@@ -1,0 +1,74 @@
+[
+  {
+    "id": "sofa-001",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/sofa-001.jpg"
+  },
+    {
+    "id": "sofa-002",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/sofa-002.jpg"
+  },
+    {
+    "id": "table-001",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/table-001.jpg"
+  },
+    {
+    "id": "table-002",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/table-002.jpg"
+  },
+    {
+    "id": "light-001",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/light-001.jpg"
+  },
+    {
+    "id": "light-002",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/light-002.jpg"
+  },
+    {
+    "id": "chair-001",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/chair-001.jpg"
+  },
+    {
+    "id": "chair-002",
+    "name": "Aurelia Curved Sofa",
+    "category": "sofa",
+    "styleTags": ["modern luxury", "warm neutral"],
+    "price": 3499,
+    "url": "https://koalaliving.com.au",
+    "imageUrl": "/products/chair-002.jpg"
+  }
+]
