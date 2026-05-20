@@ -20,7 +20,7 @@ const CACHE_KEY = "ai-room-stylist:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with AI Room Stylist. Full-room package preview coming soon.";
 const HEIC_UPLOAD_ERROR =
-  "HEIC photos are not supported yet. Please upload JPG or PNG.";
+  "iPhone HEIC photos need to be converted to JPG. Please choose Most Compatible in Camera settings or upload JPG/PNG.";
 const UNSUPPORTED_UPLOAD_ERROR =
   "Please upload a JPG, PNG, or WebP room photo.";
 const supportedRoomPhotoTypes = [
@@ -194,25 +194,99 @@ function getFileExtension(fileName: string) {
     : fileName.slice(extensionIndex).toLowerCase();
 }
 
-function getRoomPhotoValidationError(file: File): string | null {
+function isHeicRoomPhoto(file: File) {
   const fileType = file.type.toLowerCase();
   const fileExtension = getFileExtension(file.name);
 
-  if (
+  return (
     heicRoomPhotoTypes.includes(fileType) ||
     heicRoomPhotoExtensions.includes(fileExtension)
-  ) {
+  );
+}
+
+function isSupportedRoomPhoto(file: File) {
+  const fileType = file.type.toLowerCase();
+  const fileExtension = getFileExtension(file.name);
+
+  return (
+    supportedRoomPhotoTypes.includes(fileType) ||
+    (!fileType && supportedRoomPhotoExtensions.includes(fileExtension))
+  );
+}
+
+function getRoomPhotoValidationError(file: File): string | null {
+  if (isHeicRoomPhoto(file)) {
     return HEIC_UPLOAD_ERROR;
   }
 
-  if (
-    supportedRoomPhotoTypes.includes(fileType) ||
-    (!fileType && supportedRoomPhotoExtensions.includes(fileExtension))
-  ) {
+  if (isSupportedRoomPhoto(file)) {
     return null;
   }
 
   return UNSUPPORTED_UPLOAD_ERROR;
+}
+
+function loadImageFromUrl(imageUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Unable to preview image."));
+    image.src = imageUrl;
+  });
+}
+
+function canvasToJpegBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+
+        reject(new Error("Unable to convert image."));
+      },
+      "image/jpeg",
+      0.92
+    );
+  });
+}
+
+async function convertRoomPhotoToJpeg(file: File) {
+  const sourceUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImageFromUrl(sourceUrl);
+    const canvas = document.createElement("canvas");
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+
+    if (!width || !height) {
+      throw new Error("Unable to read image dimensions.");
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Unable to prepare image conversion.");
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const jpegBlob = await canvasToJpegBlob(canvas);
+    const fileName = file.name.replace(/\.[^/.]+$/, "") || "room-photo";
+
+    return new File([jpegBlob], `${fileName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
 }
 
 function ProductImage({
@@ -543,7 +617,7 @@ export default function HomePage() {
     showDemoMessage(`${products.length} item bundle added to demo cart.`);
   }
 
-  function handleImageChange(file: File | null) {
+  async function handleImageChange(file: File | null) {
     setGeneratedImages([]);
     setProducts([]);
     setError("");
@@ -555,6 +629,21 @@ export default function HomePage() {
     if (!file) {
       setImage(null);
       setPreviewUrl("");
+      return;
+    }
+
+    if (isHeicRoomPhoto(file)) {
+      try {
+        const convertedFile = await convertRoomPhotoToJpeg(file);
+
+        setImage(convertedFile);
+        setPreviewUrl(URL.createObjectURL(convertedFile));
+      } catch {
+        setImage(null);
+        setPreviewUrl("");
+        setError(HEIC_UPLOAD_ERROR);
+      }
+
       return;
     }
 
@@ -810,69 +899,67 @@ export default function HomePage() {
 
             <input
               type="file"
-              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-              onChange={(e) => handleImageChange(e.target.files?.[0] || null)}
+              accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
+              onChange={(e) => {
+                void handleImageChange(e.target.files?.[0] || null);
+              }}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-sm"
             />
 
-            {(previewUrl || selectedProducts.length > 0) && (
-              <div className="mt-5 grid gap-4">
-                {previewUrl && (
-                  <div className="overflow-hidden rounded-xl border border-neutral-800">
-                    <img
-                      src={previewUrl}
-                      alt="Uploaded room preview"
-                      className="max-h-[500px] w-full object-contain"
-                    />
-                  </div>
-                )}
-
-                {selectedProducts.length > 0 && (
-                  <section className="animate-[softRise_260ms_ease-out] rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <h2 className="text-sm font-semibold">
-                        Selected products
-                      </h2>
-                      <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300">
-                        {selectedProducts.length}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      {selectedProducts.map((product) => (
-                        <article
-                          key={product.id}
-                          className="relative animate-[softRise_240ms_ease-out] rounded-xl border border-neutral-800 bg-neutral-900 p-3 transition-all duration-200 hover:border-neutral-600"
-                        >
-                          <ProductImage
-                            product={product}
-                            className="h-32 w-full rounded-lg object-cover"
-                            placeholderClassName="h-32 w-full"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSelectedProductIds((current) =>
-                                current.filter((id) => id !== product.id)
-                              )
-                            }
-                            aria-label={`Deselect ${getShortProductName(product)}`}
-                            className="absolute right-5 top-5 rounded-full border border-neutral-700 bg-neutral-950/80 px-2 py-0.5 text-xs text-white hover:bg-neutral-800"
-                          >
-                            X
-                          </button>
-                          <p className="mt-3 line-clamp-2 text-sm font-semibold leading-snug">
-                            {getShortProductName(product)}
-                          </p>
-                          <p className="mt-1 text-xs text-neutral-400">
-                            {getCategoryLabel(product.category)}
-                          </p>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
-                )}
+            {previewUrl && (
+              <div className="mt-5 overflow-hidden rounded-xl border border-neutral-800">
+                <img
+                  src={previewUrl}
+                  alt="Uploaded room preview"
+                  className="max-h-[500px] w-full object-contain"
+                />
               </div>
+            )}
+
+            {selectedProducts.length > 0 && (
+              <section className="mt-4 hidden animate-[softRise_260ms_ease-out] rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 md:block">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-semibold">Selected products</h2>
+                  <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300">
+                    {selectedProducts.length}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {selectedProducts.map((product) => (
+                    <article
+                      key={product.id}
+                      className="relative animate-[softRise_240ms_ease-out] rounded-xl border border-neutral-800 bg-neutral-900 p-3 transition-all duration-200 hover:border-neutral-600"
+                    >
+                      <ProductImage
+                        product={product}
+                        className="h-32 w-full rounded-lg object-cover"
+                        placeholderClassName="h-32 w-full"
+                      />
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={(event) => {
+                          event.currentTarget.blur();
+                          setSelectedProductIds((current) =>
+                            current.filter((id) => id !== product.id)
+                          );
+                        }}
+                        aria-label={`Deselect ${getShortProductName(product)}`}
+                        className="absolute right-5 top-5 rounded-full border border-neutral-700 bg-neutral-950/80 px-2 py-0.5 text-xs text-white hover:bg-neutral-800"
+                      >
+                        X
+                      </button>
+                      <p className="mt-3 line-clamp-2 text-sm font-semibold leading-snug">
+                        {getShortProductName(product)}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-400">
+                        {getCategoryLabel(product.category)}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
 
@@ -922,6 +1009,54 @@ export default function HomePage() {
                 </div>
               </div>
 
+              {selectedProducts.length > 0 && (
+                <div className="sticky top-2 z-20 mb-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-3 shadow-2xl backdrop-blur md:hidden">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-400">
+                      Selected
+                    </p>
+                    <span className="rounded-full border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300">
+                      {selectedProducts.length}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {selectedProducts.map((product) => (
+                      <article
+                        key={product.id}
+                        className="relative min-w-36 rounded-xl border border-neutral-800 bg-neutral-900 p-2"
+                      >
+                        <ProductImage
+                          product={product}
+                          className="h-16 w-full rounded-lg object-cover"
+                          placeholderClassName="h-16 w-full"
+                        />
+                        <button
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={(event) => {
+                            event.currentTarget.blur();
+                            setSelectedProductIds((current) =>
+                              current.filter((id) => id !== product.id)
+                            );
+                          }}
+                          aria-label={`Deselect ${getShortProductName(product)}`}
+                          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-950/80 px-1.5 py-0.5 text-[10px] text-white"
+                        >
+                          X
+                        </button>
+                        <p className="mt-2 line-clamp-2 text-xs font-semibold leading-snug">
+                          {getShortProductName(product)}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-neutral-500">
+                          {getCategoryLabel(product.category)}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-3">
                 {productsByCategory.map((category) => {
                   const isOpen = openProductCategoryId === category.id;
@@ -966,7 +1101,7 @@ export default function HomePage() {
                         }`}
                       >
                         <div className="min-h-0 overflow-hidden">
-                          <div className="grid grid-cols-1 gap-3 px-3 pb-3 animate-[accordionReveal_220ms_ease-out] sm:grid-cols-2">
+                          <div className="grid grid-cols-2 gap-2 px-3 pb-3 animate-[accordionReveal_220ms_ease-out] sm:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] sm:gap-3">
                             {category.products.map((p) => {
                               const isSelected =
                                 selectedProductIds.includes(p.id);
@@ -974,11 +1109,17 @@ export default function HomePage() {
                               return (
                                 <button
                                   key={p.id}
-                                  onClick={() => toggleProduct(p.id)}
+                                  onMouseDown={(event) =>
+                                    event.preventDefault()
+                                  }
+                                  onClick={(event) => {
+                                    event.currentTarget.blur();
+                                    toggleProduct(p.id);
+                                  }}
                                   type="button"
                                   tabIndex={isOpen ? 0 : -1}
                                   aria-pressed={isSelected}
-                                  className={`relative flex min-h-36 flex-col gap-2 rounded-xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                                  className={`relative flex min-h-44 flex-col gap-2 rounded-xl border p-2 text-left transition-all duration-200 hover:-translate-y-0.5 ${
                                     isSelected
                                       ? "border-white bg-neutral-800 ring-1 ring-white"
                                       : "border-neutral-700 bg-neutral-950 hover:border-neutral-500 hover:bg-neutral-900"
@@ -986,8 +1127,8 @@ export default function HomePage() {
                                 >
                                   <ProductImage
                                     product={p}
-                                    className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                                    placeholderClassName="h-16 w-16 shrink-0"
+                                    className="h-24 w-full rounded-lg object-cover"
+                                    placeholderClassName="h-24 w-full"
                                   />
                                   <div className="min-w-0 flex-1">
                                     <p
@@ -1169,7 +1310,7 @@ export default function HomePage() {
                             }`}
                           >
                             <div className="min-h-0 overflow-hidden">
-                              <div className="grid grid-cols-1 gap-3 px-3 pb-3 animate-[accordionReveal_220ms_ease-out] sm:grid-cols-2">
+                              <div className="grid grid-cols-2 gap-2 px-3 pb-3 animate-[accordionReveal_220ms_ease-out] sm:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] sm:gap-3">
                                 {category.products.map((p) => {
                                   const isSelected =
                                     selectedRefinementProductIds.includes(p.id);
@@ -1179,11 +1320,15 @@ export default function HomePage() {
                                       key={p.id}
                                       type="button"
                                       tabIndex={isOpen ? 0 : -1}
-                                      onClick={() =>
-                                        toggleRefinementProduct(p.id)
+                                      onMouseDown={(event) =>
+                                        event.preventDefault()
                                       }
+                                      onClick={(event) => {
+                                        event.currentTarget.blur();
+                                        toggleRefinementProduct(p.id)
+                                      }}
                                       aria-pressed={isSelected}
-                                      className={`relative flex min-h-36 flex-col gap-2 rounded-xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                                      className={`relative flex min-h-44 flex-col gap-2 rounded-xl border p-2 text-left transition-all duration-200 hover:-translate-y-0.5 ${
                                         isSelected
                                           ? "border-white bg-neutral-800 ring-1 ring-white"
                                           : "border-neutral-700 bg-neutral-950 hover:border-neutral-500 hover:bg-neutral-900"
@@ -1191,8 +1336,8 @@ export default function HomePage() {
                                     >
                                       <ProductImage
                                         product={p}
-                                        className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                                        placeholderClassName="h-16 w-16 shrink-0"
+                                        className="h-24 w-full rounded-lg object-cover"
+                                        placeholderClassName="h-24 w-full"
                                       />
                                       <div className="min-w-0 flex-1">
                                         <p
