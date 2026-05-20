@@ -19,6 +19,19 @@ const roomTypes = ["living room", "dining room", "bedroom"];
 const CACHE_KEY = "ai-room-stylist:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with AI Room Stylist. Full-room package preview coming soon.";
+const HEIC_UPLOAD_ERROR =
+  "HEIC photos are not supported yet. Please upload JPG or PNG.";
+const UNSUPPORTED_UPLOAD_ERROR =
+  "Please upload a JPG, PNG, or WebP room photo.";
+const supportedRoomPhotoTypes = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
+const supportedRoomPhotoExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+const heicRoomPhotoTypes = ["image/heic", "image/heif"];
+const heicRoomPhotoExtensions = [".heic", ".heif"];
 const generateProgressMessages = [
   "Analysing your room...",
   "Matching selected furniture...",
@@ -78,6 +91,35 @@ function getProductImageUrl(product: Product): string | null {
 
 function formatPrice(price: Product["price"]) {
   return typeof price === "number" ? `$${price.toLocaleString()}` : "Price on request";
+}
+
+function getFileExtension(fileName: string) {
+  const extensionIndex = fileName.lastIndexOf(".");
+
+  return extensionIndex === -1
+    ? ""
+    : fileName.slice(extensionIndex).toLowerCase();
+}
+
+function getRoomPhotoValidationError(file: File): string | null {
+  const fileType = file.type.toLowerCase();
+  const fileExtension = getFileExtension(file.name);
+
+  if (
+    heicRoomPhotoTypes.includes(fileType) ||
+    heicRoomPhotoExtensions.includes(fileExtension)
+  ) {
+    return HEIC_UPLOAD_ERROR;
+  }
+
+  if (
+    supportedRoomPhotoTypes.includes(fileType) ||
+    (!fileType && supportedRoomPhotoExtensions.includes(fileExtension))
+  ) {
+    return null;
+  }
+
+  return UNSUPPORTED_UPLOAD_ERROR;
 }
 
 function ProductImage({
@@ -325,7 +367,6 @@ export default function HomePage() {
   }
 
   function handleImageChange(file: File | null) {
-    setImage(file);
     setGeneratedImages([]);
     setProducts([]);
     setError("");
@@ -333,16 +374,35 @@ export default function HomePage() {
 
     if (previewUrl) URL.revokeObjectURL(previewUrl);
 
-    if (file) {
-      setPreviewUrl(URL.createObjectURL(file));
-    } else {
+    if (!file) {
+      setImage(null);
       setPreviewUrl("");
+      return;
     }
+
+    const validationError = getRoomPhotoValidationError(file);
+
+    if (validationError) {
+      setImage(null);
+      setPreviewUrl("");
+      setError(validationError);
+      return;
+    }
+
+    setImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
   }
 
   async function handleGenerate() {
     if (!image) {
       setError("Please upload a room photo first.");
+      return;
+    }
+
+    const validationError = getRoomPhotoValidationError(image);
+
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -503,7 +563,7 @@ export default function HomePage() {
 
             <input
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
               onChange={(e) => handleImageChange(e.target.files?.[0] || null)}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-sm"
             />
