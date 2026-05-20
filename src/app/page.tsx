@@ -794,10 +794,12 @@ export default function HomePage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || "Refinement failed.");
+        setError(
+          typeof data.error === "string" ? data.error : "Refinement failed."
+        );
         return;
       }
 
