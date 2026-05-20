@@ -33,9 +33,10 @@ const supportedRoomPhotoExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 const heicRoomPhotoTypes = ["image/heic", "image/heif"];
 const heicRoomPhotoExtensions = [".heic", ".heif"];
 const generateProgressMessages = [
-  "Analysing your room...",
-  "Matching selected furniture...",
-  "Creating luxury concept...",
+  "Analysing room layout...",
+  "Reading your selected products...",
+  "Composing luxury furniture arrangement...",
+  "Rendering final concept...",
 ];
 const refineProgressMessages = [
   "Opening the selected concept",
@@ -85,8 +86,100 @@ function getCategoryLabel(category: string) {
   return category;
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getShortProductName(product: Product) {
+  const descriptors = [
+    ...product.colors,
+    ...product.materials,
+    "antique",
+    "ash",
+    "beige",
+    "black",
+    "bronze",
+    "brown",
+    "brushed",
+    "cream",
+    "ebony",
+    "fabric",
+    "finish",
+    "gloss",
+    "gold",
+    "leather",
+    "light",
+    "matte",
+    "mocha",
+    "sand",
+    "sintered",
+    "soft",
+    "stone",
+    "top",
+    "vegan",
+    "velvet",
+    "velveteen",
+    "veneer",
+    "walnut",
+    "white",
+    "wooden",
+  ]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  let shortName = product.name
+    .replace(/\bwith\b.*$/i, "")
+    .replace(/\b\d+(?:\s?x\s?\d+)?\s?(?:cm|mm|m)\b/gi, "");
+
+  descriptors.forEach((descriptor) => {
+    shortName = shortName.replace(
+      new RegExp(`\\b${escapeRegExp(descriptor)}\\b`, "gi"),
+      ""
+    );
+  });
+
+  shortName = shortName.replace(/\s+/g, " ").trim();
+
+  if (!shortName) {
+    shortName = product.name.replace(/\s+/g, " ").trim();
+  }
+
+  const words = shortName.split(" ");
+
+  return words.length > 7 ? words.slice(0, 7).join(" ") : shortName;
+}
+
 function getProductImageUrl(product: Product): string | null {
   return getPrimaryProductImageUrl(product);
+}
+
+function getProductUrl(product: Product): string | null {
+  const productUrl = product.url?.trim();
+
+  return productUrl || null;
+}
+
+function getProductsFromIds(productIds: string[]): Product[] {
+  return productIds
+    .map((productId) => productList.find((product) => product.id === productId))
+    .filter((product): product is Product => Boolean(product));
+}
+
+function mergeUniqueProducts(
+  currentProducts: Product[],
+  productsToAdd: Product[]
+) {
+  const seenProductIds = new Set(currentProducts.map((product) => product.id));
+
+  return [
+    ...currentProducts,
+    ...productsToAdd.filter((product) => {
+      if (seenProductIds.has(product.id)) return false;
+
+      seenProductIds.add(product.id);
+      return true;
+    }),
+  ];
 }
 
 function formatPrice(price: Product["price"]) {
@@ -173,8 +266,20 @@ export default function HomePage() {
   const [demoMessage, setDemoMessage] = useState("");
   const [generateProgressIndex, setGenerateProgressIndex] = useState(0);
   const [refineProgressIndex, setRefineProgressIndex] = useState(0);
-  const [openProductCategoryIds, setOpenProductCategoryIds] = useState<string[]>([]);
+  const [openProductCategoryId, setOpenProductCategoryId] = useState<
+    string | null
+  >(null);
+  const [openRefinementProductCategoryId, setOpenRefinementProductCategoryId] =
+    useState<string | null>(null);
+  const [lightboxConceptIndex, setLightboxConceptIndex] = useState<
+    number | null
+  >(null);
   const demoMessageTimeoutRef = useRef<number | null>(null);
+  const selectedProducts = getProductsFromIds(selectedProductIds);
+  const lightboxImage =
+    lightboxConceptIndex === null
+      ? null
+      : generatedImages[lightboxConceptIndex] || null;
 
   useEffect(() => {
     const cached = localStorage.getItem(CACHE_KEY);
@@ -228,6 +333,25 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (lightboxConceptIndex === null) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setLightboxConceptIndex(null);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [lightboxConceptIndex]);
+
   function showDemoMessage(message: string) {
     if (demoMessageTimeoutRef.current) {
       window.clearTimeout(demoMessageTimeoutRef.current);
@@ -237,6 +361,27 @@ export default function HomePage() {
     demoMessageTimeoutRef.current = window.setTimeout(() => {
       setDemoMessage("");
     }, 2600);
+  }
+
+  function saveResultCache(
+    nextGeneratedImages: string[],
+    nextProducts = products
+  ) {
+    if (nextGeneratedImages.length === 0) {
+      localStorage.removeItem(CACHE_KEY);
+      return;
+    }
+
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        generatedImages: nextGeneratedImages,
+        products: nextProducts,
+        style,
+        roomType,
+        createdAt: new Date().toISOString(),
+      })
+    );
   }
 
   function toggleProduct(productId: string) {
@@ -282,11 +427,20 @@ export default function HomePage() {
   }
 
   function toggleProductCategory(categoryId: string) {
-    setOpenProductCategoryIds((current) =>
-      current.includes(categoryId)
-        ? current.filter((id) => id !== categoryId)
-        : [...current, categoryId]
+    setOpenProductCategoryId((current) =>
+      current === categoryId ? null : categoryId
     );
+  }
+
+  function toggleRefinementProductCategory(categoryId: string) {
+    setOpenRefinementProductCategoryId((current) =>
+      current === categoryId ? null : categoryId
+    );
+  }
+
+  function clearSelectedProducts() {
+    setSelectedProductIds([]);
+    setOpenProductCategoryId(null);
   }
 
   function clearGeneratedConcepts() {
@@ -296,6 +450,29 @@ export default function HomePage() {
     setSelectedConcept(null);
     setChangeRequest("");
     setSelectedRefinementProductIds([]);
+    setOpenRefinementProductCategoryId(null);
+    setLightboxConceptIndex(null);
+  }
+
+  function removeGeneratedConcept(conceptIndex: number) {
+    const nextGeneratedImages = generatedImages.filter(
+      (_, index) => index !== conceptIndex
+    );
+
+    setGeneratedImages(nextGeneratedImages);
+    setSelectedConcept((current) => {
+      if (current === null) return null;
+      if (current === conceptIndex) return null;
+
+      return current > conceptIndex ? current - 1 : current;
+    });
+    setLightboxConceptIndex((current) => {
+      if (current === null) return null;
+      if (current === conceptIndex) return null;
+
+      return current > conceptIndex ? current - 1 : current;
+    });
+    saveResultCache(nextGeneratedImages);
   }
 
   function downloadGeneratedImage(imageBase64: string, index: number) {
@@ -371,6 +548,7 @@ export default function HomePage() {
     setProducts([]);
     setError("");
     setSelectedRefinementProductIds([]);
+    setLightboxConceptIndex(null);
 
     if (previewUrl) URL.revokeObjectURL(previewUrl);
 
@@ -411,6 +589,8 @@ export default function HomePage() {
     setError("");
     setGeneratedImages([]);
     setProducts([]);
+    setSelectedConcept(null);
+    setLightboxConceptIndex(null);
     trackEvent("generate_started", {
       roomType,
       style,
@@ -437,9 +617,11 @@ export default function HomePage() {
         return;
       }
 
-      setGeneratedImages(
-        data.images.map((img: { b64_json: string }) => img.b64_json)
+      const nextGeneratedImages = data.images.map(
+        (img: { b64_json: string }) => img.b64_json
       );
+
+      setGeneratedImages(nextGeneratedImages);
       setProducts(data.products);
       trackEvent("generate_completed", {
         roomType,
@@ -448,16 +630,7 @@ export default function HomePage() {
         productCount: data.products.length,
         productIds: data.products.map((product: Product) => product.id),
       });
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({
-          generatedImages: data.images.map((img: { b64_json: string }) => img.b64_json),
-          products: data.products,
-          style,
-          roomType,
-          createdAt: new Date().toISOString(),
-        })
-      );
+      saveResultCache(nextGeneratedImages, data.products);
     } catch {
       setError("Failed to connect to the generation service.");
     } finally {
@@ -502,29 +675,27 @@ export default function HomePage() {
 
       const refinedImage = data.image.b64_json;
 
-      const updatedImages = [...generatedImages];
-      updatedImages[selectedConcept] = refinedImage;
+      const updatedImages = [...generatedImages, refinedImage];
+      const refinedConceptIndex = updatedImages.length - 1;
+      const refinementProducts = getProductsFromIds(selectedRefinementProductIds);
+      const updatedProducts = mergeUniqueProducts(products, refinementProducts);
 
       setGeneratedImages(updatedImages);
+      setProducts(updatedProducts);
+      setSelectedConcept(refinedConceptIndex);
       setChangeRequest("");
       setSelectedRefinementProductIds([]);
+      setOpenRefinementProductCategoryId(null);
       trackEvent("refine_completed", {
         conceptIndex: selectedConcept,
+        refinedConceptIndex,
         hasTextInstruction: Boolean(changeRequest.trim()),
         refinementProductIds: selectedRefinementProductIds,
         refinementProductCount: selectedRefinementProductIds.length,
+        mergedProductCount: updatedProducts.length,
       });
 
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({
-          generatedImages: updatedImages,
-          products,
-          style,
-          roomType,
-          createdAt: new Date().toISOString(),
-        })
-      );
+      saveResultCache(updatedImages, updatedProducts);
     } catch {
       setError("Failed to connect to refinement service.");
     } finally {
@@ -532,7 +703,7 @@ export default function HomePage() {
     }
   }
   return (
-    <main className="min-h-screen bg-[#0f0f0f] text-white">
+    <main className="min-h-screen bg-[#080808] text-white">
       {demoMessage && (
         <div
           role="status"
@@ -541,12 +712,88 @@ export default function HomePage() {
           {demoMessage}
         </div>
       )}
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-10">
-          <p className="text-sm uppercase tracking-widest text-neutral-400">
-            AI Room Stylist
-          </p>
-          <h1 className="mt-3 text-4xl font-bold">
+
+      {lightboxImage && lightboxConceptIndex !== null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Generated concept ${lightboxConceptIndex + 1} preview`}
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 p-4"
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxConceptIndex(null)}
+            aria-label="Close generated concept preview"
+            className="absolute inset-0 cursor-default"
+          />
+          <div className="relative z-10 w-full max-w-5xl rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">
+                Concept {lightboxConceptIndex + 1}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setLightboxConceptIndex(null)}
+                className="rounded-full border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:bg-neutral-800"
+              >
+                X Close
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-neutral-800 bg-black">
+              <img
+                src={`data:image/png;base64,${lightboxImage}`}
+                alt={`Generated room concept ${lightboxConceptIndex + 1}`}
+                className="max-h-[75vh] w-full object-contain"
+              />
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() =>
+                  downloadGeneratedImage(lightboxImage, lightboxConceptIndex)
+                }
+                className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-neutral-200"
+              >
+                Download
+              </button>
+              <button
+                type="button"
+                onClick={() => shareGeneratedConcept(lightboxConceptIndex)}
+                className="rounded-xl border border-neutral-700 px-5 py-3 text-sm text-neutral-200 hover:bg-neutral-800"
+              >
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <div className="mb-10 border-b border-neutral-800 pb-8">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <Image
+                src="/koala-logo.png"
+                alt="Koala Living"
+                width={185}
+                height={80}
+                priority
+                className="h-auto w-44 sm:w-52"
+              />
+              <p className="mt-5 text-xs uppercase tracking-[0.32em] text-neutral-500">
+                AI Room Stylist
+              </p>
+            </div>
+
+            <p className="max-w-sm text-right text-sm leading-6 text-neutral-400">
+              Curate a complete room concept with real furniture references,
+              premium styling, and a shoppable bundle.
+            </p>
+          </div>
+
+          <h1 className="mt-10 max-w-3xl font-serif text-4xl leading-tight text-white sm:text-5xl">
             Redesign your room with luxury furniture
           </h1>
           <p className="mt-4 max-w-2xl text-neutral-300">
@@ -556,7 +803,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="rounded-2xl bg-neutral-900 p-6">
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-2xl">
             <label className="mb-2 block text-sm text-neutral-300">
               Upload room photo
             </label>
@@ -568,18 +815,68 @@ export default function HomePage() {
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-sm"
             />
 
-            {previewUrl && (
-              <div className="mt-5 overflow-hidden rounded-xl border border-neutral-800">
-                <img
-                  src={previewUrl}
-                  alt="Uploaded room preview"
-                  className="max-h-[500px] w-full object-contain"
-                />
+            {(previewUrl || selectedProducts.length > 0) && (
+              <div className="mt-5 grid gap-4">
+                {previewUrl && (
+                  <div className="overflow-hidden rounded-xl border border-neutral-800">
+                    <img
+                      src={previewUrl}
+                      alt="Uploaded room preview"
+                      className="max-h-[500px] w-full object-contain"
+                    />
+                  </div>
+                )}
+
+                {selectedProducts.length > 0 && (
+                  <section className="animate-[softRise_260ms_ease-out] rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-sm font-semibold">
+                        Selected products
+                      </h2>
+                      <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300">
+                        {selectedProducts.length}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {selectedProducts.map((product) => (
+                        <article
+                          key={product.id}
+                          className="relative animate-[softRise_240ms_ease-out] rounded-xl border border-neutral-800 bg-neutral-900 p-3 transition-all duration-200 hover:border-neutral-600"
+                        >
+                          <ProductImage
+                            product={product}
+                            className="h-32 w-full rounded-lg object-cover"
+                            placeholderClassName="h-32 w-full"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedProductIds((current) =>
+                                current.filter((id) => id !== product.id)
+                              )
+                            }
+                            aria-label={`Deselect ${getShortProductName(product)}`}
+                            className="absolute right-5 top-5 rounded-full border border-neutral-700 bg-neutral-950/80 px-2 py-0.5 text-xs text-white hover:bg-neutral-800"
+                          >
+                            X
+                          </button>
+                          <p className="mt-3 line-clamp-2 text-sm font-semibold leading-snug">
+                            {getShortProductName(product)}
+                          </p>
+                          <p className="mt-1 text-xs text-neutral-400">
+                            {getCategoryLabel(product.category)}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             )}
           </div>
 
-          <div className="rounded-2xl bg-neutral-900 p-6">
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-2xl">
             <label className="mb-2 block text-sm text-neutral-300">
               Room type
             </label>
@@ -616,7 +913,7 @@ export default function HomePage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setSelectedProductIds([])}
+                    onClick={clearSelectedProducts}
                     disabled={selectedProductIds.length === 0}
                     className="rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
                   >
@@ -626,89 +923,103 @@ export default function HomePage() {
               </div>
 
               <div className="grid gap-3">
-                {productsByCategory.map((category) => (
-                  <section
-                    key={category.id}
-                    className="rounded-xl border border-neutral-800 bg-neutral-950/60"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleProductCategory(category.id)}
-                      aria-expanded={openProductCategoryIds.includes(category.id)}
-                      aria-controls={`product-category-${category.id}`}
-                      className="flex w-full items-center justify-between gap-3 p-3 text-left"
-                    >
-                      <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-                        {category.label}
-                      </span>
-                      <span className="flex items-center gap-2 text-xs text-neutral-500">
-                        <span>
-                          {
-                            category.products.filter((product) =>
-                              selectedProductIds.includes(product.id)
-                            ).length
-                          }
-                          /{category.products.length}
-                        </span>
-                        <span className="text-neutral-600">
-                          {openProductCategoryIds.includes(category.id) ? "-" : "+"}
-                        </span>
-                      </span>
-                    </button>
+                {productsByCategory.map((category) => {
+                  const isOpen = openProductCategoryId === category.id;
 
-                    {openProductCategoryIds.includes(category.id) && (
+                  return (
+                    <section
+                      key={category.id}
+                      className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/60 transition-colors duration-300 hover:border-neutral-700"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleProductCategory(category.id)}
+                        aria-expanded={isOpen}
+                        aria-controls={`product-category-${category.id}`}
+                        className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors duration-200 hover:bg-neutral-900"
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+                          {category.label}
+                        </span>
+                        <span className="flex items-center gap-2 text-xs text-neutral-500">
+                          <span>
+                            {
+                              category.products.filter((product) =>
+                                selectedProductIds.includes(product.id)
+                              ).length
+                            }
+                            /{category.products.length}
+                          </span>
+                          <span className="text-neutral-600 transition-transform duration-300">
+                            {isOpen ? "-" : "+"}
+                          </span>
+                        </span>
+                      </button>
+
                       <div
                         id={`product-category-${category.id}`}
-                        className="grid gap-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-1"
+                        aria-hidden={!isOpen}
+                        className={`grid transition-all duration-300 ease-out ${
+                          isOpen
+                            ? "grid-rows-[1fr] opacity-100"
+                            : "grid-rows-[0fr] opacity-0"
+                        }`}
                       >
-                        {category.products.map((p) => {
-                          const isSelected = selectedProductIds.includes(p.id);
+                        <div className="min-h-0 overflow-hidden">
+                          <div className="grid grid-cols-1 gap-3 px-3 pb-3 animate-[accordionReveal_220ms_ease-out] sm:grid-cols-2">
+                            {category.products.map((p) => {
+                              const isSelected =
+                                selectedProductIds.includes(p.id);
 
-                          return (
-                            <button
-                              key={p.id}
-                              onClick={() => toggleProduct(p.id)}
-                              type="button"
-                              aria-pressed={isSelected}
-                              className={`flex min-h-20 items-center gap-3 rounded-xl border p-3 text-left transition ${
-                                isSelected
-                                  ? "border-white bg-neutral-800 ring-1 ring-white"
-                                  : "border-neutral-700 bg-neutral-950 hover:bg-neutral-800"
-                              }`}
-                            >
-                              <ProductImage
-                                product={p}
-                                className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                                placeholderClassName="h-16 w-16 shrink-0"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="text-sm font-semibold">
-                                    {p.name}
-                                  </p>
+                              return (
+                                <button
+                                  key={p.id}
+                                  onClick={() => toggleProduct(p.id)}
+                                  type="button"
+                                  tabIndex={isOpen ? 0 : -1}
+                                  aria-pressed={isSelected}
+                                  className={`relative flex min-h-36 flex-col gap-2 rounded-xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                                    isSelected
+                                      ? "border-white bg-neutral-800 ring-1 ring-white"
+                                      : "border-neutral-700 bg-neutral-950 hover:border-neutral-500 hover:bg-neutral-900"
+                                  }`}
+                                >
+                                  <ProductImage
+                                    product={p}
+                                    className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                                    placeholderClassName="h-16 w-16 shrink-0"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p
+                                      title={p.name}
+                                      className="line-clamp-2 text-sm font-semibold leading-snug"
+                                    >
+                                      {getShortProductName(p)}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-neutral-500">
+                                      {getCategoryLabel(p.category)}
+                                    </p>
+                                  </div>
                                   {isSelected && (
-                                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-black">
+                                    <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-black">
                                       Selected
                                     </span>
                                   )}
-                                </div>
-                                <p className="mt-1 text-xs text-neutral-400">
-                                  {getCategoryLabel(p.category)}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </section>
-                ))}
+                    </section>
+                  );
+                })}
               </div>
             </div>
             <button
               onClick={handleGenerate}
               disabled={loading || !image}
-              className="w-full rounded-xl bg-white px-6 py-3 font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl bg-white px-6 py-3 font-semibold text-black shadow-lg shadow-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {loading ? "Generating concept..." : "Generate concept"}
             </button>
@@ -726,7 +1037,7 @@ export default function HomePage() {
 
             <button
               onClick={clearGeneratedConcepts}
-              className="mt-3 w-full rounded-xl border border-neutral-700 px-6 py-3 text-sm text-neutral-300 hover:bg-neutral-800"
+              className="mt-3 w-full rounded-xl border border-neutral-700 px-6 py-3 text-sm text-neutral-300 transition-colors duration-200 hover:bg-neutral-800"
             >
               Clear saved results
             </button>
@@ -736,14 +1047,18 @@ export default function HomePage() {
         </div>
 
         {loading && (
-          <section className="mt-10">
-            <h2 className="mb-4 text-2xl font-semibold">Generated concept</h2>
-            <div className="overflow-hidden rounded-2xl bg-neutral-900">
-              <div className="flex aspect-square items-center justify-center bg-neutral-950">
+          <section className="mt-10 animate-[softRise_260ms_ease-out]">
+            <h2 className="mb-4 font-serif text-2xl font-semibold">
+              Designing your concept
+            </h2>
+            <div className="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 shadow-2xl animate-[luxuryPulse_2.8s_ease-in-out_infinite]">
+              <div className="relative flex aspect-square items-center justify-center bg-neutral-950">
+                <div className="absolute h-28 w-28 rounded-full border border-white/10" />
+                <div className="absolute h-44 w-44 rounded-full border border-white/5 animate-pulse" />
                 <div className="h-16 w-16 rounded-full border-2 border-neutral-700 border-t-white animate-spin" />
               </div>
               <div className="p-4">
-                <div className="h-10 rounded-lg bg-neutral-800" />
+                <div className="h-10 rounded-lg border border-neutral-800 bg-neutral-900" />
               </div>
             </div>
           </section>
@@ -805,54 +1120,105 @@ export default function HomePage() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    {productsByCategory.map((category) => (
-                      <section key={category.id}>
-                        <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-neutral-500">
-                          {category.label}
-                        </h4>
+                  <div className="mt-4 grid gap-3">
+                    {productsByCategory.map((category) => {
+                      const isOpen =
+                        openRefinementProductCategoryId === category.id;
 
-                        <div className="grid gap-2">
-                          {category.products.map((p) => {
-                            const isSelected =
-                              selectedRefinementProductIds.includes(p.id);
+                      return (
+                        <section
+                          key={category.id}
+                          className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/60 transition-colors duration-300 hover:border-neutral-700"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleRefinementProductCategory(category.id)
+                            }
+                            aria-expanded={isOpen}
+                            aria-controls={`refinement-product-category-${category.id}`}
+                            className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors duration-200 hover:bg-neutral-900"
+                          >
+                            <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+                              {category.label}
+                            </span>
+                            <span className="flex items-center gap-2 text-xs text-neutral-500">
+                              <span>
+                                {
+                                  category.products.filter((product) =>
+                                    selectedRefinementProductIds.includes(
+                                      product.id
+                                    )
+                                  ).length
+                                }
+                                /{category.products.length}
+                              </span>
+                              <span className="text-neutral-600 transition-transform duration-300">
+                                {isOpen ? "-" : "+"}
+                              </span>
+                            </span>
+                          </button>
 
-                            return (
-                              <button
-                                key={p.id}
-                                type="button"
-                                onClick={() => toggleRefinementProduct(p.id)}
-                                aria-pressed={isSelected}
-                                className={`flex items-center gap-3 rounded-xl border p-2 text-left transition ${
-                                  isSelected
-                                    ? "border-white bg-neutral-800 ring-1 ring-white"
-                                    : "border-neutral-700 bg-neutral-950 hover:bg-neutral-800"
-                                }`}
-                              >
-                                <ProductImage
-                                  product={p}
-                                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                                  placeholderClassName="h-12 w-12 shrink-0"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-semibold">
-                                    {p.name}
-                                  </p>
-                                  <p className="mt-0.5 text-[11px] text-neutral-500">
-                                    {getCategoryLabel(p.category)}
-                                  </p>
-                                </div>
-                                {isSelected && (
-                                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-black">
-                                    Selected
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </section>
-                    ))}
+                          <div
+                            id={`refinement-product-category-${category.id}`}
+                            aria-hidden={!isOpen}
+                            className={`grid transition-all duration-300 ease-out ${
+                              isOpen
+                                ? "grid-rows-[1fr] opacity-100"
+                                : "grid-rows-[0fr] opacity-0"
+                            }`}
+                          >
+                            <div className="min-h-0 overflow-hidden">
+                              <div className="grid grid-cols-1 gap-3 px-3 pb-3 animate-[accordionReveal_220ms_ease-out] sm:grid-cols-2">
+                                {category.products.map((p) => {
+                                  const isSelected =
+                                    selectedRefinementProductIds.includes(p.id);
+
+                                  return (
+                                    <button
+                                      key={p.id}
+                                      type="button"
+                                      tabIndex={isOpen ? 0 : -1}
+                                      onClick={() =>
+                                        toggleRefinementProduct(p.id)
+                                      }
+                                      aria-pressed={isSelected}
+                                      className={`relative flex min-h-36 flex-col gap-2 rounded-xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                                        isSelected
+                                          ? "border-white bg-neutral-800 ring-1 ring-white"
+                                          : "border-neutral-700 bg-neutral-950 hover:border-neutral-500 hover:bg-neutral-900"
+                                      }`}
+                                    >
+                                      <ProductImage
+                                        product={p}
+                                        className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                                        placeholderClassName="h-16 w-16 shrink-0"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <p
+                                          title={p.name}
+                                          className="line-clamp-2 text-sm font-semibold leading-snug"
+                                        >
+                                          {getShortProductName(p)}
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-neutral-500">
+                                          {getCategoryLabel(p.category)}
+                                        </p>
+                                      </div>
+                                      {isSelected && (
+                                        <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-black">
+                                          Selected
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -885,18 +1251,38 @@ export default function HomePage() {
               {generatedImages.map((img, index) => (
                 <div
                   key={index}
-                  className="overflow-hidden rounded-2xl bg-neutral-900"
+                  className="relative animate-[softRise_320ms_ease-out] overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-neutral-600"
                 >
-                  <img
-                    src={`data:image/png;base64,${img}`}
-                    alt={`Generated room concept ${index + 1}`}
-                    className={`w-full ${
-                      refining && selectedConcept === index ? "opacity-60" : ""
-                    }`}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => removeGeneratedConcept(index)}
+                    disabled={refining}
+                    aria-label={`Remove concept ${index + 1}`}
+                    className="absolute right-3 top-3 z-10 rounded-full border border-neutral-700 bg-neutral-950/80 px-2 py-0.5 text-xs text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    X
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLightboxConceptIndex(index)}
+                    aria-label={`Open generated room concept ${index + 1}`}
+                    className="block w-full text-left"
+                  >
+                    <img
+                      src={`data:image/png;base64,${img}`}
+                      alt={`Generated room concept ${index + 1}`}
+                      className={`w-full transition hover:opacity-90 ${
+                        refining && selectedConcept === index
+                          ? "opacity-60"
+                          : ""
+                      }`}
+                    />
+                  </button>
                   <div className="p-4">
                     <div className="grid gap-2">
                       <button
+                        type="button"
                         onClick={() => {
                           const isSelected = selectedConcept === index;
 
@@ -919,6 +1305,7 @@ export default function HomePage() {
 
                       <div className="grid gap-2 sm:grid-cols-2">
                         <button
+                          type="button"
                           onClick={() => downloadGeneratedImage(img, index)}
                           className="w-full rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
                         >
@@ -926,6 +1313,7 @@ export default function HomePage() {
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => shareGeneratedConcept(index)}
                           className="w-full rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
                         >
@@ -941,13 +1329,20 @@ export default function HomePage() {
         )}
 
         {generatedImages.length > 0 && products.length > 0 && (
-          <section className="mt-10">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <section className="mt-10 rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-2xl">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold">
+                <p className="text-xs uppercase tracking-[0.32em] text-neutral-500">
                   Suggested furniture bundle
+                </p>
+                <h2 className="mt-2 font-serif text-3xl font-semibold">
+                  Complete the look
                 </h2>
-                <p className="mt-2 inline-flex rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-300">
+                <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-400">
+                  A curated room package using the furniture references from
+                  your concept.
+                </p>
+                <p className="mt-3 inline-flex rounded-full border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-neutral-200">
                   Bundle offer: 10% off full room package
                 </p>
               </div>
@@ -955,69 +1350,89 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={addFullBundleToCart}
-                className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-neutral-200"
+                className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black shadow-lg shadow-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-neutral-200"
               >
                 Add full bundle to cart
               </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-              {products.map((p) => (
-                <article
-                  key={p.id}
-                  className="rounded-xl bg-neutral-900 p-4"
-                >
-                  <div className="relative mb-3">
-                    <ProductImage
-                      product={p}
-                      className="h-48 w-full rounded-lg object-cover"
-                      placeholderClassName="h-48 w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => toggleFavouriteProduct(p.id, p.name)}
-                      aria-pressed={favouriteProductIds.includes(p.id)}
-                      className={`absolute right-3 top-3 rounded-full border px-3 py-1 text-sm font-semibold ${
-                        favouriteProductIds.includes(p.id)
-                          ? "border-white bg-white text-black"
-                          : "border-neutral-700 bg-neutral-950/80 text-white hover:bg-neutral-800"
-                      }`}
-                    >
-                      {favouriteProductIds.includes(p.id) ? "♥" : "♡"}
-                    </button>
-                  </div>
+              {products.map((p) => {
+                const productUrl = getProductUrl(p);
 
-                  <p className="font-semibold">{p.name}</p>
-                  <p className="text-sm text-neutral-400">
-                    {getCategoryLabel(p.category)}
-                  </p>
+                return (
+                  <article
+                    key={p.id}
+                    className="animate-[softRise_280ms_ease-out] rounded-2xl border border-neutral-800 bg-neutral-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-neutral-600"
+                  >
+                    <div className="relative mb-3">
+                      <ProductImage
+                        product={p}
+                        className="h-48 w-full rounded-lg object-cover"
+                        placeholderClassName="h-48 w-full"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleFavouriteProduct(p.id, p.name)}
+                        aria-pressed={favouriteProductIds.includes(p.id)}
+                        className={`absolute right-3 top-3 rounded-full border px-3 py-1 text-sm font-semibold ${
+                          favouriteProductIds.includes(p.id)
+                            ? "border-white bg-white text-black"
+                            : "border-neutral-700 bg-neutral-950/80 text-white hover:bg-neutral-800"
+                        }`}
+                      >
+                        {favouriteProductIds.includes(p.id) ? "♥" : "♡"}
+                      </button>
+                    </div>
 
-                  <p className="mt-2 text-neutral-200">
-                    {formatPrice(p.price)}
-                  </p>
+                    <p className="font-semibold">{p.name}</p>
+                    <p className="text-sm text-neutral-400">
+                      {getCategoryLabel(p.category)}
+                    </p>
 
-                  <div className="mt-4 grid gap-2">
-                    <button
-                      type="button"
-                      onClick={() => addProductToCart(p)}
-                      className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-neutral-200"
-                    >
-                      Add to cart
-                    </button>
-                    <a
-                      href={p.url}
-                      target="_blank"
-                      className="rounded-lg border border-neutral-700 px-4 py-2 text-center text-sm text-neutral-200 hover:bg-neutral-800"
-                    >
-                      View product
-                    </a>
-                  </div>
-                </article>
-              ))}
+                    <p className="mt-2 text-neutral-200">
+                      {formatPrice(p.price)}
+                    </p>
+
+                    <div className="mt-4 grid gap-2">
+                      <button
+                        type="button"
+                        onClick={() => addProductToCart(p)}
+                        className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition-colors duration-200 hover:bg-neutral-200"
+                      >
+                        Add to cart
+                      </button>
+                      {productUrl ? (
+                        <a
+                          href={productUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-lg border border-neutral-700 px-4 py-2 text-center text-sm text-neutral-200 transition-colors duration-200 hover:bg-neutral-800"
+                        >
+                          View product
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          className="rounded-lg border border-neutral-800 px-4 py-2 text-sm text-neutral-500 disabled:cursor-not-allowed"
+                        >
+                          Product page unavailable
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
         )}
       </section>
+
+      <footer className="mx-auto max-w-6xl border-t border-neutral-900 px-6 py-6 text-center text-xs text-neutral-500">
+        Prototype experience — product availability, pricing and cart
+        integration shown for demonstration.
+      </footer>
     </main>
   );
 }
