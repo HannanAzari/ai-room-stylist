@@ -20,7 +20,7 @@ const CACHE_KEY = "ai-room-stylist:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with AI Room Stylist. Full-room package preview coming soon.";
 const HEIC_UPLOAD_ERROR =
-  "iPhone HEIC photos need to be converted to JPG. Please choose Most Compatible in Camera settings or upload JPG/PNG.";
+  "This iPhone photo format is not supported yet. Please convert to JPG or select a JPG/PNG image.";
 const UNSUPPORTED_UPLOAD_ERROR =
   "Please upload a JPG, PNG, or WebP room photo.";
 const supportedRoomPhotoTypes = [
@@ -236,6 +236,32 @@ function loadImageFromUrl(imageUrl: string) {
   });
 }
 
+async function loadCanvasImageSource(file: File, imageUrl: string) {
+  if ("createImageBitmap" in window) {
+    try {
+      const imageBitmap = await window.createImageBitmap(file);
+
+      return {
+        source: imageBitmap,
+        width: imageBitmap.width,
+        height: imageBitmap.height,
+        cleanup: () => imageBitmap.close(),
+      };
+    } catch {
+      // Fall back to browser preview decoding below.
+    }
+  }
+
+  const image = await loadImageFromUrl(imageUrl);
+
+  return {
+    source: image,
+    width: image.naturalWidth || image.width,
+    height: image.naturalHeight || image.height,
+    cleanup: () => {},
+  };
+}
+
 function canvasToJpegBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -255,12 +281,14 @@ function canvasToJpegBlob(canvas: HTMLCanvasElement) {
 
 async function convertRoomPhotoToJpeg(file: File) {
   const sourceUrl = URL.createObjectURL(file);
+  let cleanupImageSource = () => {};
 
   try {
-    const image = await loadImageFromUrl(sourceUrl);
+    const imageSource = await loadCanvasImageSource(file, sourceUrl);
     const canvas = document.createElement("canvas");
-    const width = image.naturalWidth || image.width;
-    const height = image.naturalHeight || image.height;
+    const { width, height } = imageSource;
+
+    cleanupImageSource = imageSource.cleanup;
 
     if (!width || !height) {
       throw new Error("Unable to read image dimensions.");
@@ -275,7 +303,7 @@ async function convertRoomPhotoToJpeg(file: File) {
       throw new Error("Unable to prepare image conversion.");
     }
 
-    context.drawImage(image, 0, 0, width, height);
+    context.drawImage(imageSource.source, 0, 0, width, height);
 
     const jpegBlob = await canvasToJpegBlob(canvas);
     const fileName = file.name.replace(/\.[^/.]+$/, "") || "room-photo";
@@ -285,6 +313,7 @@ async function convertRoomPhotoToJpeg(file: File) {
       lastModified: file.lastModified,
     });
   } finally {
+    cleanupImageSource();
     URL.revokeObjectURL(sourceUrl);
   }
 }
@@ -348,6 +377,8 @@ export default function HomePage() {
   const [lightboxConceptIndex, setLightboxConceptIndex] = useState<
     number | null
   >(null);
+  const [isSelectedProductsSheetOpen, setIsSelectedProductsSheetOpen] =
+    useState(false);
   const demoMessageTimeoutRef = useRef<number | null>(null);
   const selectedProducts = getProductsFromIds(selectedProductIds);
   const lightboxImage =
@@ -515,6 +546,7 @@ export default function HomePage() {
   function clearSelectedProducts() {
     setSelectedProductIds([]);
     setOpenProductCategoryId(null);
+    setIsSelectedProductsSheetOpen(false);
   }
 
   function clearGeneratedConcepts() {
@@ -618,6 +650,8 @@ export default function HomePage() {
   }
 
   async function handleImageChange(file: File | null) {
+    setImage(null);
+    setPreviewUrl("");
     setGeneratedImages([]);
     setProducts([]);
     setError("");
@@ -627,8 +661,6 @@ export default function HomePage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
 
     if (!file) {
-      setImage(null);
-      setPreviewUrl("");
       return;
     }
 
@@ -792,7 +824,7 @@ export default function HomePage() {
     }
   }
   return (
-    <main className="min-h-screen bg-[#080808] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-[#080808] text-white">
       {demoMessage && (
         <div
           role="status"
@@ -856,6 +888,74 @@ export default function HomePage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {isSelectedProductsSheetOpen && selectedProducts.length > 0 && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Selected products"
+          className="fixed inset-0 z-50 flex items-end bg-black/70 px-3 pb-3 md:hidden"
+        >
+          <button
+            type="button"
+            onClick={() => setIsSelectedProductsSheetOpen(false)}
+            aria-label="Close selected products"
+            className="absolute inset-0"
+          />
+          <section className="relative z-10 max-h-[82vh] w-full max-w-full overflow-y-auto overflow-x-hidden rounded-3xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl animate-[softRise_220ms_ease-out]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-neutral-500">
+                  Selected products
+                </p>
+                <h2 className="mt-1 text-lg font-semibold">
+                  {selectedProducts.length} selected
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSelectedProductsSheetOpen(false)}
+                className="rounded-full border border-neutral-700 px-3 py-1 text-sm text-neutral-200"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {selectedProducts.map((product) => (
+                <article
+                  key={product.id}
+                  className="relative max-w-full rounded-2xl border border-neutral-800 bg-neutral-900 p-2"
+                >
+                  <ProductImage
+                    product={product}
+                    className="h-24 w-full rounded-xl object-cover"
+                    placeholderClassName="h-24 w-full"
+                  />
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={(event) => {
+                      event.currentTarget.blur();
+                      setIsSelectedProductsSheetOpen(false);
+                      setSelectedProductIds((current) =>
+                        current.filter((id) => id !== product.id)
+                      );
+                    }}
+                    aria-label={`Deselect ${getShortProductName(product)}`}
+                    className="absolute right-4 top-4 rounded-full border border-neutral-700 bg-neutral-950/80 px-2 py-0.5 text-xs text-white"
+                  >
+                    X
+                  </button>
+                  <p className="mt-2 line-clamp-2 text-xs font-semibold leading-snug">
+                    {getShortProductName(product)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
         </div>
       )}
 
@@ -1010,51 +1110,18 @@ export default function HomePage() {
               </div>
 
               {selectedProducts.length > 0 && (
-                <div className="sticky top-2 z-20 mb-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-3 shadow-2xl backdrop-blur md:hidden">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-400">
-                      Selected
-                    </p>
-                    <span className="rounded-full border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300">
-                      {selectedProducts.length}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {selectedProducts.map((product) => (
-                      <article
-                        key={product.id}
-                        className="relative min-w-36 rounded-xl border border-neutral-800 bg-neutral-900 p-2"
-                      >
-                        <ProductImage
-                          product={product}
-                          className="h-16 w-full rounded-lg object-cover"
-                          placeholderClassName="h-16 w-full"
-                        />
-                        <button
-                          type="button"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={(event) => {
-                            event.currentTarget.blur();
-                            setSelectedProductIds((current) =>
-                              current.filter((id) => id !== product.id)
-                            );
-                          }}
-                          aria-label={`Deselect ${getShortProductName(product)}`}
-                          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-950/80 px-1.5 py-0.5 text-[10px] text-white"
-                        >
-                          X
-                        </button>
-                        <p className="mt-2 line-clamp-2 text-xs font-semibold leading-snug">
-                          {getShortProductName(product)}
-                        </p>
-                        <p className="mt-0.5 text-[10px] text-neutral-500">
-                          {getCategoryLabel(product.category)}
-                        </p>
-                      </article>
-                    ))}
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSelectedProductsSheetOpen(true)}
+                  className="sticky top-2 z-20 mb-3 flex w-full max-w-full touch-manipulation items-center justify-between gap-3 rounded-full border border-neutral-700 bg-neutral-950/95 px-4 py-3 text-left shadow-2xl backdrop-blur md:hidden"
+                >
+                  <span className="min-w-0 text-sm font-semibold text-white">
+                    {selectedProducts.length} products selected
+                  </span>
+                  <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-black">
+                    View
+                  </span>
+                </button>
               )}
 
               <div className="grid gap-3">
@@ -1119,7 +1186,7 @@ export default function HomePage() {
                                   type="button"
                                   tabIndex={isOpen ? 0 : -1}
                                   aria-pressed={isSelected}
-                                  className={`relative flex min-h-44 flex-col gap-2 rounded-xl border p-2 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                                  className={`relative flex min-h-44 touch-manipulation flex-col gap-2 rounded-xl border p-2 text-left transition-all duration-200 hover:-translate-y-0.5 ${
                                     isSelected
                                       ? "border-white bg-neutral-800 ring-1 ring-white"
                                       : "border-neutral-700 bg-neutral-950 hover:border-neutral-500 hover:bg-neutral-900"
@@ -1328,7 +1395,7 @@ export default function HomePage() {
                                         toggleRefinementProduct(p.id)
                                       }}
                                       aria-pressed={isSelected}
-                                      className={`relative flex min-h-44 flex-col gap-2 rounded-xl border p-2 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                                      className={`relative flex min-h-44 touch-manipulation flex-col gap-2 rounded-xl border p-2 text-left transition-all duration-200 hover:-translate-y-0.5 ${
                                         isSelected
                                           ? "border-white bg-neutral-800 ring-1 ring-white"
                                           : "border-neutral-700 bg-neutral-950 hover:border-neutral-500 hover:bg-neutral-900"
