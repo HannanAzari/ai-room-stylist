@@ -21,14 +21,11 @@ const SHARE_MESSAGE =
   "I created a luxury room concept with AI Room Stylist. Full-room package preview coming soon.";
 const HEIC_UPLOAD_ERROR =
   "This iPhone photo format is not supported yet. Please convert to JPG or select a JPG/PNG image.";
+const HEIC_CONVERSION_ERROR =
+  "This iPhone photo could not be converted. Please export as JPG or choose another image.";
 const UNSUPPORTED_UPLOAD_ERROR =
   "Please upload a JPG, PNG, or WebP room photo.";
-const supportedRoomPhotoTypes = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
+const supportedRoomPhotoTypes = ["image/jpeg", "image/png", "image/webp"];
 const supportedRoomPhotoExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 const heicRoomPhotoTypes = ["image/heic", "image/heif"];
 const heicRoomPhotoExtensions = [".heic", ".heif"];
@@ -204,14 +201,12 @@ function isHeicRoomPhoto(file: File) {
   );
 }
 
-function isSupportedRoomPhoto(file: File) {
-  const fileType = file.type.toLowerCase();
-  const fileExtension = getFileExtension(file.name);
+function hasSupportedRoomPhotoType(file: File) {
+  return supportedRoomPhotoTypes.includes(file.type.toLowerCase());
+}
 
-  return (
-    supportedRoomPhotoTypes.includes(fileType) ||
-    (!fileType && supportedRoomPhotoExtensions.includes(fileExtension))
-  );
+function hasSupportedRoomPhotoExtension(file: File) {
+  return supportedRoomPhotoExtensions.includes(getFileExtension(file.name));
 }
 
 function getRoomPhotoValidationError(file: File): string | null {
@@ -219,7 +214,7 @@ function getRoomPhotoValidationError(file: File): string | null {
     return HEIC_UPLOAD_ERROR;
   }
 
-  if (isSupportedRoomPhoto(file)) {
+  if (hasSupportedRoomPhotoType(file)) {
     return null;
   }
 
@@ -316,6 +311,30 @@ async function convertRoomPhotoToJpeg(file: File) {
     cleanupImageSource();
     URL.revokeObjectURL(sourceUrl);
   }
+}
+
+async function normalizeRoomPhoto(file: File) {
+  if (isHeicRoomPhoto(file)) {
+    try {
+      return await convertRoomPhotoToJpeg(file);
+    } catch {
+      throw new Error(HEIC_CONVERSION_ERROR);
+    }
+  }
+
+  if (hasSupportedRoomPhotoType(file)) {
+    return file;
+  }
+
+  if (hasSupportedRoomPhotoExtension(file)) {
+    try {
+      return await convertRoomPhotoToJpeg(file);
+    } catch {
+      throw new Error(UNSUPPORTED_UPLOAD_ERROR);
+    }
+  }
+
+  throw new Error(UNSUPPORTED_UPLOAD_ERROR);
 }
 
 function ProductImage({
@@ -664,32 +683,20 @@ export default function HomePage() {
       return;
     }
 
-    if (isHeicRoomPhoto(file)) {
-      try {
-        const convertedFile = await convertRoomPhotoToJpeg(file);
+    try {
+      const normalizedFile = await normalizeRoomPhoto(file);
 
-        setImage(convertedFile);
-        setPreviewUrl(URL.createObjectURL(convertedFile));
-      } catch {
-        setImage(null);
-        setPreviewUrl("");
-        setError(HEIC_UPLOAD_ERROR);
-      }
-
-      return;
-    }
-
-    const validationError = getRoomPhotoValidationError(file);
-
-    if (validationError) {
+      setImage(normalizedFile);
+      setPreviewUrl(URL.createObjectURL(normalizedFile));
+    } catch (normalizationError) {
       setImage(null);
       setPreviewUrl("");
-      setError(validationError);
-      return;
+      setError(
+        normalizationError instanceof Error
+          ? normalizationError.message
+          : UNSUPPORTED_UPLOAD_ERROR
+      );
     }
-
-    setImage(file);
-    setPreviewUrl(URL.createObjectURL(file));
   }
 
   async function handleGenerate() {
@@ -938,8 +945,8 @@ export default function HomePage() {
                     type="button"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={(event) => {
+                      event.stopPropagation();
                       event.currentTarget.blur();
-                      setIsSelectedProductsSheetOpen(false);
                       setSelectedProductIds((current) =>
                         current.filter((id) => id !== product.id)
                       );
@@ -955,6 +962,14 @@ export default function HomePage() {
                 </article>
               ))}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsSelectedProductsSheetOpen(false)}
+              className="mt-4 w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-black"
+            >
+              Done
+            </button>
           </section>
         </div>
       )}
