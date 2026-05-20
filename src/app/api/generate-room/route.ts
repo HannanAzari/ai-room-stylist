@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
-import { getProductsByIds, getProductsForStyle } from "@/lib/products";
+import {
+  getPrimaryProductImageUrl,
+  getProductsByIds,
+  getProductsForStyle,
+} from "@/lib/products";
 import { buildRoomPrompt } from "@/lib/prompts";
 import { readFile } from "fs/promises";
 
@@ -37,13 +41,19 @@ export async function POST(req: Request) {
 
     const productImageFiles = await Promise.all(
       products
-        .filter((p) => p.imageUrl)
+        .map((product) => ({
+          product,
+          imageUrl: getPrimaryProductImageUrl(product),
+        }))
+        .filter((item): item is { product: typeof item.product; imageUrl: string } =>
+          Boolean(item.imageUrl)
+        )
         .slice(0, 3)
-        .map(async (p) => {
-          const imagePath = `${process.cwd()}/public${p.imageUrl}`;
+        .map(async ({ product, imageUrl }) => {
+          const imagePath = `${process.cwd()}/public${imageUrl}`;
           const fileBuffer = await readFile(imagePath);
 
-          return new File([fileBuffer], `${p.id}.jpg`, {
+          return new File([fileBuffer], `${product.id}.jpg`, {
             type: "image/jpeg",
           });
         })

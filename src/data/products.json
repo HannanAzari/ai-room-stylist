@@ -1,74 +1,1072 @@
 [
   {
-    "id": "sofa-001",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/sofa-001.jpg"
+    "id": "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+    "name": "Archie Cream Wooden Oval Bedside Table With White Sintered Stone Top",
+    "category": "bed-sides",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "cream",
+      "white",
+      "stone"
+    ],
+    "materials": [
+      "wood",
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/bed-sides/archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top/main.jpg"
+    ],
+    "url": ""
   },
-    {
-    "id": "sofa-002",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/sofa-002.jpg"
+  {
+    "id": "costanza-mocha-walnut-brown-wooden-dresser",
+    "name": "Costanza Mocha Walnut Brown Wooden Dresser",
+    "category": "bed-sides",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "brown",
+      "walnut",
+      "tan",
+      "mocha"
+    ],
+    "materials": [
+      "wood"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/bed-sides/costanza-mocha-walnut-brown-wooden-dresser/main.jpg"
+    ],
+    "url": ""
   },
-    {
-    "id": "table-001",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/table-001.jpg"
+  {
+    "id": "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+    "name": "Sir Lionell Gliding White Sintered Stone Dresser Walnut Brown Wooden Leg",
+    "category": "bed-sides",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "brown",
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "wood",
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/bed-sides/sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg/main.jpg"
+    ],
+    "url": ""
   },
-    {
-    "id": "table-002",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/table-002.jpg"
+  {
+    "id": "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+    "name": "Estelle Velvet Mustard Velveteen Fabric Queen Bed",
+    "category": "beds",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "mustard"
+    ],
+    "materials": [
+      "fabric",
+      "velvet"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/beds/estelle-velvet-mustard-velveteen-fabric-queen-bed/main.jpg"
+    ],
+    "url": ""
   },
-    {
-    "id": "light-001",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/light-001.jpg"
+  {
+    "id": "martina-soft-beige-vegan-leather-queen-bed",
+    "name": "Martina Soft Beige Vegan Leather Queen Bed",
+    "category": "beds",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/beds/martina-soft-beige-vegan-leather-queen-bed/main.jpg"
+    ],
+    "url": ""
   },
-    {
-    "id": "light-002",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/light-002.jpg"
+  {
+    "id": "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+    "name": "Ophelia Mid Beige Fabric Queen Bed With Smoky Walnut Bed Frame",
+    "category": "beds",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "walnut"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/beds/ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame/main.jpg"
+    ],
+    "url": ""
   },
-    {
-    "id": "chair-001",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/chair-001.jpg"
+  {
+    "id": "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+    "name": "Summerton Stone White Fabric Queen Bed Toffee Brown Ash",
+    "category": "beds",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "brown",
+      "stone",
+      "toffee"
+    ],
+    "materials": [
+      "fabric",
+      "ash"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/beds/summerton-stone-white-fabric-queen-bed-toffee-brown-ash/main.jpg"
+    ],
+    "url": ""
   },
-    {
-    "id": "chair-002",
-    "name": "Aurelia Curved Sofa",
-    "category": "sofa",
-    "styleTags": ["modern luxury", "warm neutral"],
-    "price": 3499,
-    "url": "https://koalaliving.com.au",
-    "imageUrl": "/products/chair-002.jpg"
+  {
+    "id": "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+    "name": "Ballina Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs",
+    "category": "chairs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "brown",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/chairs/ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+    "name": "Gloria Sand Beige Vegan Leather Dining Chair Smoky Ash Legs",
+    "category": "chairs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/chairs/gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+    "name": "Maggie Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs",
+    "category": "chairs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "brown",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/chairs/maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+    "name": "Romina Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs",
+    "category": "chairs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "brown",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/chairs/romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+    "name": "Aspen White Sintered Stone Coffee Table Matte Black Legs",
+    "category": "coffee-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "black",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+    "name": "San Pierre Walnut Veneer Low Round Coffee Table With Travertine Finish Sintered Stone Top",
+    "category": "coffee-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "travertine",
+      "veneer",
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+    "name": "Sir Lionell Gliding White Sintered Stone Coffee Table Walnut Brown Wooden Legs",
+    "category": "coffee-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "brown",
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "wood",
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/coffee-tables/sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm",
+    "name": "Terra Linea Light Brown Ash Veneer High Triangular Coffee Table 90cm",
+    "category": "coffee-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "brown"
+    ],
+    "materials": [
+      "ash",
+      "veneer"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/coffee-tables/terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "thames-calacatta-oro-white-sintered-stone-square-coffee-table",
+    "name": "Thames Calacatta Oro White Sintered Stone Square Coffee Table",
+    "category": "coffee-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/coffee-tables/thames-calacatta-oro-white-sintered-stone-square-coffee-table/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top",
+    "name": "Vania Brushed Bronze Coffee Table With Statuario White Sintered Stone Top",
+    "category": "coffee-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "stone",
+      "bronze"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/coffee-tables/vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "crimson-silence-painting-180x180cm",
+    "name": "Crimson Silence Painting 180x180cm",
+    "category": "decor",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/decor/crimson-silence-painting-180x180cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "millaray-iii-antique-gold-arch-mirror-120-cm",
+    "name": "Millaray Iii Antique Gold Arch Mirror 120 Cm",
+    "category": "decor",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "gold"
+    ],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "millaray-iii-antique-gold-round-mirror",
+    "name": "Millaray Iii Antique Gold Round Mirror",
+    "category": "decor",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "gold"
+    ],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/decor/millaray-iii-antique-gold-round-mirror/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "muted-vermilion-painting-80x120cm",
+    "name": "Muted Vermilion Painting 80x120cm",
+    "category": "decor",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/decor/muted-vermilion-painting-80x120cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "ochre-memory-painting-180x180cm",
+    "name": "Ochre Memory Painting 180x180cm",
+    "category": "decor",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/decor/ochre-memory-painting-180x180cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "rust-on-pulse-painting-230x140cm",
+    "name": "Rust On Pulse Painting 230x140cm",
+    "category": "decor",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/decor/rust-on-pulse-painting-230x140cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "static-trace-painting-120x200cm",
+    "name": "Static Trace Painting 120x200cm",
+    "category": "decor",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/decor/static-trace-painting-120x200cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+    "name": "Grayson Black Rectangular Dining Table With Statuario White Sintered Stone Top 240x105cm",
+    "category": "dining-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "black",
+      "gray",
+      "tan",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/dining-tables/grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "ophelia-ii-smoky-walnut-veneer-curved-dining-table",
+    "name": "Ophelia Ii Smoky Walnut Veneer Curved Dining Table",
+    "category": "dining-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "walnut"
+    ],
+    "materials": [
+      "veneer"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/dining-tables/ophelia-ii-smoky-walnut-veneer-curved-dining-table/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "sierra-walnut-brown-dining-table-wooden-top-240x120cm",
+    "name": "Sierra Walnut Brown Dining Table Wooden Top 240x120cm",
+    "category": "dining-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "brown",
+      "walnut"
+    ],
+    "materials": [
+      "wood"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/dining-tables/sierra-walnut-brown-dining-table-wooden-top-240x120cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm",
+    "name": "Terra Linea Amber Brown Ash Veneer Two Triangular Leg Rectangular Dining Table 240cm X 120cm",
+    "category": "dining-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "brown",
+      "tan",
+      "amber"
+    ],
+    "materials": [
+      "ash",
+      "veneer"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/dining-tables/terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm",
+    "name": "Terra Linea Light Brown Ash Veneer Single Leg Rectangular Dining Table 240cm X 120cm",
+    "category": "dining-tables",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "brown",
+      "tan"
+    ],
+    "materials": [
+      "ash",
+      "veneer"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/dining-tables/terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "alina-wooden-metal-floor-lamp",
+    "name": "Alina Wooden Metal Floor Lamp",
+    "category": "lighting",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [
+      "metal",
+      "wood"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/lighting/alina-wooden-metal-floor-lamp/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "emmeline-chandelier",
+    "name": "Emmeline Chandelier",
+    "category": "lighting",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/lighting/emmeline-chandelier/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "lunara-chandelier",
+    "name": "Lunara Chandelier",
+    "category": "lighting",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/lighting/lunara-chandelier/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "margo-cocoa-brown-wooden-floor-lamp",
+    "name": "Margo Cocoa Brown Wooden Floor Lamp",
+    "category": "lighting",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "brown"
+    ],
+    "materials": [
+      "wood"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/lighting/margo-cocoa-brown-wooden-floor-lamp/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "solene-chandelier-amber-glass",
+    "name": "Solene Chandelier Amber Glass",
+    "category": "lighting",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "amber"
+    ],
+    "materials": [
+      "glass"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/lighting/solene-chandelier-amber-glass/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "arges-stone-green-floor-rug-large-250cm-x-350cm",
+    "name": "Arges Stone Green Floor Rug Large 250cm X 350cm",
+    "category": "rugs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "green",
+      "stone"
+    ],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "dixon-string-floor-rug-extra-large-300cm-x-350cm",
+    "name": "Dixon String Floor Rug Extra Large 300cm X 350cm",
+    "category": "rugs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/rugs/dixon-string-floor-rug-extra-large-300cm-x-350cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "estonia-ivory-beige-floor-rug-large-250cm-x-350cm",
+    "name": "Estonia Ivory Beige Floor Rug Large 250cm X 350cm",
+    "category": "rugs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "ivory"
+    ],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/rugs/estonia-ivory-beige-floor-rug-large-250cm-x-350cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "messina-nomad-floor-rug-medium-200cm-x-300cm",
+    "name": "Messina Nomad Floor Rug Medium 200cm X 300cm",
+    "category": "rugs",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [],
+    "price": null,
+    "imageUrls": [
+      "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform",
+    "name": "Bellagio Stone Cream Woven Fabric 3 Pieces Modular Sofa With Left Terminal And Side Platform",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "cream",
+      "stone"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "calma-pearl-beige-fabric-2-pieces-modular-sofa",
+    "name": "Calma Pearl Beige Fabric 2 Pieces Modular Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/calma-pearl-beige-fabric-2-pieces-modular-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "celia-mid-beige-2-seater-woven-fabric-sofa",
+    "name": "Celia Mid Beige 2 Seater Woven Fabric Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/celia-mid-beige-2-seater-woven-fabric-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "elva-green-pastel-nubuck-leather-3-seater-sofa",
+    "name": "Elva Green Pastel Nubuck Leather 3 Seater Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "green"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/elva-green-pastel-nubuck-leather-3-seater-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "gabriella-mid-beige-3-seater-woven-fabric-sofa",
+    "name": "Gabriella Mid Beige 3 Seater Woven Fabric Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/gabriella-mid-beige-3-seater-woven-fabric-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "gabriella-vintage-mustard-3-seater-woven-fabric-sofa",
+    "name": "Gabriella Vintage Mustard 3 Seater Woven Fabric Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "mustard"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/gabriella-vintage-mustard-3-seater-woven-fabric-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs",
+    "name": "Kelly Pearl Beige Fabric 3 Seater Sofa Champagne Gold Legs",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "gold",
+      "champagne"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "kensley-almond-cream-leather-2-seater-dual-electric-recliner",
+    "name": "Kensley Almond Cream Leather 2 Seater Dual Electric Recliner",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "cream",
+      "almond"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/kensley-almond-cream-leather-2-seater-dual-electric-recliner/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "lennox-almond-cream-leather-3-seater-sofa",
+    "name": "Lennox Almond Cream Leather 3 Seater Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "cream",
+      "almond"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa",
+    "name": "Marvie Champagne Beige Semi Aniline Leather 3 Pieces Modular Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "beige",
+      "champagne"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "pierce-shadow-white-woven-fabric-corner-electric-recliner",
+    "name": "Pierce Shadow White Woven Fabric Corner Electric Recliner",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/pierce-shadow-white-woven-fabric-corner-electric-recliner/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "portia-vintage-tan-leather-4-seater-sofa",
+    "name": "Portia Vintage Tan Leather 4 Seater Sofa",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "tan"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/portia-vintage-tan-leather-4-seater-sofa/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal",
+    "name": "Soluna Powder White Chenille Fabric 4 Pieces Modular Corner Sofa With Left And Right Terminal",
+    "category": "sofas",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white"
+    ],
+    "materials": [
+      "fabric",
+      "chenille"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/sofas/soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top",
+    "name": "Grayson Brushed Bronze Entertainment Unit With Statuario White Sintered Stone Top",
+    "category": "tv-units",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "white",
+      "gray",
+      "stone",
+      "bronze"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/tv-units/grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "jamil-ash-oak-veneer-entertainment-unit",
+    "name": "Jamil Ash Oak Veneer Entertainment Unit",
+    "category": "tv-units",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [],
+    "materials": [
+      "oak",
+      "ash",
+      "veneer"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+    "name": "Sierra Walnut Brown Entertainment Unit Sintered Stone Top",
+    "category": "tv-units",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "brown",
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/tv-units/sierra-walnut-brown-entertainment-unit-sintered-stone-top/main.jpg"
+    ],
+    "url": ""
+  },
+  {
+    "id": "tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit",
+    "name": "Tinsley Brushed Champagne Gold Stainless Steel Entertainment Unit",
+    "category": "tv-units",
+    "styleTags": [
+      "modern luxury"
+    ],
+    "colors": [
+      "gold",
+      "champagne"
+    ],
+    "materials": [
+      "stainless steel"
+    ],
+    "price": null,
+    "imageUrls": [
+      "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/main.jpg"
+    ],
+    "url": ""
   }
 ]

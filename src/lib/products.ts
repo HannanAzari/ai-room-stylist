@@ -5,9 +5,11 @@ export type Product = {
   name: string;
   category: string;
   styleTags: string[];
-  price: number;
+  colors: string[];
+  materials: string[];
+  price: number | null;
   url: string;
-  imageUrl: string;
+  imageUrls: string[];
 };
 
 export function getAllProducts(): Product[] {
@@ -24,4 +26,8 @@ export function getProductsForStyle(style: string): Product[] {
 
 export function getProductsByIds(ids: string[]): Product[] {
   return (products as Product[]).filter((p) => ids.includes(p.id));
+}
+
+export function getPrimaryProductImageUrl(product: Product): string | null {
+  return product.imageUrls?.[0] || null;
 }
