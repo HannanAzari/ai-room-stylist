@@ -9,7 +9,8 @@ export type Product = {
   materials: string[];
   price: number | null;
   url: string;
-  imageUrls: string[];
+  imageUrls?: string[];
+  imageUrl?: string;
 };
 
 export function getAllProducts(): Product[] {
@@ -29,5 +30,10 @@ export function getProductsByIds(ids: string[]): Product[] {
 }
 
 export function getPrimaryProductImageUrl(product: Product): string | null {
-  return product.imageUrls?.[0] || null;
+  const imageFromList = product.imageUrls
+    ?.map((imageUrl) => imageUrl.trim())
+    .find(Boolean);
+  const legacyImage = product.imageUrl?.trim();
+
+  return imageFromList || legacyImage || null;
 }

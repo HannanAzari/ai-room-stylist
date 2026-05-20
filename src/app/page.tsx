@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import allProducts from "@/data/products.json";
 import { trackEvent } from "@/lib/analytics";
-import type { Product } from "@/lib/products";
+import { getPrimaryProductImageUrl, type Product } from "@/lib/products";
 
 const styles = [
   "modern luxury",
@@ -37,46 +38,78 @@ const refineQuickPrompts = [
   "Make it more minimal",
   "Improve lighting",
 ];
-const productCategories = [
-  { id: "sofa", label: "Sofas" },
-  { id: "coffee_table", label: "Coffee tables" },
-  { id: "chair", label: "Chairs" },
-  { id: "lighting", label: "Lighting" },
-  { id: "decor", label: "Decor" },
-  { id: "dining_table", label: "Dining tables" },
-] as const;
-
-type ProductCategory = (typeof productCategories)[number]["id"];
-
-const productCategoryLabels: Record<ProductCategory, string> =
-  productCategories.reduce(
-    (labels, category) => ({
-      ...labels,
-      [category.id]: category.label,
-    }),
-    {} as Record<ProductCategory, string>
-  );
+const preferredCategoryOrder = [
+  "sofas",
+  "coffee-tables",
+  "dining-tables",
+  "chairs",
+  "lighting",
+  "decor",
+  "rugs",
+];
 const productList = allProducts as Product[];
-const productsByCategory = productCategories
-  .map((category) => ({
-    ...category,
-    products: productList.filter((product) => product.category === category.id),
+const productCategoryIds = Array.from(
+  new Set(productList.map((product) => product.category).filter(Boolean))
+).sort((a, b) => {
+  const aIndex = preferredCategoryOrder.indexOf(a);
+  const bIndex = preferredCategoryOrder.indexOf(b);
+
+  if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+  if (aIndex !== -1) return -1;
+  if (bIndex !== -1) return 1;
+
+  return a.localeCompare(b);
+});
+const productsByCategory = productCategoryIds
+  .map((categoryId) => ({
+    id: categoryId,
+    label: categoryId,
+    products: productList.filter((product) => product.category === categoryId),
   }))
   .filter((category) => category.products.length > 0);
 
 function getCategoryLabel(category: string) {
-  return (
-    productCategoryLabels[category as ProductCategory] ||
-    category.replaceAll("_", " ")
-  );
+  return category;
 }
 
-function getProductImageUrl(product: Product) {
-  return product.imageUrls?.[0] || "";
+function getProductImageUrl(product: Product): string | null {
+  return getPrimaryProductImageUrl(product);
 }
 
 function formatPrice(price: Product["price"]) {
   return typeof price === "number" ? `$${price.toLocaleString()}` : "Price on request";
+}
+
+function ProductImage({
+  product,
+  className,
+  placeholderClassName,
+}: {
+  product: Product;
+  className: string;
+  placeholderClassName: string;
+}) {
+  const imageUrl = getProductImageUrl(product);
+
+  if (!imageUrl) {
+    return (
+      <div
+        className={`flex items-center justify-center rounded-lg border border-dashed border-neutral-700 bg-neutral-950 text-xs text-neutral-500 ${placeholderClassName}`}
+      >
+        No image
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={imageUrl}
+      alt={product.name}
+      width={320}
+      height={240}
+      className={className}
+    />
+  );
 }
 
 export default function HomePage() {
@@ -98,9 +131,7 @@ export default function HomePage() {
   const [demoMessage, setDemoMessage] = useState("");
   const [generateProgressIndex, setGenerateProgressIndex] = useState(0);
   const [refineProgressIndex, setRefineProgressIndex] = useState(0);
-  const [openProductCategoryIds, setOpenProductCategoryIds] = useState<string[]>(
-    productsByCategory.map((category) => category.id)
-  );
+  const [openProductCategoryIds, setOpenProductCategoryIds] = useState<string[]>([]);
   const demoMessageTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -214,6 +245,15 @@ export default function HomePage() {
         ? current.filter((id) => id !== categoryId)
         : [...current, categoryId]
     );
+  }
+
+  function clearGeneratedConcepts() {
+    localStorage.removeItem(CACHE_KEY);
+    setGeneratedImages([]);
+    setProducts([]);
+    setSelectedConcept(null);
+    setChangeRequest("");
+    setSelectedRefinementProductIds([]);
   }
 
   function downloadGeneratedImage(imageBase64: string, index: number) {
@@ -576,13 +616,11 @@ export default function HomePage() {
                                   : "border-neutral-700 bg-neutral-950 hover:bg-neutral-800"
                               }`}
                             >
-                              {getProductImageUrl(p) && (
-                                <img
-                                  src={getProductImageUrl(p) || undefined}
-                                  alt={p.name}
-                                  className="h-48 w-full rounded-lg object-cover"
-                                />
-                              )}
+                              <ProductImage
+                                product={p}
+                                className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                                placeholderClassName="h-16 w-16 shrink-0"
+                              />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-2">
                                   <p className="text-sm font-semibold">
@@ -627,14 +665,7 @@ export default function HomePage() {
             )}
 
             <button
-              onClick={() => {
-                localStorage.removeItem(CACHE_KEY);
-                setGeneratedImages([]);
-                setProducts([]);
-                setSelectedConcept(null);
-                setChangeRequest("");
-                setSelectedRefinementProductIds([]);
-              }}
+              onClick={clearGeneratedConcepts}
               className="mt-3 w-full rounded-xl border border-neutral-700 px-6 py-3 text-sm text-neutral-300 hover:bg-neutral-800"
             >
               Clear saved results
@@ -660,7 +691,17 @@ export default function HomePage() {
 
         {generatedImages.length > 0 && (
           <section className="mt-10">
-            <h2 className="mb-4 text-2xl font-semibold">Generated concepts</h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-semibold">Generated concepts</h2>
+              <button
+                type="button"
+                onClick={clearGeneratedConcepts}
+                aria-label="Clear generated concepts"
+                className="rounded-full border border-neutral-700 px-3 py-1 text-sm text-neutral-300 hover:bg-neutral-800"
+              >
+                X Clear concepts
+              </button>
+            </div>
             {selectedConcept !== null && (
               <section className="mt-10 rounded-2xl bg-neutral-900 p-6">
                 <h2 className="text-2xl font-semibold">Refine selected concept</h2>
@@ -728,10 +769,10 @@ export default function HomePage() {
                                     : "border-neutral-700 bg-neutral-950 hover:bg-neutral-800"
                                 }`}
                               >
-                                <img
-                                  src={getProductImageUrl(p)}
-                                  alt={p.name}
+                                <ProductImage
+                                  product={p}
                                   className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                                  placeholderClassName="h-12 w-12 shrink-0"
                                 />
                                 <div className="min-w-0 flex-1">
                                   <p className="text-xs font-semibold">
@@ -839,7 +880,7 @@ export default function HomePage() {
           </section>
         )}
 
-        {products.length > 0 && (
+        {generatedImages.length > 0 && products.length > 0 && (
           <section className="mt-10">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -867,10 +908,10 @@ export default function HomePage() {
                   className="rounded-xl bg-neutral-900 p-4"
                 >
                   <div className="relative mb-3">
-                    <img
-                      src={getProductImageUrl(p)}
-                      alt={p.name}
+                    <ProductImage
+                      product={p}
                       className="h-48 w-full rounded-lg object-cover"
+                      placeholderClassName="h-48 w-full"
                     />
                     <button
                       type="button"
