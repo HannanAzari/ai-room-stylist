@@ -576,11 +576,13 @@ export default function HomePage() {
                                   : "border-neutral-700 bg-neutral-950 hover:bg-neutral-800"
                               }`}
                             >
-                              <img
-                                src={getProductImageUrl(p)}
-                                alt={p.name}
-                                className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                              />
+                              {getProductImageUrl(p) && (
+                                <img
+                                  src={getProductImageUrl(p) || undefined}
+                                  alt={p.name}
+                                  className="h-48 w-full rounded-lg object-cover"
+                                />
+                              )}
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-2">
                                   <p className="text-sm font-semibold">
