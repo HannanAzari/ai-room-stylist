@@ -1,0 +1,156 @@
+[
+  {
+    "id": "TKT-1001",
+    "customer": "Amelia R.",
+    "category": "delivery",
+    "product": "Lennox Cream Leather 3 Seater Sofa",
+    "status": "open",
+    "priority": "high",
+    "sentiment": "negative",
+    "summary": "Customer reports delayed delivery and no clear ETA after Sydney showroom purchase.",
+    "recommendedAction": "Escalate to logistics team and provide updated delivery window today."
+  },
+  {
+    "id": "TKT-1002",
+    "customer": "Daniel K.",
+    "category": "damage",
+    "product": "Romina Sand Beige Vegan Leather Dining Chair",
+    "status": "open",
+    "priority": "medium",
+    "sentiment": "negative",
+    "summary": "Customer received two dining chairs with visible scratches on front legs.",
+    "recommendedAction": "Check Sydney Store replacement stock and offer exchange or partial credit."
+  },
+  {
+    "id": "TKT-1003",
+    "customer": "Sarah M.",
+    "category": "availability",
+    "product": "Lunara Brass Glass Chandelier",
+    "status": "open",
+    "priority": "high",
+    "sentiment": "neutral",
+    "summary": "Customer wants to know when chandelier will be back in stock for Adelaide renovation.",
+    "recommendedAction": "Check inbound ETA and recommend alternative lighting options if delay exceeds 14 days."
+  },
+  {
+    "id": "TKT-1004",
+    "customer": "Nathan P.",
+    "category": "product advice",
+    "product": "Kensley Almond Cream Leather 2 Seater Recliner",
+    "status": "closed",
+    "priority": "low",
+    "sentiment": "positive",
+    "summary": "Customer asked whether recliner suits a compact apartment living room.",
+    "recommendedAction": "Suggest room measurement check and matching compact coffee table bundle."
+  },
+  {
+    "id": "TKT-1005",
+    "customer": "Priya S.",
+    "category": "delivery",
+    "product": "Montego Tan Leather Corner Lounge",
+    "status": "open",
+    "priority": "high",
+    "sentiment": "negative",
+    "summary": "Customer has guests arriving this weekend and corner lounge delivery is not booked.",
+    "recommendedAction": "Confirm Adelaide Store stock and offer priority delivery or substitute sofa."
+  },
+  {
+    "id": "TKT-1006",
+    "customer": "Michael T.",
+    "category": "availability",
+    "product": "Safira Sand Wool Blend Floor Rug",
+    "status": "open",
+    "priority": "medium",
+    "sentiment": "neutral",
+    "summary": "Customer wants rug held with sofa order but Sydney Store stock is nearly depleted.",
+    "recommendedAction": "Reserve available unit or suggest Estonia Ivory Beige Floor Rug as substitute."
+  },
+  {
+    "id": "TKT-1007",
+    "customer": "Olivia N.",
+    "category": "damage",
+    "product": "Castello White Marble Round Dining Table",
+    "status": "open",
+    "priority": "high",
+    "sentiment": "negative",
+    "summary": "Marble table arrived with chipped edge and customer is requesting urgent replacement.",
+    "recommendedAction": "Inspect Brisbane overstock position and authorise replacement from local store."
+  },
+  {
+    "id": "TKT-1008",
+    "customer": "James W.",
+    "category": "delivery",
+    "product": "Cassia Oatmeal Fabric Queen Bed Frame",
+    "status": "open",
+    "priority": "medium",
+    "sentiment": "negative",
+    "summary": "Bed frame delivery missed the agreed morning window and installation is rescheduled.",
+    "recommendedAction": "Coordinate with delivery partner and offer proactive communication plus fee waiver."
+  },
+  {
+    "id": "TKT-1009",
+    "customer": "Hannah C.",
+    "category": "product advice",
+    "product": "Ophelia Smoky Walnut Curved Dining Table",
+    "status": "closed",
+    "priority": "low",
+    "sentiment": "positive",
+    "summary": "Customer requested chair recommendations for an Ophelia dining table package.",
+    "recommendedAction": "Recommend Alba Ivory Boucle or Romina chairs depending on stock availability."
+  },
+  {
+    "id": "TKT-1010",
+    "customer": "Ethan L.",
+    "category": "availability",
+    "product": "Raven Black Ash Entertainment Unit",
+    "status": "open",
+    "priority": "medium",
+    "sentiment": "neutral",
+    "summary": "Customer wants Perth pickup but only two units remain and one may be floor stock.",
+    "recommendedAction": "Verify sellable stock and offer Aria White Oak Entertainment Unit if unavailable."
+  },
+  {
+    "id": "TKT-1011",
+    "customer": "Grace B.",
+    "category": "damage",
+    "product": "Mira Smoked Glass Pendant Light",
+    "status": "open",
+    "priority": "medium",
+    "sentiment": "negative",
+    "summary": "Pendant glass shade arrived cracked after interstate transfer.",
+    "recommendedAction": "Check spare shade availability and create claim with delivery partner."
+  },
+  {
+    "id": "TKT-1012",
+    "customer": "Leo F.",
+    "category": "delivery",
+    "product": "Verona Black Oak 240cm Dining Table",
+    "status": "closed",
+    "priority": "medium",
+    "sentiment": "positive",
+    "summary": "Customer requested a specific Saturday delivery window for dining table installation.",
+    "recommendedAction": "Confirm weekend delivery surcharge and note lift access requirements."
+  },
+  {
+    "id": "TKT-1013",
+    "customer": "Mia J.",
+    "category": "availability",
+    "product": "Alina Marble Base Table Lamp",
+    "status": "open",
+    "priority": "low",
+    "sentiment": "neutral",
+    "summary": "Customer wants two table lamps for bedroom package but Perth Store shows high stock only.",
+    "recommendedAction": "Offer transfer from Perth Store or suggest Orion Floor Lamp as alternative."
+  },
+  {
+    "id": "TKT-1014",
+    "customer": "Christopher Y.",
+    "category": "product advice",
+    "product": "Lorenzo Charcoal Velvet King Bed Frame",
+    "status": "open",
+    "priority": "low",
+    "sentiment": "positive",
+    "summary": "Customer asked whether charcoal bed frame can be paired with walnut bedroom furniture.",
+    "recommendedAction": "Suggest Arlo Walnut suite comparison and offer virtual styling appointment."
+  }
+]
