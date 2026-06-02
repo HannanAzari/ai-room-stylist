@@ -10,6 +10,9 @@ type Product = {
   styleTags: string[];
   colors: string[];
   materials: string[];
+  widthCm?: number | null;
+  depthCm?: number | null;
+  heightCm?: number | null;
   price?: number | null;
   imageUrls: string[];
   url: string;
@@ -278,6 +281,9 @@ async function scrapeProduct(browser: Awaited<ReturnType<typeof chromium.launch>
       styleTags: extractTags(allText, STYLE_WORDS),
       colors: extractTags(allText, COLOR_WORDS),
       materials: extractTags(allText, MATERIAL_WORDS),
+      widthCm: null,
+      depthCm: null,
+      heightCm: null,
       price,
       imageUrls: localImageUrls,
       url,

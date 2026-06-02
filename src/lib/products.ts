@@ -7,6 +7,9 @@ export type Product = {
   styleTags: string[];
   colors: string[];
   materials: string[];
+  widthCm?: number | null;
+  depthCm?: number | null;
+  heightCm?: number | null;
   price: number | null;
   url: string;
   imageUrls?: string[];

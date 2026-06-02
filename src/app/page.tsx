@@ -162,6 +162,12 @@ function getProductsFromIds(productIds: string[]): Product[] {
     .filter((product): product is Product => Boolean(product));
 }
 
+function hasPositiveMeasurement(value: string) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
 function mergeUniqueProducts(
   currentProducts: Product[],
   productsToAdd: Product[]
@@ -369,11 +375,71 @@ function ProductImage({
   );
 }
 
+function DesignConfidenceCard({
+  selectedProductCount,
+  hasRoomMeasurements,
+}: {
+  selectedProductCount: number;
+  hasRoomMeasurements: boolean;
+}) {
+  const productMatch = selectedProductCount > 0 ? "High" : "Medium";
+
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/80 p-5 shadow-xl">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.28em] text-neutral-500">
+            AI-estimated preview
+          </p>
+          <h3 className="mt-2 font-serif text-2xl font-semibold">
+            Design Confidence
+          </h3>
+        </div>
+        <span className="rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-300">
+          Demo score
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4">
+          <p className="text-xs text-neutral-500">Product match</p>
+          <p className="mt-2 text-lg font-semibold text-white">
+            {productMatch}
+          </p>
+        </div>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4">
+          <p className="text-xs text-neutral-500">Scale realism</p>
+          <p className="mt-2 text-lg font-semibold text-white">Good</p>
+        </div>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4">
+          <p className="text-xs text-neutral-500">Room fit</p>
+          <p className="mt-2 text-lg font-semibold text-white">Good</p>
+        </div>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4">
+          <p className="text-xs text-neutral-500">Selected products used</p>
+          <p className="mt-2 text-lg font-semibold text-white">
+            {selectedProductCount}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-4 text-sm text-neutral-400">
+        {hasRoomMeasurements
+          ? "Scale assisted by room dimensions."
+          : "Add room dimensions for better scale accuracy."}
+      </p>
+    </section>
+  );
+}
+
 export default function HomePage() {
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [style, setStyle] = useState(styles[0]);
   const [roomType, setRoomType] = useState(roomTypes[0]);
+  const [roomWidthM, setRoomWidthM] = useState("");
+  const [roomLengthM, setRoomLengthM] = useState("");
+  const [ceilingHeightM, setCeilingHeightM] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -400,6 +466,11 @@ export default function HomePage() {
     useState(false);
   const demoMessageTimeoutRef = useRef<number | null>(null);
   const selectedProducts = getProductsFromIds(selectedProductIds);
+  const hasRoomMeasurements = [
+    roomWidthM,
+    roomLengthM,
+    ceilingHeightM,
+  ].some(hasPositiveMeasurement);
   const lightboxImage =
     lightboxConceptIndex === null
       ? null
@@ -417,6 +488,11 @@ export default function HomePage() {
         setProducts(parsed.products || []);
         setStyle(parsed.style || styles[0]);
         setRoomType(parsed.roomType || roomTypes[0]);
+        setRoomWidthM(String(parsed.roomMeasurements?.roomWidthM || ""));
+        setRoomLengthM(String(parsed.roomMeasurements?.roomLengthM || ""));
+        setCeilingHeightM(
+          String(parsed.roomMeasurements?.ceilingHeightM || "")
+        );
       }, 0);
 
       return () => window.clearTimeout(timeout);
@@ -503,6 +579,11 @@ export default function HomePage() {
         products: nextProducts,
         style,
         roomType,
+        roomMeasurements: {
+          roomWidthM,
+          roomLengthM,
+          ceilingHeightM,
+        },
         createdAt: new Date().toISOString(),
       })
     );
@@ -724,6 +805,11 @@ export default function HomePage() {
       style,
       selectedProductIds,
       selectedProductCount: selectedProductIds.length,
+      roomMeasurements: {
+        roomWidthM: roomWidthM.trim() || null,
+        roomLengthM: roomLengthM.trim() || null,
+        ceilingHeightM: ceilingHeightM.trim() || null,
+      },
     });
 
     try {
@@ -731,6 +817,9 @@ export default function HomePage() {
       formData.append("image", image);
       formData.append("style", style);
       formData.append("roomType", roomType);
+      formData.append("roomWidthM", roomWidthM.trim());
+      formData.append("roomLengthM", roomLengthM.trim());
+      formData.append("ceilingHeightM", ceilingHeightM.trim());
       formData.append("selectedProductIds", JSON.stringify(selectedProductIds));
 
       const res = await fetch("/api/generate-room", {
@@ -757,6 +846,11 @@ export default function HomePage() {
         imageCount: data.images.length,
         productCount: data.products.length,
         productIds: data.products.map((product: Product) => product.id),
+        roomMeasurements: {
+          roomWidthM: roomWidthM.trim() || null,
+          roomLengthM: roomLengthM.trim() || null,
+          ceilingHeightM: ceilingHeightM.trim() || null,
+        },
       });
       saveResultCache(nextGeneratedImages, data.products);
     } catch {
@@ -1100,12 +1194,69 @@ export default function HomePage() {
             <select
               value={style}
               onChange={(e) => setStyle(e.target.value)}
-              className="mb-6 w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3"
+              className="mb-5 w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3"
             >
               {styles.map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
+
+            <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <h2 className="text-sm text-neutral-300">
+                    Room measurements
+                  </h2>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Optional — improves scale realism.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                <label className="block text-xs text-neutral-400">
+                  Room width in metres
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.1"
+                    value={roomWidthM}
+                    onChange={(event) => setRoomWidthM(event.target.value)}
+                    placeholder="e.g. 4.2"
+                    className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900 p-3 text-sm text-white outline-none focus:border-neutral-400"
+                  />
+                </label>
+
+                <label className="block text-xs text-neutral-400">
+                  Room length in metres
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.1"
+                    value={roomLengthM}
+                    onChange={(event) => setRoomLengthM(event.target.value)}
+                    placeholder="e.g. 5.8"
+                    className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900 p-3 text-sm text-white outline-none focus:border-neutral-400"
+                  />
+                </label>
+
+                <label className="block text-xs text-neutral-400">
+                  Ceiling height in metres
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.1"
+                    value={ceilingHeightM}
+                    onChange={(event) => setCeilingHeightM(event.target.value)}
+                    placeholder="e.g. 2.7"
+                    className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900 p-3 text-sm text-white outline-none focus:border-neutral-400"
+                  />
+                </label>
+              </div>
+            </section>
             <div className="mb-6">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-neutral-300">
@@ -1302,6 +1453,12 @@ export default function HomePage() {
                 X Clear concepts
               </button>
             </div>
+
+            <DesignConfidenceCard
+              selectedProductCount={selectedProductIds.length}
+              hasRoomMeasurements={hasRoomMeasurements}
+            />
+
             {selectedConcept !== null && (
               <section className="mt-10 rounded-2xl bg-neutral-900 p-6">
                 <h2 className="text-2xl font-semibold">Refine selected concept</h2>

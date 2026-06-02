@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
-import {
-  getPrimaryProductImageUrl,
-  getProductsByIds,
-  type Product,
-} from "@/lib/products";
-import { formatProductForPrompt } from "@/lib/prompts";
-import { readFile } from "fs/promises";
+import { getProductsByIds } from "@/lib/products";
+import { loadProductReferenceImageFiles } from "@/lib/product-image-references";
+import { buildScaleInstructions, formatProductForPrompt } from "@/lib/prompts";
 
 const MISSING_IMAGE_ERROR =
   "Missing selected concept image. Please choose a concept before refining.";
@@ -16,27 +12,12 @@ const INVALID_IMAGE_ERROR =
   "Invalid selected concept image. Please choose a generated concept and try again.";
 const OPENAI_INVALID_IMAGE_ERROR =
   "OpenAI invalid image file. Please try refining a newly generated concept.";
-const PRODUCT_IMAGE_TYPES_BY_EXTENSION = new Map([
-  [".jpg", "image/jpeg"],
-  [".jpeg", "image/jpeg"],
-  [".png", "image/png"],
-  [".webp", "image/webp"],
-]);
 const SUPPORTED_DATA_URL_PREFIX = /^data:image\/(?:png|jpeg);base64,/i;
 
 function devLog(message: string, details?: unknown) {
   if (process.env.NODE_ENV !== "development") return;
 
   console.log(message, details);
-}
-
-function getFileExtension(fileName: string) {
-  const cleanFileName = fileName.split(/[?#]/)[0];
-  const extensionIndex = cleanFileName.lastIndexOf(".");
-
-  return extensionIndex === -1
-    ? ""
-    : cleanFileName.slice(extensionIndex).toLowerCase();
 }
 
 function stripImageDataUrlPrefix(imageBase64: string) {
@@ -61,111 +42,6 @@ function base64ToImageBuffer(imageBase64: unknown) {
   const buffer = Buffer.from(cleanBase64, "base64");
 
   return buffer.length > 0 ? buffer : null;
-}
-
-function isProductImageBufferValid(buffer: Buffer, imageType: string) {
-  if (imageType === "image/jpeg") {
-    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  }
-
-  if (imageType === "image/png") {
-    return (
-      buffer[0] === 0x89 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x4e &&
-      buffer[3] === 0x47 &&
-      buffer[4] === 0x0d &&
-      buffer[5] === 0x0a &&
-      buffer[6] === 0x1a &&
-      buffer[7] === 0x0a
-    );
-  }
-
-  if (imageType === "image/webp") {
-    return (
-      buffer.toString("ascii", 0, 4) === "RIFF" &&
-      buffer.toString("ascii", 8, 12) === "WEBP"
-    );
-  }
-
-  return false;
-}
-
-async function loadProductImageFiles(products: Product[]) {
-  const productImageFiles: File[] = [];
-
-  for (const product of products.slice(0, 3)) {
-    const imageUrl = getPrimaryProductImageUrl(product)?.trim();
-
-    if (!imageUrl) {
-      devLog("[refine-room] skipped product image", {
-        productId: product.id,
-        reason: "missing image URL",
-      });
-      continue;
-    }
-
-    if (!imageUrl.startsWith("/")) {
-      devLog("[refine-room] skipped product image", {
-        productId: product.id,
-        imageUrl,
-        reason: "not a local public image path",
-      });
-      continue;
-    }
-
-    const imageExtension = getFileExtension(imageUrl);
-    const imageType = PRODUCT_IMAGE_TYPES_BY_EXTENSION.get(imageExtension);
-
-    if (!imageType) {
-      devLog("[refine-room] skipped product image", {
-        productId: product.id,
-        imageUrl,
-        reason: "unsupported product image type",
-      });
-      continue;
-    }
-
-    const imagePath = `${process.cwd()}/public${imageUrl.split(/[?#]/)[0]}`;
-
-    devLog("[refine-room] loading product image", {
-      productId: product.id,
-      imagePath,
-    });
-
-    try {
-      const fileBuffer = await readFile(imagePath);
-
-      if (!isProductImageBufferValid(fileBuffer, imageType)) {
-        devLog("[refine-room] skipped product image", {
-          productId: product.id,
-          imagePath,
-          reason: "image file signature did not match extension",
-        });
-        continue;
-      }
-
-      devLog("[refine-room] using product image", {
-        productId: product.id,
-        imagePath,
-        imageType,
-      });
-
-      productImageFiles.push(
-        new File([fileBuffer], `${product.id}${imageExtension}`, {
-          type: imageType,
-        })
-      );
-    } catch (error) {
-      devLog("[refine-room] skipped product image", {
-        productId: product.id,
-        imagePath,
-        reason: error instanceof Error ? error.message : "read failed",
-      });
-    }
-  }
-
-  return productImageFiles;
 }
 
 function getErrorText(error: unknown) {
@@ -264,7 +140,10 @@ export async function POST(req: Request) {
       .map((product, index) => `${index + 1}. ${formatProductForPrompt(product)}`)
       .join("\n\n");
 
-    const productImageFiles = await loadProductImageFiles(products);
+    const productImageFiles = await loadProductReferenceImageFiles(
+      products,
+      "[refine-room]"
+    );
 
     const prompt = `
 Refine this interior design concept based on the user request:
@@ -277,6 +156,7 @@ ${productList || "None"}
 Keep the same room perspective, architecture, lighting, and luxury furniture retail style.
 Only change what the user requested.
 If product references are provided, incorporate them naturally as swap or add-on furniture pieces.
+${buildScaleInstructions()}
 Keep it photorealistic.
 Do not add people.
 Do not add text or logos.

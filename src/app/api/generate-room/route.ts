@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import {
-  getPrimaryProductImageUrl,
   getProductsByIds,
   getProductsForStyle,
-  type Product,
 } from "@/lib/products";
-import { buildRoomPrompt } from "@/lib/prompts";
-import { readFile } from "fs/promises";
+import { loadProductReferenceImageFiles } from "@/lib/product-image-references";
+import { buildRoomPrompt, type RoomMeasurements } from "@/lib/prompts";
 
 const SUPPORTED_UPLOAD_TYPES = new Set([
   "image/jpeg",
@@ -23,12 +21,6 @@ const MISSING_ROOM_IMAGE_ERROR =
 const OPENAI_INVALID_IMAGE_ERROR =
   "OpenAI invalid image file. Please upload a clear JPG, PNG, or WebP room photo.";
 const HEIC_EXTENSIONS = [".heic", ".heif"];
-const PRODUCT_IMAGE_TYPES_BY_EXTENSION = new Map([
-  [".jpg", "image/jpeg"],
-  [".jpeg", "image/jpeg"],
-  [".png", "image/png"],
-  [".webp", "image/webp"],
-]);
 
 function getFileExtension(fileName: string) {
   const cleanFileName = fileName.split(/[?#]/)[0];
@@ -55,103 +47,22 @@ function parseSelectedProductIds(rawProductIds: string | null) {
     : [];
 }
 
-function isProductImageBufferValid(buffer: Buffer, imageType: string) {
-  if (imageType === "image/jpeg") {
-    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  }
+function parseOptionalPositiveNumber(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || value.trim() === "") return null;
 
-  if (imageType === "image/png") {
-    return (
-      buffer[0] === 0x89 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x4e &&
-      buffer[3] === 0x47 &&
-      buffer[4] === 0x0d &&
-      buffer[5] === 0x0a &&
-      buffer[6] === 0x1a &&
-      buffer[7] === 0x0a
-    );
-  }
+  const parsed = Number(value);
 
-  if (imageType === "image/webp") {
-    return (
-      buffer.toString("ascii", 0, 4) === "RIFF" &&
-      buffer.toString("ascii", 8, 12) === "WEBP"
-    );
-  }
-
-  return false;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-async function loadProductImageFiles(products: Product[]) {
-  const productImageFiles: File[] = [];
-
-  for (const product of products.slice(0, 3)) {
-    const imageUrl = getPrimaryProductImageUrl(product)?.trim();
-
-    if (!imageUrl) {
-      devLog("[generate-room] skipped product image", {
-        productId: product.id,
-        reason: "missing image URL",
-      });
-      continue;
-    }
-
-    if (!imageUrl.startsWith("/")) {
-      devLog("[generate-room] skipped product image", {
-        productId: product.id,
-        imageUrl,
-        reason: "not a local public image path",
-      });
-      continue;
-    }
-
-    const imageExtension = getFileExtension(imageUrl);
-    const imageType = PRODUCT_IMAGE_TYPES_BY_EXTENSION.get(imageExtension);
-
-    if (!imageType) {
-      devLog("[generate-room] skipped product image", {
-        productId: product.id,
-        imageUrl,
-        reason: "unsupported product image type",
-      });
-      continue;
-    }
-
-    const imagePath = `${process.cwd()}/public${imageUrl.split(/[?#]/)[0]}`;
-
-    devLog("[generate-room] loading product image", {
-      productId: product.id,
-      imagePath,
-    });
-
-    try {
-      const fileBuffer = await readFile(imagePath);
-
-      if (!isProductImageBufferValid(fileBuffer, imageType)) {
-        devLog("[generate-room] skipped product image", {
-          productId: product.id,
-          imagePath,
-          reason: "image file signature did not match extension",
-        });
-        continue;
-      }
-
-      productImageFiles.push(
-        new File([fileBuffer], `${product.id}${imageExtension}`, {
-          type: imageType,
-        })
-      );
-    } catch (error) {
-      devLog("[generate-room] skipped product image", {
-        productId: product.id,
-        imagePath,
-        reason: error instanceof Error ? error.message : "read failed",
-      });
-    }
-  }
-
-  return productImageFiles;
+function parseRoomMeasurements(formData: FormData): RoomMeasurements {
+  return {
+    widthM: parseOptionalPositiveNumber(formData.get("roomWidthM")),
+    lengthM: parseOptionalPositiveNumber(formData.get("roomLengthM")),
+    ceilingHeightM: parseOptionalPositiveNumber(
+      formData.get("ceilingHeightM")
+    ),
+  };
 }
 
 function getErrorText(error: unknown) {
@@ -189,6 +100,7 @@ export async function POST(req: Request) {
     const style = formData.get("style") as string | null;
     const roomType = formData.get("roomType") as string | null;
     const selectedProductIdsRaw = formData.get("selectedProductIds") as string | null;
+    const roomMeasurements = parseRoomMeasurements(formData);
 
     if (!(image instanceof File) || image.size === 0) {
       return NextResponse.json(
@@ -225,6 +137,7 @@ export async function POST(req: Request) {
     }
 
     devLog("[generate-room] selected product IDs", selectedProductIds);
+    devLog("[generate-room] room measurements", roomMeasurements);
 
     if (
       imageType === "image/heic" ||
@@ -253,9 +166,13 @@ export async function POST(req: Request) {
       style,
       roomType,
       products,
+      roomMeasurements,
     });
 
-    const productImageFiles = await loadProductImageFiles(products);
+    const productImageFiles = await loadProductReferenceImageFiles(
+      products,
+      "[generate-room]"
+    );
 
     const result = await openai.images.edit({
       model: "gpt-image-1",

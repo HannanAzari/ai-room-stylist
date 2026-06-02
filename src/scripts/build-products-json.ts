@@ -8,6 +8,9 @@ type Product = {
   styleTags: string[];
   colors: string[];
   materials: string[];
+  widthCm: number | null;
+  depthCm: number | null;
+  heightCm: number | null;
   price: null;
   imageUrls: string[];
   url: string;
@@ -80,6 +83,9 @@ async function main() {
         styleTags: ["modern luxury"],
         colors: extractTags(slugText, COLOR_WORDS),
         materials: extractTags(slugText, MATERIAL_WORDS),
+        widthCm: null,
+        depthCm: null,
+        heightCm: null,
         price: null,
         imageUrls,
         url: "",
