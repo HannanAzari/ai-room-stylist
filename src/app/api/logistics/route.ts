@@ -3,7 +3,7 @@ import {
   getLogistics,
   getLogisticsSummary,
   getLogisticsSignals,
-} from "@/lib/ops/logistics";
+} from "@/features/ops/services/logistics";
 
 export async function GET() {
   try {

@@ -1,4 +1,4 @@
-import shipments from "@/data/logistics.json";
+import shipments from "@/features/ops/data/logistics.json";
 
 export type LogisticsItem = {
   id: string;

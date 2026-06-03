@@ -1,4 +1,4 @@
-import inventory from "@/data/inventory.json";
+import inventory from "@/features/ops/data/inventory.json";
 
 export type InventoryItem = {
   sku: string;

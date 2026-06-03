@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOpsBrainSnapshot } from "@/lib/ops/brain";
+import { getOpsBrainSnapshot } from "@/features/ops/services/brain";
 
 export async function GET() {
   try {

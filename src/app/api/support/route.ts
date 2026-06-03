@@ -3,7 +3,7 @@ import {
   getSupportTickets,
   getSupportSummary,
   getSupportSignals,
-} from "@/lib/ops/support";
+} from "@/features/ops/services/support";
 
 export async function GET() {
   try {

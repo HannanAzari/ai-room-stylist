@@ -5,15 +5,15 @@ import {
   getRecommendations,
   searchInventory,
   getExecutiveSignals,
-} from "@/lib/ops/inventory";
+} from "@/features/ops/services/inventory";
 
 import {
   getOpsBrainSnapshot,
   getAgentExecutionPlan,
-} from "@/lib/ops/brain";
+} from "@/features/ops/services/brain";
 
-import { getSupportSignals } from "@/lib/ops/support";
-import { getLogisticsSignals } from "@/lib/ops/logistics";
+import { getSupportSignals } from "@/features/ops/services/support";
+import { getLogisticsSignals } from "@/features/ops/services/logistics";
 
 export async function GET() {
   try {

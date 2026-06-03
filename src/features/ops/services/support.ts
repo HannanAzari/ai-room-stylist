@@ -1,4 +1,4 @@
-import tickets from "@/data/support-tickets.json";
+import tickets from "@/features/ops/data/support-tickets.json";
 
 export type SupportTicket = {
   id: string;

@@ -6,7 +6,7 @@ import {
   getSalesOpportunities,
   getMarketingCampaigns,
   getExecutiveSignals,
-} from "@/lib/ops/inventory";
+} from "@/features/ops/services/inventory";
 
 export async function GET() {
   try {
