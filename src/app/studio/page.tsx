@@ -1,11 +1,5 @@
-import { StudioPilotBadge } from "@/components/studio/StudioPilotBadge";
-import { RoomStylistApp } from "@/features/room-stylist/components/RoomStylistApp";
+import { KoalaDesignStudio } from "@/components/studio/KoalaDesignStudio";
 
 export default function StudioPage() {
-  return (
-    <>
-      <StudioPilotBadge />
-      <RoomStylistApp mode="studio" />
-    </>
-  );
+  return <KoalaDesignStudio />;
 }
