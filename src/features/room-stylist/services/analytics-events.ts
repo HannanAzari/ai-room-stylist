@@ -161,6 +161,73 @@ export function trackQuoteRequested({
   });
 }
 
+export function trackRoomSummaryViewed({
+  roomType,
+  style,
+  productCount,
+  budgetBasis,
+}: {
+  roomType: string;
+  style: string;
+  productCount: number;
+  budgetBasis: "prices" | "estimate";
+}) {
+  trackEvent("room_summary_viewed", {
+    roomType,
+    style,
+    productCount,
+    budgetBasis,
+  });
+}
+
+export function trackRecommendationAdded(product: Product) {
+  trackEvent("recommendation_added", {
+    productId: product.id,
+    productName: product.name,
+    category: product.category,
+  });
+}
+
+export function trackRecommendationRemoved(product: Product) {
+  trackEvent("recommendation_removed", {
+    productId: product.id,
+    productName: product.name,
+    category: product.category,
+  });
+}
+
+export function trackQuoteOpened({
+  productCount,
+  hasPricing,
+}: {
+  productCount: number;
+  hasPricing: boolean;
+}) {
+  trackEvent("quote_opened", {
+    productCount,
+    hasPricing,
+  });
+}
+
+export function trackQuoteSubmitted({
+  productCount,
+  recommendationCount,
+  hasPricing,
+  packageTotal,
+}: {
+  productCount: number;
+  recommendationCount: number;
+  hasPricing: boolean;
+  packageTotal: number | null;
+}) {
+  trackEvent("quote_submitted", {
+    productCount,
+    recommendationCount,
+    hasPricing,
+    packageTotal,
+  });
+}
+
 export function trackGeneratedProviderCount(concepts: GeneratedConcept[]) {
   trackEvent("generated_provider_count", {
     providerCount: concepts.length,

@@ -31,13 +31,25 @@ import {
   trackGenerateCompleted,
   trackGenerateStarted,
   trackGeneratedProviderCount,
+  trackQuoteOpened,
   trackQuoteRequested,
+  trackQuoteSubmitted,
+  trackRecommendationAdded,
+  trackRecommendationRemoved,
   trackRefineCompleted,
   trackRefineStarted,
   trackResultProviderSwiped,
   trackResultProviderViewed,
+  trackRoomSummaryViewed,
   trackShareClicked,
 } from "@/features/room-stylist/services/analytics-events";
+import {
+  buildDesignRationale,
+  buildRoomSummary,
+  estimateFurnishingBudget,
+  recommendMissingCategoryProducts,
+  type RoomSummary,
+} from "@/features/room-stylist/services/room-consultant";
 import { normalizeGeneratedConcepts } from "@/features/room-stylist/services/generated-concepts";
 import type {
   GeneratedConcept,
@@ -682,6 +694,227 @@ function PackageSummary({ pricing }: { pricing: PackagePricing }) {
   );
 }
 
+function ProductRow({
+  product,
+  action,
+  addedBadge = false,
+}: {
+  product: Product;
+  action?: React.ReactNode;
+  addedBadge?: boolean;
+}) {
+  const productUrl = getProductUrl(product);
+
+  return (
+    <article className="flex min-h-32 gap-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-3">
+      <ProductImage
+        product={product}
+        className="h-20 w-20 shrink-0 rounded-xl object-cover"
+        placeholderClassName="h-20 w-20 shrink-0 rounded-xl"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="line-clamp-2 text-sm font-semibold">{product.name}</p>
+          {addedBadge && (
+            <span className="shrink-0 rounded-full border border-[#F4C430]/40 bg-[#F4C430]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#F4C430]">
+              Added
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+          {getCategoryLabel(product.category)}
+        </p>
+        <p className="mt-1 text-xs text-[#9C9C94]">
+          {formatPrice(product.price)}
+        </p>
+        <div className="mt-2 flex gap-2">
+          {action ??
+            (productUrl ? (
+              <a
+                href={productUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackAddToCartClicked(product)}
+                className="rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs font-semibold text-[#050505]"
+              >
+                View product
+              </a>
+            ) : (
+              <span className="rounded-xl border border-[rgba(255,255,255,0.12)] px-3 py-1 text-xs text-[#9C9C94]">
+                Available in store
+              </span>
+            ))}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function RoomSummaryCard({ summary }: { summary: RoomSummary }) {
+  const { budget } = summary;
+  const budgetLabel =
+    budget.min === budget.max
+      ? formatMoney(budget.min)
+      : `${formatMoney(budget.min)} – ${formatMoney(budget.max)}`;
+
+  return (
+    <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
+      <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
+        Recommended direction
+      </p>
+      <h2 className="mt-2 font-serif text-2xl">Your room, considered</h2>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+            Room
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#F7F7F2]">
+            {summary.roomTypeLabel}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+            Style
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#F7F7F2]">
+            {summary.styleLabel}
+          </p>
+        </div>
+        <div className="col-span-2 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+            Room mood
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#F7F7F2]">
+            {summary.mood}
+          </p>
+        </div>
+      </div>
+
+      {summary.palette.length > 0 && (
+        <div className="mt-4">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+            Suggested palette
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {summary.palette.map((swatch) => (
+              <span
+                key={swatch.name}
+                className="flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] px-2.5 py-1"
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 rounded-full border border-white/20"
+                  style={{ background: swatch.hex }}
+                />
+                <span className="text-xs text-[#F7F7F2]">{swatch.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+            Package estimate
+          </p>
+          <p className="mt-1 text-[11px] text-[#9C9C94]">
+            {budget.basis === "prices"
+              ? "From selected product pricing"
+              : "Indicative range for a room like this"}
+          </p>
+        </div>
+        <span className="shrink-0 font-serif text-xl text-[#F7F7F2]">
+          {budgetLabel}
+        </span>
+      </div>
+
+      <p className="mt-3 text-xs text-[#9C9C94]">
+        {summary.productCount}{" "}
+        {summary.productCount === 1 ? "piece" : "pieces"} styled · consultant
+        curated direction
+      </p>
+    </section>
+  );
+}
+
+function RecommendationsSection({
+  recommendations,
+  addedIds,
+  onAdd,
+  onRemove,
+}: {
+  recommendations: Product[];
+  addedIds: string[];
+  onAdd: (product: Product) => void;
+  onRemove: (product: Product) => void;
+}) {
+  return (
+    <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
+      <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
+        Recommended additions
+      </p>
+      <h2 className="mt-2 font-serif text-2xl">Complete the look</h2>
+      <p className="mt-1 text-sm text-[#9C9C94]">
+        Pieces that round out the room. Add any to your package.
+      </p>
+
+      <div className="mt-4 grid gap-4">
+        {recommendations.map((product) => {
+          const added = addedIds.includes(product.id);
+
+          return (
+            <ProductRow
+              key={product.id}
+              product={product}
+              action={
+                <button
+                  type="button"
+                  onClick={() => (added ? onRemove(product) : onAdd(product))}
+                  aria-pressed={added}
+                  className={
+                    added
+                      ? "rounded-xl border border-[#F4C430]/50 bg-[#F4C430]/10 px-3 py-1 text-xs font-semibold text-[#F4C430]"
+                      : "rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs font-semibold text-[#050505]"
+                  }
+                >
+                  {added ? "Added — remove" : "Add to package"}
+                </button>
+              }
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function DesignRationaleSection({ bullets }: { bullets: string[] }) {
+  return (
+    <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
+      <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
+        Why these products
+      </p>
+      <h2 className="mt-2 font-serif text-2xl">The thinking behind it</h2>
+      <ul className="mt-4 grid gap-3">
+        {bullets.map((bullet) => (
+          <li
+            key={bullet}
+            className="flex gap-3 text-sm leading-6 text-[#D9D9D2]"
+          >
+            <span
+              aria-hidden="true"
+              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F4C430]"
+            />
+            <span>{bullet}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function StudioTextField({
   label,
   value,
@@ -712,10 +945,25 @@ function StudioTextField({
   );
 }
 
+function QuoteLineItem({ product }: { product: Product }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] px-3 py-2">
+      <span className="min-w-0 flex-1 truncate text-sm text-[#F7F7F2]">
+        {getShortProductName(product)}
+      </span>
+      <span className="shrink-0 text-xs text-[#9C9C94]">
+        {formatPrice(product.price)}
+      </span>
+    </div>
+  );
+}
+
 function QuoteSheet({
   imageDataUrl,
   products,
+  recommendations,
   pricing,
+  summary,
   name,
   email,
   phone,
@@ -727,7 +975,9 @@ function QuoteSheet({
 }: {
   imageDataUrl: string;
   products: Product[];
+  recommendations: Product[];
   pricing: PackagePricing;
+  summary: RoomSummary | null;
   name: string;
   email: string;
   phone: string;
@@ -776,21 +1026,35 @@ function QuoteSheet({
           </div>
         )}
 
+        {summary && (
+          <p className="mt-4 text-sm text-[#9C9C94]">
+            {summary.roomTypeLabel} · {summary.styleLabel} · {summary.mood}
+          </p>
+        )}
+
         {products.length > 0 && (
-          <div className="mt-4 grid gap-2">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] px-3 py-2"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm text-[#F7F7F2]">
-                  {getShortProductName(product)}
-                </span>
-                <span className="shrink-0 text-xs text-[#9C9C94]">
-                  {formatPrice(product.price)}
-                </span>
-              </div>
-            ))}
+          <div className="mt-4">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+              In your room
+            </p>
+            <div className="mt-2 grid gap-2">
+              {products.map((product) => (
+                <QuoteLineItem key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {recommendations.length > 0 && (
+          <div className="mt-4">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+              Recommended additions
+            </p>
+            <div className="mt-2 grid gap-2">
+              {recommendations.map((product) => (
+                <QuoteLineItem key={product.id} product={product} />
+              ))}
+            </div>
           </div>
         )}
 
@@ -1011,12 +1275,16 @@ export function KoalaDesignStudio() {
   const [quoteName, setQuoteName] = useState("");
   const [quoteEmail, setQuoteEmail] = useState("");
   const [quotePhone, setQuotePhone] = useState("");
+  const [addedRecommendationIds, setAddedRecommendationIds] = useState<
+    string[]
+  >([]);
   const [toastMessage, setToastMessage] = useState("");
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const resultSwipeStartXRef = useRef<number | null>(null);
   const suppressResultViewerOpenRef = useRef(false);
   const toastTimeoutRef = useRef<number | null>(null);
+  const summaryViewedRef = useRef(false);
   const [loadingIndex, resetLoadingIndex] = useProgressIndex(
     loading || refining,
     loadingMessages.length,
@@ -1028,8 +1296,28 @@ export function KoalaDesignStudio() {
   const activeImageDataUrl = activeConcept
     ? `data:${activeConcept.mimeType || "image/png"};base64,${activeConcept.imageBase64}`
     : "";
-  const packagePricing = getPackagePricing(products);
   const selectedStylePrompt = getStylePrompt(style, customPrompt);
+
+  // Consultant layer — deterministic, derived from the current room + package.
+  const recommendations = recommendMissingCategoryProducts(
+    products,
+    roomType,
+    selectedStylePrompt
+  );
+  const addedRecommendations = getProductsFromIds(addedRecommendationIds).filter(
+    (product) => !products.some((existing) => existing.id === product.id)
+  );
+  const packageProducts = mergeUniqueProducts(products, addedRecommendations);
+  const packagePricing = getPackagePricing(packageProducts);
+  const roomSummary =
+    products.length > 0
+      ? buildRoomSummary(packageProducts, roomType, selectedStylePrompt)
+      : null;
+  const designRationale = buildDesignRationale(
+    packageProducts,
+    roomType,
+    selectedStylePrompt
+  );
 
   function showToast(message: string) {
     if (toastTimeoutRef.current) {
@@ -1042,17 +1330,48 @@ export function KoalaDesignStudio() {
     }, 3200);
   }
 
+  function addRecommendation(product: Product) {
+    setAddedRecommendationIds((current) =>
+      current.includes(product.id) ? current : [...current, product.id]
+    );
+    trackRecommendationAdded(product);
+    showToast(`${getShortProductName(product)} added to your package.`);
+  }
+
+  function removeRecommendation(product: Product) {
+    setAddedRecommendationIds((current) =>
+      current.filter((id) => id !== product.id)
+    );
+    trackRecommendationRemoved(product);
+  }
+
   function openQuoteSheet() {
-    trackBundleAddToCartClicked(products);
+    trackBundleAddToCartClicked(packageProducts);
+    trackQuoteOpened({
+      productCount: packageProducts.length,
+      hasPricing: packagePricing.hasAllPrices,
+    });
     setQuoteSheetOpen(true);
   }
 
   function submitQuoteRequest() {
+    const packageTotal = packagePricing.hasAllPrices
+      ? packagePricing.total
+      : null;
+
+    // quote_requested retained from Sprint 1 for continuity; quote_submitted
+    // is the canonical Sprint 2 event.
     trackQuoteRequested({
-      productCount: products.length,
-      productIds: products.map((product) => product.id),
+      productCount: packageProducts.length,
+      productIds: packageProducts.map((product) => product.id),
       hasPricing: packagePricing.hasAllPrices,
-      packageTotal: packagePricing.hasAllPrices ? packagePricing.total : null,
+      packageTotal,
+    });
+    trackQuoteSubmitted({
+      productCount: products.length,
+      recommendationCount: addedRecommendations.length,
+      hasPricing: packagePricing.hasAllPrices,
+      packageTotal,
     });
     setQuoteSheetOpen(false);
     setQuoteName("");
@@ -1077,6 +1396,9 @@ export function KoalaDesignStudio() {
         setGeneratedConcepts(cachedConcepts);
         setProducts(parsed.products || []);
 
+        if (typeof parsed.roomType === "string") setRoomType(parsed.roomType);
+        if (typeof parsed.style === "string") setStyle(parsed.style);
+
         if (cachedConcepts.length > 0) {
           setSelectedConceptIndex(0);
           setStep(5);
@@ -1088,6 +1410,31 @@ export function KoalaDesignStudio() {
       localStorage.removeItem(CACHE_KEY);
     }
   }, []);
+
+  // Fire room_summary_viewed once each time a result summary becomes visible.
+  useEffect(() => {
+    const showingSummary =
+      step === 5 && products.length > 0 && Boolean(activeImage);
+
+    if (showingSummary && !summaryViewedRef.current) {
+      summaryViewedRef.current = true;
+      const budget = estimateFurnishingBudget(
+        products,
+        roomType,
+        selectedStylePrompt
+      );
+      trackRoomSummaryViewed({
+        roomType,
+        style: selectedStylePrompt,
+        productCount: products.length,
+        budgetBasis: budget.basis,
+      });
+    }
+
+    if (!showingSummary) {
+      summaryViewedRef.current = false;
+    }
+  }, [step, products, activeImage, roomType, selectedStylePrompt]);
 
   useEffect(() => {
     return () => {
@@ -1267,6 +1614,7 @@ export function KoalaDesignStudio() {
 
     setError("");
     setLoading(true);
+    setAddedRecommendationIds([]);
     resetLoadingIndex();
     trackGenerateStarted({
       roomType,
@@ -1487,6 +1835,7 @@ export function KoalaDesignStudio() {
   function deleteResult() {
     setGeneratedConcepts([]);
     setProducts([]);
+    setAddedRecommendationIds([]);
     setSelectedConceptIndex(0);
     setRefineSheetOpen(false);
     setImageViewerOpen(false);
@@ -1510,6 +1859,7 @@ export function KoalaDesignStudio() {
     setOpenProductCategoryId(null);
     setGeneratedConcepts([]);
     setProducts([]);
+    setAddedRecommendationIds([]);
     setSelectedConceptIndex(0);
     setError("");
     setLoading(false);
@@ -1962,10 +2312,12 @@ export function KoalaDesignStudio() {
               </div>
             </div>
 
+            {roomSummary && <RoomSummaryCard summary={roomSummary} />}
+
             {products.length > 0 && (
               <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
                 <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-                  Complete the look
+                  Your package
                 </p>
                 <h2 className="mt-2 font-serif text-2xl">Products in this room</h2>
                 <p className="mt-1 text-sm text-[#9C9C94]">
@@ -1973,57 +2325,40 @@ export function KoalaDesignStudio() {
                   styled into your room.
                 </p>
                 <div className="mt-4 grid gap-4">
-                  {products.map((product) => {
-                    const productUrl = getProductUrl(product);
-
-                    return (
-                      <article
-                        key={product.id}
-                        className="flex min-h-32 gap-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-3"
-                      >
-                        <ProductImage
-                          product={product}
-                          className="h-20 w-20 shrink-0 rounded-xl object-cover"
-                          placeholderClassName="h-20 w-20 shrink-0 rounded-xl"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-sm font-semibold">
-                            {product.name}
-                          </p>
-                          <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-                            {getCategoryLabel(product.category)}
-                          </p>
-                          <p className="mt-1 text-xs text-[#9C9C94]">
-                            {formatPrice(product.price)}
-                          </p>
-                          <div className="mt-2 flex gap-2">
-                            {productUrl ? (
-                              <a
-                                href={productUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={() => trackAddToCartClicked(product)}
-                                className="rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs font-semibold text-[#050505]"
-                              >
-                                View product
-                              </a>
-                            ) : (
-                              <span className="rounded-xl border border-[rgba(255,255,255,0.12)] px-3 py-1 text-xs text-[#9C9C94]">
-                                Available in store
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {products.map((product) => (
+                    <ProductRow key={product.id} product={product} />
+                  ))}
+                  {addedRecommendations.map((product) => (
+                    <ProductRow
+                      key={product.id}
+                      product={product}
+                      addedBadge
+                    />
+                  ))}
                 </div>
 
                 <PackageSummary pricing={packagePricing} />
+              </section>
+            )}
 
+            {recommendations.length > 0 && (
+              <RecommendationsSection
+                recommendations={recommendations}
+                addedIds={addedRecommendationIds}
+                onAdd={addRecommendation}
+                onRemove={removeRecommendation}
+              />
+            )}
+
+            {designRationale.length > 0 && (
+              <DesignRationaleSection bullets={designRationale} />
+            )}
+
+            {products.length > 0 && (
+              <div className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
                 <StudioButton
                   onClick={openQuoteSheet}
-                  className="mt-4 min-h-12 w-full rounded-xl text-base"
+                  className="min-h-12 w-full rounded-xl text-base"
                 >
                   Request quote
                 </StudioButton>
@@ -2031,7 +2366,7 @@ export function KoalaDesignStudio() {
                   No payment taken — a Koala consultant follows up with
                   availability and final pricing.
                 </p>
-              </section>
+              </div>
             )}
           </>
         ) : (
@@ -2145,7 +2480,9 @@ export function KoalaDesignStudio() {
         <QuoteSheet
           imageDataUrl={activeImageDataUrl}
           products={products}
+          recommendations={addedRecommendations}
           pricing={packagePricing}
+          summary={roomSummary}
           name={quoteName}
           email={quoteEmail}
           phone={quotePhone}
