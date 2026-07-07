@@ -65,10 +65,11 @@ const CACHE_KEY = "ai-room-stylist:studio:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with Koala Design Studio.";
 const loadingMessages = [
-  "Analysing room layout",
-  "Matching Koala products",
-  "Creating design concept",
-  "Rendering final image",
+  "Understanding your room",
+  "Finding complementary Koala pieces",
+  "Balancing colour palette",
+  "Refining layout and lighting",
+  "Creating your new space",
 ];
 const refineChips = [
   "Make it brighter",
@@ -150,6 +151,12 @@ const designStyles = [
 ];
 function getStylePrompt(style: string, customPrompt: string) {
   return style === "Custom" ? customPrompt.trim() : style.toLowerCase();
+}
+
+// Optional light haptic on supported mobile devices. No-op elsewhere.
+function triggerHaptic() {
+  if (typeof navigator === "undefined") return;
+  if (typeof navigator.vibrate === "function") navigator.vibrate(8);
 }
 
 const studioRoomMeasurementPayload: {
@@ -305,7 +312,7 @@ function RoomTypePreview({
       <span
         className={`absolute right-3 top-3 flex h-12 w-12 items-center justify-center rounded-2xl border backdrop-blur-md ${
           selected
-            ? "border-[#F4C430]/70 bg-[#050505]/72"
+            ? "border-[#C9A57A]/70 bg-[#050505]/72"
             : "border-[#F7F7F2]/10 bg-[#050505]/52"
         }`}
       >
@@ -326,7 +333,7 @@ function StyleVisualPreview({
     <span
       aria-hidden="true"
       className={`relative block h-32 overflow-hidden rounded-2xl border ${
-        selected ? "border-[#F4C430]/60" : "border-[rgba(255,255,255,0.12)]"
+        selected ? "border-[#C9A57A]/60" : "border-[rgba(255,255,255,0.12)]"
       }`}
       style={{ background: visual }}
     >
@@ -354,33 +361,43 @@ function StudioProductCard({
       onMouseDown={(event) => event.preventDefault()}
       onClick={(event) => {
         event.currentTarget.blur();
+        triggerHaptic();
         onToggle();
       }}
-      className={`relative flex h-[218px] min-w-0 flex-col overflow-hidden rounded-2xl border bg-[#111111] p-2.5 text-left transition ${
+      className={`relative flex h-[218px] min-w-0 flex-col overflow-hidden rounded-2xl border bg-[#111111] p-2.5 text-left transition-all duration-200 ease-out will-change-transform active:scale-[0.985] ${
         selected
-          ? "border-[#F4C430]/55 bg-[#181818]"
-          : "border-[rgba(255,255,255,0.12)] hover:border-white/25"
+          ? "-translate-y-0.5 border-[#C9A57A]/60 bg-[#181818] shadow-[0_10px_28px_-14px_rgba(201,165,122,0.55)]"
+          : "border-[rgba(255,255,255,0.12)] hover:-translate-y-0.5 hover:border-white/25"
       }`}
     >
-      <ProductImage
-        product={product}
-        className="h-28 w-full rounded-xl object-cover"
-        placeholderClassName="h-28 w-full rounded-xl"
-      />
+      <div className="relative">
+        <ProductImage
+          product={product}
+          className="h-28 w-full rounded-xl object-cover"
+          placeholderClassName="h-28 w-full rounded-xl"
+        />
+        {selected && (
+          <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#C9A57A] text-[#050505] shadow-lg">
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+              <path
+                d="m5 12 4.5 4.5L19 7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        )}
+      </div>
       <div className="flex min-h-0 flex-1 flex-col pt-2">
         <p className="line-clamp-2 min-h-9 break-words text-xs font-semibold leading-snug text-[#F7F7F2]">
           {getShortProductName(product)}
         </p>
-        <div className="mt-1 flex min-w-0 items-center justify-between gap-2">
-          <p className="truncate text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-            {getCategoryLabel(product.category)}
-          </p>
-          {selected && (
-            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#F4C430]/90">
-              SELECTED
-            </span>
-          )}
-        </div>
+        <p className="mt-1 truncate text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+          {getCategoryLabel(product.category)}
+        </p>
       </div>
     </button>
   );
@@ -392,13 +409,29 @@ function ResultIconButton({
   onClick,
   variant = "default",
   compact = false,
+  quiet = false,
 }: {
   label: string;
   icon: React.ReactNode;
   onClick: () => void;
   variant?: "default" | "primary" | "danger";
   compact?: boolean;
+  quiet?: boolean;
 }) {
+  if (quiet) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className="flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium text-[#9C9C94] transition hover:bg-white/5 hover:text-[#F7F7F2]"
+      >
+        <span className="flex h-4 w-4 items-center justify-center">{icon}</span>
+        {label}
+      </button>
+    );
+  }
+
   const variantClassName =
     variant === "primary"
       ? "border-white/25 bg-[#181818] text-[#F7F7F2] hover:border-white/40 hover:bg-[#111111]"
@@ -675,7 +708,7 @@ function PackageSummary({ pricing }: { pricing: PackagePricing }) {
         <span>Subtotal</span>
         <span>{formatMoney(pricing.subtotal)}</span>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-3 text-sm text-[#F4C430]">
+      <div className="mt-2 flex items-center justify-between gap-3 text-sm text-[#C9A57A]">
         <span>Bundle saving ({Math.round(pricing.savingRate * 100)}%)</span>
         <span>-{formatMoney(pricing.saving)}</span>
       </div>
@@ -716,7 +749,7 @@ function ProductRow({
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 text-sm font-semibold">{product.name}</p>
           {addedBadge && (
-            <span className="shrink-0 rounded-full border border-[#F4C430]/40 bg-[#F4C430]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#F4C430]">
+            <span className="shrink-0 rounded-full border border-[#C9A57A]/40 bg-[#C9A57A]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#C9A57A]">
               Added
             </span>
           )}
@@ -855,9 +888,9 @@ function RecommendationsSection({
       <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
         Recommended additions
       </p>
-      <h2 className="mt-2 font-serif text-2xl">Complete the look</h2>
+      <h2 className="mt-2 font-serif text-2xl">Complete the Look</h2>
       <p className="mt-1 text-sm text-[#9C9C94]">
-        Pieces that round out the room. Add any to your package.
+        Selected to complement your room package.
       </p>
 
       <div className="mt-4 grid gap-4">
@@ -871,15 +904,27 @@ function RecommendationsSection({
               action={
                 <button
                   type="button"
-                  onClick={() => (added ? onRemove(product) : onAdd(product))}
+                  onClick={() => {
+                    triggerHaptic();
+                    if (added) {
+                      onRemove(product);
+                    } else {
+                      onAdd(product);
+                    }
+                  }}
                   aria-pressed={added}
-                  className={
+                  aria-label={
                     added
-                      ? "rounded-xl border border-[#F4C430]/50 bg-[#F4C430]/10 px-3 py-1 text-xs font-semibold text-[#F4C430]"
-                      : "rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs font-semibold text-[#050505]"
+                      ? `Remove ${getShortProductName(product)} from package`
+                      : `Add ${getShortProductName(product)} to package`
                   }
+                  className={`rounded-xl px-3 py-1 text-xs font-semibold transition ${
+                    added
+                      ? "border border-[#C9A57A]/50 bg-[#C9A57A]/10 text-[#C9A57A]"
+                      : "bg-[#F7F7F2] text-[#050505] hover:bg-white"
+                  }`}
                 >
-                  {added ? "Added — remove" : "Add to package"}
+                  {added ? "Added" : "Add to package"}
                 </button>
               }
             />
@@ -894,9 +939,9 @@ function DesignRationaleSection({ bullets }: { bullets: string[] }) {
   return (
     <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
       <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-        Why these products
+        From your consultant
       </p>
-      <h2 className="mt-2 font-serif text-2xl">The thinking behind it</h2>
+      <h2 className="mt-2 font-serif text-2xl">Designer Notes</h2>
       <ul className="mt-4 grid gap-3">
         {bullets.map((bullet) => (
           <li
@@ -905,7 +950,7 @@ function DesignRationaleSection({ bullets }: { bullets: string[] }) {
           >
             <span
               aria-hidden="true"
-              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F4C430]"
+              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#C9A57A]"
             />
             <span>{bullet}</span>
           </li>
@@ -939,20 +984,25 @@ function StudioTextField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         autoComplete={autoComplete}
-        className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3 text-sm text-[#F7F7F2] outline-none focus:border-[#F4C430]"
+        className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3 text-sm text-[#F7F7F2] outline-none focus:border-[#C9A57A]"
       />
     </label>
   );
 }
 
 function QuoteLineItem({ product }: { product: Product }) {
+  const priceLabel =
+    typeof product.price === "number"
+      ? formatMoney(product.price)
+      : "On product page";
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] px-3 py-2">
+    <div className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] px-3 py-2">
       <span className="min-w-0 flex-1 truncate text-sm text-[#F7F7F2]">
         {getShortProductName(product)}
       </span>
-      <span className="shrink-0 text-xs text-[#9C9C94]">
-        {formatPrice(product.price)}
+      <span className="shrink-0 whitespace-nowrap text-xs text-[#9C9C94]">
+        {priceLabel}
       </span>
     </div>
   );
@@ -1007,9 +1057,9 @@ function QuoteSheet({
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-              Request quote
+              Save your design
             </p>
-            <h2 className="mt-1 font-serif text-2xl">Your room package</h2>
+            <h2 className="mt-1 font-serif text-2xl">Your Room Package</h2>
           </div>
           <StudioButton variant="ghost" onClick={onClose}>
             Close
@@ -1089,13 +1139,12 @@ function QuoteSheet({
         <StudioButton
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="mt-5 min-h-12 w-full rounded-xl text-base"
+          className="mt-5 min-h-12 w-full rounded-2xl text-base"
         >
-          Request quote
+          Send this room package to our team
         </StudioButton>
-        <p className="mt-2 text-center text-[11px] text-[#9C9C94]">
-          We will email your room concept and package details. No payment
-          required.
+        <p className="mt-2 text-center text-[11px] leading-5 text-[#9C9C94]">
+          A consultant can help confirm availability, pricing and next steps.
         </p>
       </section>
     </div>
@@ -1176,7 +1225,7 @@ function RefineSheet({
           value={changeRequest}
           onChange={(event) => onChangeRequest(event.target.value)}
           placeholder="Tell the studio what to adjust..."
-          className="mt-4 min-h-28 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-4 text-sm text-[#F7F7F2] outline-none focus:border-[#F4C430]"
+          className="mt-4 min-h-28 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-4 text-sm text-[#F7F7F2] outline-none focus:border-[#C9A57A]"
         />
 
         <div className="mt-5 rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#050505]/40 p-5">
@@ -1921,9 +1970,9 @@ export function KoalaDesignStudio() {
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
-                className="mt-5 flex aspect-[4/5] w-full flex-col items-center justify-center rounded-3xl border border-dashed border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 text-center transition hover:border-[#F4C430] hover:bg-[#181818]"
+                className="mt-5 flex aspect-[4/5] w-full flex-col items-center justify-center rounded-3xl border border-dashed border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 text-center transition hover:border-[#C9A57A] hover:bg-[#181818]"
               >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[#050505] text-2xl text-[#F4C430]">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[#050505] text-2xl text-[#C9A57A]">
                   +
                 </span>
                 <span className="mt-5 text-base font-semibold text-[#F7F7F2]">
@@ -1976,7 +2025,7 @@ export function KoalaDesignStudio() {
                   onClick={() => setRoomType(item.id)}
                   className={`min-h-44 rounded-3xl border p-3 text-left transition ${
                     selected
-                      ? "border-[#F4C430]/55 bg-[#181818] text-[#F7F7F2]"
+                      ? "border-[#C9A57A]/55 bg-[#181818] text-[#F7F7F2]"
                       : "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#F7F7F2]"
                   }`}
                 >
@@ -2013,7 +2062,7 @@ export function KoalaDesignStudio() {
                   onClick={() => setStyle(item.id)}
                   className={`grid gap-4 rounded-3xl border p-4 text-left transition ${
                     selected
-                      ? "border-[#F4C430]/55 bg-[#181818] text-[#F7F7F2]"
+                      ? "border-[#C9A57A]/55 bg-[#181818] text-[#F7F7F2]"
                       : "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#F7F7F2]"
                   }`}
                 >
@@ -2036,7 +2085,7 @@ export function KoalaDesignStudio() {
               value={customPrompt}
               onChange={(event) => setCustomPrompt(event.target.value)}
               placeholder="Describe the mood, colours, materials or layout you want..."
-              className="mt-4 min-h-28 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-4 text-sm text-[#F7F7F2] outline-none focus:border-[#F4C430]"
+              className="mt-4 min-h-28 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-4 text-sm text-[#F7F7F2] outline-none focus:border-[#C9A57A]"
             />
           )}
         </section>
@@ -2059,7 +2108,7 @@ export function KoalaDesignStudio() {
               onClick={() => setLetAiRecommendBundle((current) => !current)}
               className={`mt-5 flex w-full items-center justify-between rounded-xl border p-4 text-left ${
                 letAiRecommendBundle
-                  ? "border-[#F4C430]/55 bg-[#181818] text-[#F7F7F2]"
+                  ? "border-[#C9A57A]/55 bg-[#181818] text-[#F7F7F2]"
                   : "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#F7F7F2]"
               }`}
             >
@@ -2082,7 +2131,11 @@ export function KoalaDesignStudio() {
                 onClick={() => setSelectedSheetOpen(true)}
                 className="sticky top-3 z-10 mt-4 flex w-full items-center justify-between rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#050505]/95 px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur"
               >
-                <span>{selectedProducts.length} products selected</span>
+                <span>
+                  {selectedProducts.length}{" "}
+                  {selectedProducts.length === 1 ? "product" : "products"}{" "}
+                  selected
+                </span>
                 <span className="rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs text-[#050505]">
                   View
                 </span>
@@ -2146,7 +2199,7 @@ export function KoalaDesignStudio() {
         {activeImage ? (
           <>
             <div
-              className="relative aspect-[4/5] max-h-[46vh] w-full overflow-hidden rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] shadow-2xl"
+              className="relative aspect-[4/5] max-h-[56vh] w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#0B0B0B] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
               onTouchStart={(event) => {
                 if (
                   generatedConcepts.length < 2 ||
@@ -2199,9 +2252,10 @@ export function KoalaDesignStudio() {
                 className="h-full w-full"
               >
                 <img
+                  key={`${selectedConceptIndex}-${activeImage.slice(0, 16)}`}
                   src={`data:${activeConcept?.mimeType || "image/png"};base64,${activeImage}`}
                   alt={`Generated concept ${selectedConceptIndex + 1}`}
-                  className="h-full w-full object-contain object-center"
+                  className="h-full w-full animate-[imageReveal_600ms_ease-out] object-contain object-center"
                 />
               </button>
 
@@ -2239,13 +2293,6 @@ export function KoalaDesignStudio() {
                 )}
             </div>
 
-            <StudioButton
-              onClick={openQuoteSheet}
-              className="min-h-12 w-full rounded-xl text-base"
-            >
-              Prepare room package
-            </StudioButton>
-
             {generatedConcepts.length > 1 && (
               <div className="flex items-center justify-center gap-2">
                 {generatedConcepts.map((concept, index) => (
@@ -2273,8 +2320,15 @@ export function KoalaDesignStudio() {
               </div>
             )}
 
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2.5">
+              <StudioButton
+                onClick={openQuoteSheet}
+                className="min-h-13 w-full rounded-2xl text-base"
+              >
+                Prepare room package
+              </StudioButton>
+
+              <div className="grid grid-cols-2 gap-2.5">
                 <ResultIconButton
                   label="Edit with AI"
                   icon={<AiEditIcon />}
@@ -2289,25 +2343,26 @@ export function KoalaDesignStudio() {
                   compact
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2">
+
+              <div className="flex items-center justify-center gap-1 pt-0.5">
                 <ResultIconButton
                   label="Save"
                   icon={<SaveIcon />}
                   onClick={downloadImage}
-                  compact
+                  quiet
                 />
                 <ResultIconButton
                   label="Share"
                   icon={<ShareIcon />}
                   onClick={shareImage}
-                  compact
+                  quiet
                 />
                 <ResultIconButton
                   label="Delete"
                   icon={<DeleteIcon />}
                   onClick={deleteResult}
                   variant="danger"
-                  compact
+                  quiet
                 />
               </div>
             </div>
@@ -2356,16 +2411,19 @@ export function KoalaDesignStudio() {
 
             {products.length > 0 && (
               <div className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
+                <p className="font-serif text-xl text-[#F7F7F2]">
+                  Ready to make it yours?
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[#9C9C94]">
+                  Save this package and a Koala consultant will help with
+                  availability, pricing and next steps.
+                </p>
                 <StudioButton
                   onClick={openQuoteSheet}
-                  className="min-h-12 w-full rounded-xl text-base"
+                  className="mt-4 min-h-13 w-full rounded-2xl text-base"
                 >
-                  Request quote
+                  Prepare room package
                 </StudioButton>
-                <p className="mt-2 text-center text-[11px] text-[#9C9C94]">
-                  No payment taken — a Koala consultant follows up with
-                  availability and final pricing.
-                </p>
               </div>
             )}
           </>
@@ -2390,51 +2448,39 @@ export function KoalaDesignStudio() {
   return (
     <main className="h-dvh overflow-hidden bg-[#050505] text-[#F7F7F2]">
       {(loading || refining) && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#050505]/95 p-6">
-          <div className="w-full max-w-sm rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 text-center shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-              Koala AI Studio
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#050505] px-8">
+          <div className="w-full max-w-[360px] text-center">
+            <p className="text-[11px] uppercase tracking-[0.32em] text-[#9C9C94]">
+              Koala Design Studio
             </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight">
+            <h2
+              key={loadingIndex}
+              className="mx-auto mt-5 min-h-[6.5rem] max-w-[300px] animate-[stepIn_500ms_ease-out] font-serif text-3xl font-medium leading-tight text-[#F7F7F2]"
+            >
               {loadingMessages[loadingIndex]}
             </h2>
-            <div className="mt-6 grid gap-4 text-left">
+
+            <div className="mt-6 flex items-center justify-center gap-2">
               {loadingMessages.map((message, index) => (
-                <div key={message} className="grid gap-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <span
-                      className={`text-xs font-semibold uppercase tracking-[0.18em] ${
-                        index <= loadingIndex
-                          ? "text-[#F7F7F2]"
-                          : "text-[#9C9C94]"
-                      }`}
-                    >
-                      Step {index + 1}
-                    </span>
-                    <span
-                      className={`text-xs ${
-                        index <= loadingIndex
-                          ? "text-[#F7F7F2]"
-                          : "text-[#9C9C94]"
-                      }`}
-                    >
-                      {message}
-                    </span>
-                  </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.12)]">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        index < loadingIndex
-                          ? "w-full bg-[#F4C430]"
-                          : index === loadingIndex
-                            ? "w-2/3 bg-[#F4C430]"
-                            : "w-0 bg-[#F4C430]"
-                      }`}
-                    />
-                  </div>
-                </div>
+                <span
+                  key={message}
+                  className={`h-1 flex-1 overflow-hidden rounded-full transition-colors duration-500 ${
+                    index < loadingIndex
+                      ? "bg-[#C9A57A]"
+                      : "bg-[rgba(255,255,255,0.12)]"
+                  }`}
+                >
+                  {index === loadingIndex && (
+                    <span className="block h-full w-1/2 animate-[progressShimmer_1.4s_ease-in-out_infinite] rounded-full bg-[#C9A57A]" />
+                  )}
+                </span>
               ))}
             </div>
+
+            <p className="mt-5 text-xs text-[#9C9C94]">
+              Step {Math.min(loadingIndex + 1, loadingMessages.length)} of{" "}
+              {loadingMessages.length}
+            </p>
           </div>
         </div>
       )}
@@ -2532,7 +2578,7 @@ export function KoalaDesignStudio() {
               <div
                 key={item}
                 className={`h-1 rounded-full ${
-                  item <= step ? "bg-[#F4C430]" : "bg-[rgba(255,255,255,0.12)]"
+                  item <= step ? "bg-[#C9A57A]" : "bg-[rgba(255,255,255,0.12)]"
                 }`}
               />
             ))}
@@ -2544,7 +2590,9 @@ export function KoalaDesignStudio() {
             step === 5 && activeImage ? "pb-8" : "pb-32"
           }`}
         >
-          {renderStep()}
+          <div key={step} className="animate-[stepIn_360ms_ease-out]">
+            {renderStep()}
+          </div>
 
           {error && (
             <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">

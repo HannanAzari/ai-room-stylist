@@ -17,6 +17,23 @@ const preferredCategoryOrder = [
 
 export const productList = allProducts as Product[];
 
+const CATEGORY_LABEL_OVERRIDES: Record<string, string> = {
+  "tv-units": "TV Units",
+  "bed-sides": "Bedsides",
+  "coffee-tables": "Coffee Tables",
+  "dining-tables": "Dining Tables",
+};
+
+export function getCategoryLabel(category: string) {
+  if (!category) return "";
+  if (CATEGORY_LABEL_OVERRIDES[category]) return CATEGORY_LABEL_OVERRIDES[category];
+
+  return category
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export const productsByCategory: ProductCategoryGroup[] = Array.from(
   new Set(productList.map((product) => product.category).filter(Boolean))
 )
@@ -32,14 +49,10 @@ export const productsByCategory: ProductCategoryGroup[] = Array.from(
   })
   .map((categoryId) => ({
     id: categoryId,
-    label: categoryId,
+    label: getCategoryLabel(categoryId),
     products: productList.filter((product) => product.category === categoryId),
   }))
   .filter((category) => category.products.length > 0);
-
-export function getCategoryLabel(category: string) {
-  return category;
-}
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
