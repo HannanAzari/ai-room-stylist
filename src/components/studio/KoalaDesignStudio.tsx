@@ -24,15 +24,28 @@ import {
   trackAddToCartClicked,
   trackBundleAddToCartClicked,
   trackDownloadClicked,
+  trackFullscreenProviderViewed,
   trackGenerateCompleted,
   trackGenerateStarted,
+  trackGeneratedProviderCount,
   trackRefineCompleted,
   trackRefineStarted,
+  trackResultProviderSwiped,
+  trackResultProviderViewed,
   trackShareClicked,
 } from "@/features/room-stylist/services/analytics-events";
-import type { Product } from "@/features/room-stylist/types";
+import { normalizeGeneratedConcepts } from "@/features/room-stylist/services/generated-concepts";
+import type {
+  GeneratedConcept,
+  Product,
+} from "@/features/room-stylist/types";
+import {
+  assertStudioGeminiProvider,
+  fetchStudioGemini,
+  STUDIO_GEMINI_ROUTE,
+} from "./studio-gemini-api";
 
-const CACHE_KEY = "ai-room-stylist:last-result";
+const CACHE_KEY = "ai-room-stylist:studio:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with Koala Design Studio.";
 const loadingMessages = [
@@ -123,71 +136,6 @@ function getStylePrompt(style: string, customPrompt: string) {
   return style === "Custom" ? customPrompt.trim() : style.toLowerCase();
 }
 
-function formatRoomType(roomType: string) {
-  return roomTypes.find((item) => item.id === roomType)?.label.toLowerCase() ||
-    "room";
-}
-
-function formatStyleName(style: string, customPrompt: string) {
-  if (style === "Custom" && customPrompt.trim()) return "custom design";
-
-  return designStyles.find((item) => item.id === style)?.title || "selected";
-}
-
-function buildWhyDesignWorksBullets({
-  roomType,
-  style,
-  customPrompt,
-  selectedProducts,
-}: {
-  roomType: string;
-  style: string;
-  customPrompt: string;
-  selectedProducts: Product[];
-}) {
-  const roomLabel = formatRoomType(roomType);
-  const styleLabel = formatStyleName(style, customPrompt);
-  const primaryProduct = selectedProducts[0];
-  const primaryCategory = primaryProduct
-    ? getCategoryLabel(primaryProduct.category).toLowerCase()
-    : "";
-  const productCount = selectedProducts.length;
-  const bullets: string[] = [];
-
-  if (primaryProduct) {
-    bullets.push(
-      `The selected ${primaryCategory || "product"} anchors the ${roomLabel} layout.`
-    );
-  } else {
-    bullets.push(
-      `The concept uses the ${roomLabel} photo as the main layout reference.`
-    );
-  }
-
-  bullets.push(
-    `Warm neutral tones support the ${styleLabel} direction without overclaiming exact colour accuracy.`
-  );
-  bullets.push(
-    `The concept keeps the main focal wall and furniture zone visually balanced.`
-  );
-
-  if (productCount > 1) {
-    bullets.push(
-      `${productCount} selected Koala products guide the styling and bundle direction.`
-    );
-  } else if (productCount === 1) {
-    bullets.push(
-      `The selected Koala product gives the preview a clear shopping anchor.`
-    );
-  }
-
-  bullets.push(
-    "The product bundle supports a complete-room shopping journey."
-  );
-
-  return bullets;
-}
-
 const studioRoomMeasurementPayload: {
   roomWidthM: string | null;
   roomLengthM: string | null;
@@ -200,6 +148,42 @@ const studioRoomMeasurementPayload: {
 
 function selectedIdsToProducts(productIds: string[]) {
   return getProductsFromIds(productIds);
+}
+
+function normalizeStudioGeminiConcepts(
+  values: unknown,
+  fallbackImageBase64?: unknown
+) {
+  const concepts = normalizeGeneratedConcepts(values, fallbackImageBase64);
+
+  concepts.forEach((concept) => {
+    assertStudioGeminiProvider(concept.provider);
+  });
+
+  return concepts.map((concept) => ({
+    ...concept,
+    provider: "gemini",
+    label: "Gemini",
+  }));
+}
+
+function getImageFileExtension(mimeType: string) {
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+
+  return "png";
+}
+
+function conceptToFile(concept: GeneratedConcept, index: number) {
+  const binary = window.atob(concept.imageBase64);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  const extension = getImageFileExtension(concept.mimeType);
+
+  return new File(
+    [bytes],
+    `koala-design-studio-${concept.provider}-${index + 1}.${extension}`,
+    { type: concept.mimeType }
+  );
 }
 
 function StudioButton({
@@ -482,31 +466,16 @@ function RegenerateIcon() {
   );
 }
 
-function SliderHandleIcon() {
+function ChevronIcon({ direction }: { direction: "left" | "right" }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
       <path
-        d="M9 7 5 12l4 5M15 7l4 5-4 5M12 5v14"
+        d={direction === "left" ? "m14.5 6-6 6 6 6" : "m9.5 6 6 6-6 6"}
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function CompareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
-      <path
-        d="M12 4v16M5 7.5h5M5 12h5M5 16.5h5M14 7.5h5M14 12h5M14 16.5h5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.7"
       />
     </svg>
   );
@@ -629,73 +598,14 @@ function SelectedProductsSheet({
   );
 }
 
-function WhyDesignWorks({
-  roomType,
-  style,
-  customPrompt,
-  selectedProducts,
-}: {
-  roomType: string;
-  style: string;
-  customPrompt: string;
-  selectedProducts: Product[];
-}) {
-  const bullets = buildWhyDesignWorksBullets({
-    roomType,
-    style,
-    customPrompt,
-    selectedProducts,
-  });
-
-  return (
-    <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-      <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-        AI-estimated preview
-      </p>
-      <h2 className="mt-2 font-serif text-2xl font-semibold text-[#F7F7F2]">
-        Why this design works
-      </h2>
-      <ul className="mt-4 grid gap-3">
-        {bullets.map((item) => (
-          <li
-            key={item}
-            className="flex items-start gap-3 text-sm leading-6 text-[#F7F7F2]"
-          >
-            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F4C430]" />
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 function ImageViewerModal({
-  imageBase64,
-  beforeImageUrl,
+  concept,
   onClose,
 }: {
-  imageBase64: string;
-  beforeImageUrl: string;
+  concept: GeneratedConcept;
   onClose: () => void;
 }) {
-  const sliderRef = useRef<HTMLDivElement | null>(null);
-  const [sliderPosition, setSliderPosition] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
-  const [compareEnabled, setCompareEnabled] = useState(false);
-  const canShowBefore = Boolean(beforeImageUrl);
-  const showComparison = canShowBefore && compareEnabled;
-  const generatedImageUrl = `data:image/png;base64,${imageBase64}`;
-
-  function updateSliderPosition(clientX: number) {
-    const rect = sliderRef.current?.getBoundingClientRect();
-
-    if (!rect) return;
-
-    const nextPosition = ((clientX - rect.left) / rect.width) * 100;
-
-    setSliderPosition(Math.min(92, Math.max(8, nextPosition)));
-  }
+  const generatedImageUrl = `data:${concept.mimeType};base64,${concept.imageBase64}`;
 
   return (
     <div
@@ -706,28 +616,8 @@ function ImageViewerModal({
     >
       <div className="mx-auto flex h-full w-full max-w-[430px] overflow-hidden bg-[#050505]">
         <div
-          ref={sliderRef}
           className="relative min-h-0 flex-1 overflow-hidden bg-[#050505]"
-          style={{ touchAction: showComparison ? "none" : "pinch-zoom" }}
-          onPointerDown={(event) => {
-            if (!showComparison) return;
-
-            setIsDragging(true);
-            event.currentTarget.setPointerCapture(event.pointerId);
-            updateSliderPosition(event.clientX);
-          }}
-          onPointerMove={(event) => {
-            if (!isDragging || !showComparison) return;
-
-            updateSliderPosition(event.clientX);
-          }}
-          onPointerUp={(event) => {
-            if (!showComparison) return;
-
-            setIsDragging(false);
-            event.currentTarget.releasePointerCapture(event.pointerId);
-          }}
-          onPointerCancel={() => setIsDragging(false)}
+          style={{ touchAction: "pinch-zoom" }}
         >
           <button
             type="button"
@@ -738,60 +628,11 @@ function ImageViewerModal({
             <CloseIcon />
           </button>
 
-          {canShowBefore && (
-            <button
-              type="button"
-              onClick={() => setCompareEnabled((current) => !current)}
-              aria-label={
-                compareEnabled
-                  ? "Hide before and after comparison"
-                  : "Compare before and after"
-              }
-              aria-pressed={compareEnabled}
-              className={`absolute right-4 bottom-[calc(env(safe-area-inset-bottom)_+_18px)] z-30 flex h-11 w-11 items-center justify-center rounded-full border shadow-2xl backdrop-blur transition ${
-                compareEnabled
-                  ? "border-[#F4C430]/70 bg-[#050505]/85 text-[#F4C430]"
-                  : "border-white/15 bg-[#050505]/75 text-[#F7F7F2]"
-              }`}
-            >
-              <CompareIcon />
-            </button>
-          )}
-
-          {showComparison ? (
-            <>
-              <img
-                src={beforeImageUrl}
-                alt="Uploaded room before design"
-                className="absolute inset-0 h-full w-full object-contain"
-              />
-              <img
-                src={generatedImageUrl}
-                alt="Generated room design"
-                className="absolute inset-0 h-full w-full object-contain"
-                style={{
-                  clipPath: `inset(0 0 0 ${sliderPosition}%)`,
-                }}
-              />
-              <div
-                className="absolute inset-y-0 z-10 w-px bg-[#F4C430]"
-                style={{ left: `${sliderPosition}%` }}
-              />
-              <div
-                className="absolute top-1/2 z-20 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#F4C430]/80 bg-[#050505]/90 text-[#F4C430] shadow-2xl"
-                style={{ left: `${sliderPosition}%` }}
-                aria-hidden="true"
-              >
-                <SliderHandleIcon />
-              </div>
-            </>
-          ) : (
-            <img
-              src={generatedImageUrl}
-              alt="Generated room design"
-              className="h-full w-full object-contain"
-            />
-          )}
+          <img
+            src={generatedImageUrl}
+            alt={`${concept.label} generated room design`}
+            className="h-full w-full object-contain object-center"
+          />
         </div>
       </div>
     </div>
@@ -950,7 +791,9 @@ export function KoalaDesignStudio() {
   const [openProductCategoryId, setOpenProductCategoryId] = useState<
     string | null
   >(null);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generatedConcepts, setGeneratedConcepts] = useState<
+    GeneratedConcept[]
+  >([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedConceptIndex, setSelectedConceptIndex] = useState(0);
   const [error, setError] = useState("");
@@ -967,13 +810,16 @@ export function KoalaDesignStudio() {
   >(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const resultSwipeStartXRef = useRef<number | null>(null);
+  const suppressResultViewerOpenRef = useRef(false);
   const [loadingIndex, resetLoadingIndex] = useProgressIndex(
     loading || refining,
     loadingMessages.length,
     2600
   );
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
-  const activeImage = generatedImages[selectedConceptIndex] || "";
+  const activeConcept = generatedConcepts[selectedConceptIndex] || null;
+  const activeImage = activeConcept?.imageBase64 || "";
   const selectedStylePrompt = getStylePrompt(style, customPrompt);
 
   useEffect(() => {
@@ -984,10 +830,15 @@ export function KoalaDesignStudio() {
     try {
       const parsed = JSON.parse(cached);
       const timeout = window.setTimeout(() => {
-        setGeneratedImages(parsed.generatedImages || []);
+        const cachedConcepts = normalizeStudioGeminiConcepts(
+          parsed.generatedConcepts || parsed.generatedImages,
+          parsed.imageBase64
+        );
+
+        setGeneratedConcepts(cachedConcepts);
         setProducts(parsed.products || []);
 
-        if (parsed.generatedImages?.length) {
+        if (cachedConcepts.length > 0) {
           setSelectedConceptIndex(0);
           setStep(5);
         }
@@ -1006,10 +857,14 @@ export function KoalaDesignStudio() {
   }, [previewUrl]);
 
   function saveResultCache(
-    nextGeneratedImages: string[],
+    nextGeneratedConcepts: GeneratedConcept[],
     nextProducts = products
   ) {
-    if (nextGeneratedImages.length === 0) {
+    nextGeneratedConcepts.forEach((concept) => {
+      assertStudioGeminiProvider(concept.provider);
+    });
+
+    if (nextGeneratedConcepts.length === 0) {
       localStorage.removeItem(CACHE_KEY);
       return;
     }
@@ -1017,7 +872,10 @@ export function KoalaDesignStudio() {
     localStorage.setItem(
       CACHE_KEY,
       JSON.stringify({
-        generatedImages: nextGeneratedImages,
+        generatedConcepts: nextGeneratedConcepts,
+        generatedImages: nextGeneratedConcepts.map(
+          (concept) => concept.imageBase64
+        ),
         products: nextProducts,
         style: selectedStylePrompt,
         roomType,
@@ -1065,6 +923,71 @@ export function KoalaDesignStudio() {
     );
   }
 
+  function selectConcept({
+    nextIndex,
+    source,
+    surface,
+  }: {
+    nextIndex: number;
+    source: "arrow" | "dot" | "swipe";
+    surface: "result" | "fullscreen";
+  }) {
+    const nextConcept = generatedConcepts[nextIndex];
+    const currentConcept = generatedConcepts[selectedConceptIndex];
+
+    if (!nextConcept || nextIndex === selectedConceptIndex) return;
+
+    setSelectedConceptIndex(nextIndex);
+
+    if (source === "swipe" && currentConcept) {
+      trackResultProviderSwiped({
+        fromProvider: currentConcept.provider,
+        toProvider: nextConcept.provider,
+        fromIndex: selectedConceptIndex,
+        toIndex: nextIndex,
+        surface,
+      });
+    }
+
+    if (surface === "fullscreen") {
+      trackFullscreenProviderViewed({
+        provider: nextConcept.provider,
+        conceptIndex: nextIndex,
+        source: source === "swipe" ? "swiped" : "selected",
+      });
+    } else {
+      trackResultProviderViewed({
+        provider: nextConcept.provider,
+        conceptIndex: nextIndex,
+        source,
+      });
+    }
+  }
+
+  function selectAdjacentConcept(
+    direction: -1 | 1,
+    source: "arrow" | "swipe",
+    surface: "result" | "fullscreen"
+  ) {
+    const nextIndex = Math.min(
+      generatedConcepts.length - 1,
+      Math.max(0, selectedConceptIndex + direction)
+    );
+
+    selectConcept({ nextIndex, source, surface });
+  }
+
+  function openImageViewer() {
+    if (!activeConcept) return;
+
+    trackFullscreenProviderViewed({
+      provider: activeConcept.provider,
+      conceptIndex: selectedConceptIndex,
+      source: "opened",
+    });
+    setImageViewerOpen(true);
+  }
+
   function canContinue() {
     if (step === 1) return Boolean(image && previewUrl);
     if (step === 2) return Boolean(roomType);
@@ -1072,7 +995,7 @@ export function KoalaDesignStudio() {
       return style === "Custom" ? Boolean(customPrompt.trim()) : Boolean(style);
     }
     if (step === 4) return letAiRecommendBundle || selectedProductIds.length > 0;
-    return generatedImages.length > 0;
+    return generatedConcepts.length > 0;
   }
 
   function canGenerateConcept() {
@@ -1120,12 +1043,13 @@ export function KoalaDesignStudio() {
       formData.append("style", selectedStylePrompt);
       formData.append("roomType", roomType);
       formData.append("selectedProductIds", JSON.stringify(selectedProductIds));
+      formData.append("aiConceptMode", String(letAiRecommendBundle));
       if (style === "Custom") {
         formData.append("customPrompt", customPrompt.trim());
       }
       appendRoomMeasurements(formData);
 
-      const response = await fetch("/api/generate-room", {
+      const response = await fetchStudioGemini(STUDIO_GEMINI_ROUTE, {
         method: "POST",
         body: formData,
       });
@@ -1136,24 +1060,40 @@ export function KoalaDesignStudio() {
         return;
       }
 
-      const nextImages = (data.images || []).map(
-        (item: { b64_json: string }) => item.b64_json
+      const nextConcepts = normalizeStudioGeminiConcepts(
+        data.images,
+        data.imageBase64
       );
       const nextProducts = (data.products || []) as Product[];
 
-      setGeneratedImages(nextImages);
+      if (nextConcepts.length === 0) {
+        setError("Generation completed but no image was returned.");
+        return;
+      }
+
+      setGeneratedConcepts(nextConcepts);
       setProducts(nextProducts);
       setSelectedConceptIndex(0);
       trackGenerateCompleted({
         roomType,
         style: selectedStylePrompt,
         products: nextProducts,
-        imageCount: nextImages.length,
+        imageCount: nextConcepts.length,
         roomMeasurements: studioRoomMeasurementPayload,
       });
-      saveResultCache(nextImages, nextProducts);
-    } catch {
-      setError("Failed to connect to the generation service.");
+      trackGeneratedProviderCount(nextConcepts);
+      trackResultProviderViewed({
+        provider: nextConcepts[0].provider,
+        conceptIndex: 0,
+        source: "generated",
+      });
+      saveResultCache(nextConcepts, nextProducts);
+    } catch (generationError) {
+      setError(
+        generationError instanceof Error
+          ? generationError.message
+          : "Gemini generation failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -1175,13 +1115,14 @@ export function KoalaDesignStudio() {
     });
 
     try {
-      const response = await fetch("/api/refine-room", {
+      const response = await fetchStudioGemini(STUDIO_GEMINI_ROUTE, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           imageBase64: activeImage,
+          imageMimeType: activeConcept?.mimeType || "image/png",
           changeRequest,
           refinementProductIds: selectedRefinementProductIds,
         }),
@@ -1193,21 +1134,25 @@ export function KoalaDesignStudio() {
         return;
       }
 
-      const refinedImage = data.image?.b64_json;
+      const refinedConcepts = normalizeStudioGeminiConcepts(
+        data.images,
+        data.imageBase64
+      );
+      const refinedConcept = refinedConcepts[0];
 
-      if (!refinedImage) {
+      if (!refinedConcept) {
         setError("Refinement completed but no image was returned.");
         return;
       }
 
-      const updatedImages = [...generatedImages, refinedImage];
-      const refinedIndex = updatedImages.length - 1;
+      const updatedConcepts = [...generatedConcepts, refinedConcept];
+      const refinedIndex = updatedConcepts.length - 1;
       const refinementProducts = selectedIdsToProducts(
         selectedRefinementProductIds
       );
       const updatedProducts = mergeUniqueProducts(products, refinementProducts);
 
-      setGeneratedImages(updatedImages);
+      setGeneratedConcepts(updatedConcepts);
       setProducts(updatedProducts);
       setSelectedConceptIndex(refinedIndex);
       setRefineSheetOpen(false);
@@ -1221,26 +1166,34 @@ export function KoalaDesignStudio() {
         refinementProductIds: selectedRefinementProductIds,
         mergedProductCount: updatedProducts.length,
       });
-      saveResultCache(updatedImages, updatedProducts);
-    } catch {
-      setError("Failed to connect to refinement service.");
+      trackResultProviderViewed({
+        provider: refinedConcept.provider,
+        conceptIndex: refinedIndex,
+        source: "refined",
+      });
+      saveResultCache(updatedConcepts, updatedProducts);
+    } catch (refinementError) {
+      setError(
+        refinementError instanceof Error
+          ? refinementError.message
+          : "Gemini refinement failed. Please try again."
+      );
     } finally {
       setRefining(false);
     }
   }
 
   function downloadImage() {
-    if (!activeImage) return;
+    if (!activeConcept) return;
 
     trackDownloadClicked(selectedConceptIndex);
 
-    const binary = window.atob(activeImage);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+    const imageFile = conceptToFile(activeConcept, selectedConceptIndex);
+    const url = URL.createObjectURL(imageFile);
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = `koala-design-studio-${selectedConceptIndex + 1}.png`;
+    link.download = imageFile.name;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1248,21 +1201,38 @@ export function KoalaDesignStudio() {
   }
 
   async function shareImage() {
+    if (!activeConcept) return;
+
     const navigatorWithShare = navigator as Navigator & {
       share?: (data: ShareData) => Promise<void>;
+      canShare?: (data: ShareData) => boolean;
     };
     const shareMethod =
       typeof navigatorWithShare.share === "function" ? "native" : "clipboard";
+    const imageFile = conceptToFile(activeConcept, selectedConceptIndex);
 
     trackShareClicked(selectedConceptIndex, shareMethod);
 
     if (typeof navigatorWithShare.share === "function") {
       try {
-        await navigatorWithShare.share({
-          title: "Koala Design Studio concept",
+        const fileShareData: ShareData = {
+          title: `${activeConcept.label} Koala Design Studio concept`,
           text: SHARE_MESSAGE,
-          url: window.location.href,
-        });
+          files: [imageFile],
+        };
+        const canShareFile =
+          typeof navigatorWithShare.canShare === "function" &&
+          navigatorWithShare.canShare(fileShareData);
+
+        await navigatorWithShare.share(
+          canShareFile
+            ? fileShareData
+            : {
+                title: `${activeConcept.label} Koala Design Studio concept`,
+                text: `${SHARE_MESSAGE} Created with ${activeConcept.label}.`,
+                url: window.location.href,
+              }
+        );
       } catch {
         // User cancelled the native sheet.
       }
@@ -1270,11 +1240,13 @@ export function KoalaDesignStudio() {
       return;
     }
 
-    await navigator.clipboard.writeText(SHARE_MESSAGE);
+    await navigator.clipboard.writeText(
+      `${SHARE_MESSAGE} Created with ${activeConcept.label}.`
+    );
   }
 
   function deleteResult() {
-    setGeneratedImages([]);
+    setGeneratedConcepts([]);
     setProducts([]);
     setSelectedConceptIndex(0);
     setRefineSheetOpen(false);
@@ -1297,7 +1269,7 @@ export function KoalaDesignStudio() {
     setSelectedProductIds([]);
     setLetAiRecommendBundle(true);
     setOpenProductCategoryId(null);
-    setGeneratedImages([]);
+    setGeneratedConcepts([]);
     setProducts([]);
     setSelectedConceptIndex(0);
     setError("");
@@ -1504,10 +1476,12 @@ export function KoalaDesignStudio() {
             >
               <span>
                 <span className="block text-sm font-semibold">
-                  Let AI recommend bundle
+                  AI concept mode
                 </span>
                 <span className="mt-1 block text-xs opacity-70">
-                  You can still select products manually.
+                  {letAiRecommendBundle
+                    ? "AI can complete the room using matching Koala products."
+                    : "Only selected products will be changed."}
                 </span>
               </span>
               <span>{letAiRecommendBundle ? "On" : "Off"}</span>
@@ -1582,44 +1556,130 @@ export function KoalaDesignStudio() {
       <section className="space-y-4">
         {activeImage ? (
           <>
-            <button
-              type="button"
-              onClick={() => setImageViewerOpen(true)}
-              className="aspect-[4/5] max-h-[46vh] w-full overflow-hidden rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] text-left shadow-2xl"
+            <div
+              className="relative aspect-[4/5] max-h-[46vh] w-full overflow-hidden rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] shadow-2xl"
+              onTouchStart={(event) => {
+                if (
+                  generatedConcepts.length < 2 ||
+                  event.touches.length !== 1
+                ) {
+                  return;
+                }
+
+                resultSwipeStartXRef.current = event.touches[0].clientX;
+              }}
+              onTouchEnd={(event) => {
+                if (
+                  generatedConcepts.length < 2 ||
+                  resultSwipeStartXRef.current === null
+                ) {
+                  return;
+                }
+
+                const endX = event.changedTouches[0]?.clientX;
+                const deltaX =
+                  typeof endX === "number"
+                    ? endX - resultSwipeStartXRef.current
+                    : 0;
+
+                resultSwipeStartXRef.current = null;
+
+                if (Math.abs(deltaX) < 48) return;
+
+                suppressResultViewerOpenRef.current = true;
+                window.setTimeout(() => {
+                  suppressResultViewerOpenRef.current = false;
+                }, 500);
+                selectAdjacentConcept(
+                  deltaX < 0 ? 1 : -1,
+                  "swipe",
+                  "result"
+                );
+              }}
             >
-              <img
-                src={`data:image/png;base64,${activeImage}`}
-                alt={`Generated concept ${selectedConceptIndex + 1}`}
-                className="h-full w-full object-cover"
-              />
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (suppressResultViewerOpenRef.current) {
+                    suppressResultViewerOpenRef.current = false;
+                    return;
+                  }
+
+                  openImageViewer();
+                }}
+                className="h-full w-full"
+              >
+                <img
+                  src={`data:${activeConcept?.mimeType || "image/png"};base64,${activeImage}`}
+                  alt={`Generated concept ${selectedConceptIndex + 1}`}
+                  className="h-full w-full object-contain object-center"
+                />
+              </button>
+
+              {activeConcept && (
+                <span className="pointer-events-none absolute right-3 top-3 rounded-full border border-white/15 bg-[#050505]/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#F7F7F2] backdrop-blur">
+                  {activeConcept.label}
+                </span>
+              )}
+
+              {generatedConcepts.length > 1 && selectedConceptIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    selectAdjacentConcept(-1, "arrow", "result")
+                  }
+                  aria-label="Previous generated concept"
+                  className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
+                >
+                  <ChevronIcon direction="left" />
+                </button>
+              )}
+
+              {generatedConcepts.length > 1 &&
+                selectedConceptIndex < generatedConcepts.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectAdjacentConcept(1, "arrow", "result")
+                    }
+                    aria-label="Next generated concept"
+                    className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
+                  >
+                    <ChevronIcon direction="right" />
+                  </button>
+                )}
+            </div>
 
             <StudioButton
               onClick={() => trackBundleAddToCartClicked(products)}
               className="min-h-12 w-full rounded-xl text-base"
             >
-              Shop this room
+              Prepare room package
             </StudioButton>
 
-            {generatedImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {generatedImages.map((imageBase64, index) => (
+            {generatedConcepts.length > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                {generatedConcepts.map((concept, index) => (
                   <button
-                    key={`${index}-${imageBase64.slice(0, 8)}`}
+                    key={`${concept.provider}-${index}`}
                     type="button"
-                    onClick={() => setSelectedConceptIndex(index)}
-                    className={`aspect-square overflow-hidden rounded-xl border ${
+                    onClick={() =>
+                      selectConcept({
+                        nextIndex: index,
+                        source: "dot",
+                        surface: "result",
+                      })
+                    }
+                    aria-label={`View ${concept.label} concept`}
+                    aria-current={
+                      selectedConceptIndex === index ? "true" : undefined
+                    }
+                    className={`h-1.5 rounded-full transition-all ${
                       selectedConceptIndex === index
-                        ? "border-[#F4C430]/55"
-                        : "border-[rgba(255,255,255,0.12)]"
+                        ? "w-5 bg-[#F7F7F2]"
+                        : "w-1.5 bg-white/35"
                     }`}
-                  >
-                    <img
-                      src={`data:image/png;base64,${imageBase64}`}
-                      alt={`Concept thumbnail ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
+                  />
                 ))}
               </div>
             )}
@@ -1663,19 +1723,12 @@ export function KoalaDesignStudio() {
               </div>
             </div>
 
-            <WhyDesignWorks
-              roomType={roomType}
-              style={style}
-              customPrompt={customPrompt}
-              selectedProducts={selectedProducts}
-            />
-
             {products.length > 0 && (
               <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
                 <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
                   Complete the look
                 </p>
-                <h2 className="mt-2 font-serif text-2xl">Shop this room</h2>
+                <h2 className="mt-2 font-serif text-2xl">Products in this room</h2>
                 <div className="mt-4 grid gap-4">
                   {products.slice(0, 4).map((product) => {
                     const productUrl = getProductUrl(product);
@@ -1701,22 +1754,20 @@ export function KoalaDesignStudio() {
                             {formatPrice(product.price)}
                           </p>
                           <div className="mt-2 flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => trackAddToCartClicked(product)}
-                              className="rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs font-semibold text-[#050505]"
-                            >
-                              Add
-                            </button>
-                            {productUrl && (
+                            {productUrl ? (
                               <a
                                 href={productUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="rounded-xl border border-[rgba(255,255,255,0.12)] px-3 py-1 text-xs text-[#F7F7F2]"
+                                onClick={() => trackAddToCartClicked(product)}
+                                className="rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs font-semibold text-[#050505]"
                               >
-                                View
+                                View product
                               </a>
+                            ) : (
+                              <span className="rounded-xl border border-[rgba(255,255,255,0.12)] px-3 py-1 text-xs text-[#9C9C94]">
+                                Available in store
+                              </span>
                             )}
                           </div>
                         </div>
@@ -1827,10 +1878,9 @@ export function KoalaDesignStudio() {
         />
       )}
 
-      {imageViewerOpen && activeImage && (
+      {imageViewerOpen && activeConcept && (
         <ImageViewerModal
-          imageBase64={activeImage}
-          beforeImageUrl={previewUrl}
+          concept={activeConcept}
           onClose={() => setImageViewerOpen(false)}
         />
       )}

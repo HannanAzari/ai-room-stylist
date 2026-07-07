@@ -53,6 +53,55 @@ export function buildScaleInstructions(roomType = "room") {
   ].join("\n");
 }
 
+export function buildRoomPreservationInstructions() {
+  return [
+    "- Preserve the exact room perspective, camera angle, walls, windows, doors, floor, ceiling, TV position, and architectural layout from the uploaded room photo.",
+    "- Redesign the full visible room, not only isolated furniture or a cropped furniture vignette.",
+    "- Keep the entire visible room in frame. Do not crop closer, zoom in, or remove architectural context.",
+    "- Do not change room proportions, camera position, wall geometry, window placement, ceiling height, or floor boundaries.",
+    "- Replace existing furniture with the selected retailer products where possible while retaining the original room envelope.",
+    "- Keep the output as a full-room photorealistic interior concept suitable for furniture ecommerce.",
+  ].join("\n");
+}
+
+function buildConceptModeInstructions(aiConceptMode: boolean) {
+  if (aiConceptMode) {
+    return `
+AI concept mode is ON:
+- Redesign the room as a complete, cohesive Koala Living concept.
+- Use the selected Koala products clearly where possible.
+- You may add complementary products represented in the supplied local catalog references only when they improve the full-room design.
+- Do not invent unrelated furniture styles or products that conflict with the supplied Koala references.
+- Preserve the architecture and whole-room composition while improving furniture, styling, lighting, and decor cohesively.
+`;
+  }
+
+  return `
+AI concept mode is OFF:
+- Only replace or add the exact selected or explicitly requested products.
+- Do not redesign unrelated parts of the room.
+- Do not add extra furniture, decor, lighting, or architectural changes unless explicitly requested.
+- Preserve all existing furniture and styling that were not selected for change.
+`;
+}
+
+function buildDesignDirectionInstructions(
+  aiConceptMode: boolean,
+  style: string
+) {
+  if (aiConceptMode) {
+    return [
+      `- Build a cohesive ${style} interior: coordinate colors, materials, silhouettes, lighting warmth, decor, and spacing so the products feel like one curated retail package.`,
+      "- Make the room feel premium, warm, elegant, commercially appealing, and ready for a furniture ecommerce product bundle.",
+    ].join("\n");
+  }
+
+  return [
+    "- Keep the surrounding room styling, lighting, decor, and furniture unchanged unless a supplied product explicitly replaces that item.",
+    "- Integrate the exact supplied products naturally without restyling unrelated areas.",
+  ].join("\n");
+}
+
 function buildProductFidelityInstructions(products: Product[]) {
   if (products.length === 0) return "";
 
@@ -94,11 +143,13 @@ export function buildRoomPrompt({
   roomType,
   products,
   roomMeasurements,
+  aiConceptMode = true,
 }: {
   style: string;
   roomType: string;
   products: Product[];
   roomMeasurements?: RoomMeasurements;
+  aiConceptMode?: boolean;
 }) {
   const productList = products
     .map((product, index) => `${index + 1}. ${formatProductForPrompt(product)}`)
@@ -118,15 +169,15 @@ Use these exact retailer products as the furniture intelligence for the redesign
 ${productList}
 ${buildProductFidelityInstructions(products)}
 ${buildCategoryPlacementGuidance(products)}
+${buildConceptModeInstructions(aiConceptMode)}
 
 Instructions:
-- Keep the original room architecture, walls, floor, windows, lighting direction, and perspective.
+${buildRoomPreservationInstructions()}
 - Use the selected products visibly and recognizably as the primary furniture references.
 - Match the listed product colors and materials closely, including wood tones, stone finishes, fabrics, leather, metal, and accent colors.
 ${buildScaleInstructions(roomType)}
-- Build a cohesive ${style} interior: coordinate colors, materials, silhouettes, lighting warmth, decor, and spacing so the products feel like one curated retail package.
+${buildDesignDirectionInstructions(aiConceptMode, style)}
 - Preserve photorealistic material behavior: fabric softness, leather sheen, wood grain, stone texture, glass reflection, and metal highlights should look natural.
-- Make the room feel premium, warm, elegant, commercially appealing, and ready for a furniture ecommerce product bundle.
 - Do not invent mismatched colors or materials that fight the selected product palette.
 - Do not add people.
 - Do not add text.

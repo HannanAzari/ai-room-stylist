@@ -11,7 +11,12 @@ export type AnalyticsEventName =
   | "share_clicked"
   | "favourite_clicked"
   | "add_to_cart_clicked"
-  | "bundle_add_to_cart_clicked";
+  | "bundle_add_to_cart_clicked"
+  | "generated_provider_count"
+  | "result_provider_viewed"
+  | "result_provider_swiped"
+  | "fullscreen_provider_viewed"
+  | "provider_warning";
 
 export type AnalyticsEvent = {
   eventName: AnalyticsEventName;

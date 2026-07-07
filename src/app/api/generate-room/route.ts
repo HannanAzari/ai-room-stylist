@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
 import {
   getProductsByIds,
   getProductsForStyle,
 } from "@/lib/products";
 import { loadProductReferenceImageFiles } from "@/lib/product-image-references";
 import { buildRoomPrompt, type RoomMeasurements } from "@/lib/prompts";
+import {
+  generateGeminiImage,
+  getGeminiImageConfiguration,
+} from "@/features/room-stylist/services/image-providers/gemini";
+import { generateOpenAIImage } from "@/lib/openai-image-provider";
+import type { GeneratedImageResult } from "@/features/room-stylist/services/image-providers/types";
 
 const SUPPORTED_UPLOAD_TYPES = new Set([
   "image/jpeg",
@@ -65,6 +70,23 @@ function parseRoomMeasurements(formData: FormData): RoomMeasurements {
   };
 }
 
+function mergeProductsById(
+  primaryProducts: ReturnType<typeof getProductsByIds>,
+  complementaryProducts: ReturnType<typeof getProductsForStyle>,
+  limit = 6
+) {
+  const seenProductIds = new Set<string>();
+
+  return [...primaryProducts, ...complementaryProducts]
+    .filter((product) => {
+      if (seenProductIds.has(product.id)) return false;
+
+      seenProductIds.add(product.id);
+      return true;
+    })
+    .slice(0, limit);
+}
+
 function getErrorText(error: unknown) {
   if (error instanceof Error) return error.message;
 
@@ -100,6 +122,12 @@ export async function POST(req: Request) {
     const style = formData.get("style") as string | null;
     const roomType = formData.get("roomType") as string | null;
     const selectedProductIdsRaw = formData.get("selectedProductIds") as string | null;
+    const aiConceptModeRaw = formData.get("aiConceptMode");
+    const providerStrategy = formData.get("providerStrategy");
+    const aiConceptMode =
+      typeof aiConceptModeRaw === "string"
+        ? aiConceptModeRaw === "true"
+        : undefined;
     const roomMeasurements = parseRoomMeasurements(formData);
 
     if (!(image instanceof File) || image.size === 0) {
@@ -137,6 +165,8 @@ export async function POST(req: Request) {
     }
 
     devLog("[generate-room] selected product IDs", selectedProductIds);
+    devLog("[generate-room] AI concept mode", aiConceptMode);
+    devLog("[generate-room] provider strategy", providerStrategy);
     devLog("[generate-room] room measurements", roomMeasurements);
 
     if (
@@ -157,16 +187,23 @@ export async function POST(req: Request) {
       );
     }
 
+    const selectedProducts = getProductsByIds(selectedProductIds);
+    const styleProducts = getProductsForStyle(style);
     const products =
-      selectedProductIds.length > 0
-        ? getProductsByIds(selectedProductIds)
-        : getProductsForStyle(style);
+      aiConceptMode === true
+        ? mergeProductsById(selectedProducts, styleProducts)
+        : aiConceptMode === false
+          ? selectedProducts
+          : selectedProductIds.length > 0
+            ? selectedProducts
+            : styleProducts;
 
     const prompt = buildRoomPrompt({
       style,
       roomType,
       products,
       roomMeasurements,
+      aiConceptMode: aiConceptMode ?? true,
     });
 
     const productImageFiles = await loadProductReferenceImageFiles(
@@ -174,17 +211,87 @@ export async function POST(req: Request) {
       "[generate-room]"
     );
 
-    const result = await openai.images.edit({
-      model: "gpt-image-1",
-      image: [image, ...productImageFiles],
+    const geminiConfiguration = getGeminiImageConfiguration();
+    const providerWarnings: string[] = [];
+
+    if (providerStrategy === "gemini-first") {
+      if (geminiConfiguration.available) {
+        try {
+          const geminiImage = await generateGeminiImage({
+            prompt,
+            roomImage: image,
+            productImages: productImageFiles,
+          });
+
+          return NextResponse.json({
+            images: [geminiImage],
+            imageBase64: geminiImage.imageBase64,
+            products,
+            providerWarnings,
+          });
+        } catch (error) {
+          console.error("[generate-room] Gemini provider failed", error);
+          providerWarnings.push(
+            `Gemini image generation failed: ${getErrorText(error) || "unknown provider error"}. Showing an OpenAI fallback.`
+          );
+        }
+      } else {
+        providerWarnings.push(
+          geminiConfiguration.enabled
+            ? "Gemini image generation is enabled but GEMINI_API_KEY is missing. Showing an OpenAI fallback."
+            : "Gemini image generation is disabled. Showing an OpenAI fallback."
+        );
+      }
+
+      const openAIFallback = await generateOpenAIImage({
+        prompt,
+        roomImage: image,
+        productImages: productImageFiles,
+      });
+
+      return NextResponse.json({
+        images: [openAIFallback],
+        imageBase64: openAIFallback.imageBase64,
+        products,
+        providerWarnings,
+      });
+    }
+
+    const openAIImage = await generateOpenAIImage({
       prompt,
-      size: "1024x1024",
-      n: 1,
+      roomImage: image,
+      productImages: productImageFiles,
     });
+    const images: GeneratedImageResult[] = [openAIImage];
+
+    if (geminiConfiguration.enabled && !geminiConfiguration.apiKey) {
+      providerWarnings.push(
+        "Gemini image generation is enabled but GEMINI_API_KEY is missing."
+      );
+    }
+
+    if (geminiConfiguration.available) {
+      try {
+        const geminiImage = await generateGeminiImage({
+          prompt,
+          roomImage: image,
+          productImages: productImageFiles,
+        });
+
+        images.push(geminiImage);
+      } catch (error) {
+        console.error("[generate-room] Gemini provider failed", error);
+        providerWarnings.push(
+          `Gemini image generation failed: ${getErrorText(error) || "unknown provider error"}. The OpenAI concept is still available.`
+        );
+      }
+    }
 
     return NextResponse.json({
-      images: result.data,
+      images,
+      imageBase64: images[0].imageBase64,
       products,
+      providerWarnings,
     });
   } catch (error) {
     console.error(error);

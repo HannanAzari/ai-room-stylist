@@ -15,3 +15,12 @@ export type RoomMeasurementInputs = {
   roomLengthM: string;
   ceilingHeightM: string;
 };
+
+export type ImageProviderId = string;
+
+export type GeneratedConcept = {
+  provider: ImageProviderId;
+  label: string;
+  imageBase64: string;
+  mimeType: string;
+};

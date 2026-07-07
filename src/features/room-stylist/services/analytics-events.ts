@@ -1,5 +1,9 @@
 import { trackEvent } from "@/lib/analytics";
-import type { Product } from "../types";
+import type {
+  GeneratedConcept,
+  ImageProviderId,
+  Product,
+} from "../types";
 
 type GenerateContext = {
   roomType: string;
@@ -135,5 +139,73 @@ export function trackBundleAddToCartClicked(products: Product[]) {
   trackEvent("bundle_add_to_cart_clicked", {
     productCount: products.length,
     productIds: products.map((product) => product.id),
+  });
+}
+
+export function trackGeneratedProviderCount(concepts: GeneratedConcept[]) {
+  trackEvent("generated_provider_count", {
+    providerCount: concepts.length,
+    providers: concepts.map((concept) => concept.provider),
+  });
+}
+
+export function trackResultProviderViewed({
+  provider,
+  conceptIndex,
+  source,
+}: {
+  provider: ImageProviderId;
+  conceptIndex: number;
+  source: "generated" | "arrow" | "dot" | "swipe" | "refined";
+}) {
+  trackEvent("result_provider_viewed", {
+    provider,
+    conceptIndex,
+    source,
+  });
+}
+
+export function trackResultProviderSwiped({
+  fromProvider,
+  toProvider,
+  fromIndex,
+  toIndex,
+  surface,
+}: {
+  fromProvider: ImageProviderId;
+  toProvider: ImageProviderId;
+  fromIndex: number;
+  toIndex: number;
+  surface: "result" | "fullscreen";
+}) {
+  trackEvent("result_provider_swiped", {
+    fromProvider,
+    toProvider,
+    fromIndex,
+    toIndex,
+    surface,
+  });
+}
+
+export function trackFullscreenProviderViewed({
+  provider,
+  conceptIndex,
+  source,
+}: {
+  provider: ImageProviderId;
+  conceptIndex: number;
+  source: "opened" | "swiped" | "selected";
+}) {
+  trackEvent("fullscreen_provider_viewed", {
+    provider,
+    conceptIndex,
+    source,
+  });
+}
+
+export function trackProviderWarning(warning: string) {
+  trackEvent("provider_warning", {
+    provider: "gemini",
+    warning,
   });
 }

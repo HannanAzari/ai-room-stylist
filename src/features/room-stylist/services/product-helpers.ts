@@ -140,7 +140,7 @@ export function mergeUniqueProducts(
 export function formatPrice(price: Product["price"]) {
   return typeof price === "number"
     ? `$${price.toLocaleString()}`
-    : "Price on request";
+    : "Price available on product page";
 }
 
 export function hasPositiveMeasurement(value: string) {

@@ -1,11 +1,20 @@
 "use client";
 
+/**
+ * LEGACY — the original long-scroll room stylist experience.
+ * Superseded by the canonical Studio wizard (src/components/studio/KoalaDesignStudio.tsx).
+ * Retained for reference only; not routed. Do not build new features here.
+ */
+
 /* eslint-disable @next/next/no-img-element */
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { GenerationProgress } from "@/components/ui/GenerationProgress";
-import { DesignConfidenceCard } from "./DesignConfidenceCard";
+import {
+  GENERATE_ROOM_API_ROUTE,
+  REFINE_ROOM_API_ROUTE,
+} from "@/lib/room-stylist-api-routes";
 import { ProductImage } from "./ProductImage";
 import { useProgressIndex } from "../hooks/useProgressIndex";
 import {
@@ -19,7 +28,6 @@ import {
   getProductUrl,
   getProductsFromIds,
   getShortProductName,
-  hasPositiveMeasurement,
   mergeUniqueProducts,
   productsByCategory,
 } from "../services/product-helpers";
@@ -116,11 +124,6 @@ export function RoomStylistApp({
     useState(false);
   const demoMessageTimeoutRef = useRef<number | null>(null);
   const selectedProducts = getProductsFromIds(selectedProductIds);
-  const hasRoomMeasurements = [
-    roomWidthM,
-    roomLengthM,
-    ceilingHeightM,
-  ].some(hasPositiveMeasurement);
   const roomMeasurementPayload = {
     roomWidthM: roomWidthM.trim() || null,
     roomLengthM: roomLengthM.trim() || null,
@@ -371,12 +374,12 @@ export function RoomStylistApp({
 
   function addProductToCart(product: Product) {
     trackAddToCartClicked(product);
-    showDemoMessage(`${product.name} added to demo cart.`);
+    showDemoMessage(`${product.name} added to your room package.`);
   }
 
   function addFullBundleToCart() {
     trackBundleAddToCartClicked(products);
-    showDemoMessage(`${products.length} item bundle added to demo cart.`);
+    showDemoMessage(`${products.length} items added to your room package.`);
   }
 
   async function handleImageChange(file: File | null) {
@@ -447,7 +450,7 @@ export function RoomStylistApp({
       formData.append("ceilingHeightM", ceilingHeightM.trim());
       formData.append("selectedProductIds", JSON.stringify(selectedProductIds));
 
-      const res = await fetch("/api/generate-room", {
+      const res = await fetch(GENERATE_ROOM_API_ROUTE, {
         method: "POST",
         body: formData,
       });
@@ -495,7 +498,7 @@ export function RoomStylistApp({
     });
 
     try {
-      const res = await fetch("/api/refine-room", {
+      const res = await fetch(REFINE_ROOM_API_ROUTE, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1073,11 +1076,6 @@ export function RoomStylistApp({
                 X Clear concepts
               </button>
             </div>
-
-            <DesignConfidenceCard
-              selectedProductCount={selectedProductIds.length}
-              hasRoomMeasurements={hasRoomMeasurements}
-            />
 
             {selectedConcept !== null && (
               <section className="mt-10 rounded-2xl bg-neutral-900 p-6">

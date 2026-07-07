@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { getProductsByIds } from "@/lib/products";
 import { loadProductReferenceImageFiles } from "@/lib/product-image-references";
-import { buildScaleInstructions, formatProductForPrompt } from "@/lib/prompts";
+import {
+  buildRoomPreservationInstructions,
+  buildScaleInstructions,
+  formatProductForPrompt,
+} from "@/lib/prompts";
 
 const MISSING_IMAGE_ERROR =
   "Missing selected concept image. Please choose a concept before refining.";
@@ -13,6 +17,11 @@ const INVALID_IMAGE_ERROR =
 const OPENAI_INVALID_IMAGE_ERROR =
   "OpenAI invalid image file. Please try refining a newly generated concept.";
 const SUPPORTED_DATA_URL_PREFIX = /^data:image\/(?:png|jpeg);base64,/i;
+const SUPPORTED_REFINEMENT_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
 
 function devLog(message: string, details?: unknown) {
   if (process.env.NODE_ENV !== "development") return;
@@ -84,10 +93,16 @@ export async function POST(req: Request) {
 
     const refinementRequest = body as {
       imageBase64?: unknown;
+      imageMimeType?: unknown;
       changeRequest?: unknown;
       refinementProductIds?: unknown;
     };
     const imageBase64 = refinementRequest.imageBase64;
+    const imageMimeType =
+      typeof refinementRequest.imageMimeType === "string" &&
+      SUPPORTED_REFINEMENT_IMAGE_TYPES.has(refinementRequest.imageMimeType)
+        ? refinementRequest.imageMimeType
+        : "image/png";
     const changeRequest =
       typeof refinementRequest.changeRequest === "string"
         ? refinementRequest.changeRequest
@@ -103,6 +118,7 @@ export async function POST(req: Request) {
     devLog("[refine-room] received request", {
       imageBase64Exists: typeof imageBase64 === "string" && imageBase64.length > 0,
       imageBase64Length: typeof imageBase64 === "string" ? imageBase64.length : 0,
+      imageMimeType,
       changeRequestExists: Boolean(changeRequest.trim()),
       changeRequestLength: changeRequest.trim().length,
       refinementProductIds,
@@ -131,8 +147,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const imageFile = new File([buffer], "selected-concept.png", {
-      type: "image/png",
+    const imageExtension =
+      imageMimeType === "image/jpeg"
+        ? "jpg"
+        : imageMimeType === "image/webp"
+          ? "webp"
+          : "png";
+    const imageFile = new File([buffer], `selected-concept.${imageExtension}`, {
+      type: imageMimeType,
     });
 
     const products = getProductsByIds(refinementProductIds);
@@ -153,7 +175,8 @@ Refine this interior design concept based on the user request:
 Selected product references for this refinement:
 ${productList || "None"}
 
-Keep the same room perspective, architecture, lighting, and luxury furniture retail style.
+${buildRoomPreservationInstructions()}
+Keep the same lighting direction and luxury furniture retail style.
 Only change what the user requested.
 If product references are provided, incorporate them naturally as swap or add-on furniture pieces.
 ${buildScaleInstructions()}
