@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "scrape:products": "tsx src/scripts/scrape-products.ts",
-    "build:products": "tsx src/scripts/build-products-json.ts"
+    "build:products": "tsx src/scripts/build-products-json.ts",
+    "audit:products": "tsx src/scripts/audit-product-data.ts"
   },
   "dependencies": {
     "next": "16.2.6",

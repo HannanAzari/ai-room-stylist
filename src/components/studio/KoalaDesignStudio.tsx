@@ -12,13 +12,16 @@ import {
   UNSUPPORTED_UPLOAD_ERROR,
 } from "@/features/room-stylist/services/image-upload";
 import {
+  formatMoney,
   formatPrice,
   getCategoryLabel,
+  getPackagePricing,
   getProductsFromIds,
   getProductUrl,
   getShortProductName,
   mergeUniqueProducts,
   productsByCategory,
+  type PackagePricing,
 } from "@/features/room-stylist/services/product-helpers";
 import {
   trackAddToCartClicked,
@@ -28,6 +31,7 @@ import {
   trackGenerateCompleted,
   trackGenerateStarted,
   trackGeneratedProviderCount,
+  trackQuoteRequested,
   trackRefineCompleted,
   trackRefineStarted,
   trackResultProviderSwiped,
@@ -639,6 +643,201 @@ function ImageViewerModal({
   );
 }
 
+function PackageSummary({ pricing }: { pricing: PackagePricing }) {
+  if (!pricing.hasAllPrices) {
+    return (
+      <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-[#9C9C94]">Package total</span>
+          <span className="text-right text-sm font-semibold text-[#F7F7F2]">
+            Pricing available on product pages
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
+      <div className="flex items-center justify-between gap-3 text-sm text-[#9C9C94]">
+        <span>Subtotal</span>
+        <span>{formatMoney(pricing.subtotal)}</span>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3 text-sm text-[#F4C430]">
+        <span>Bundle saving ({Math.round(pricing.savingRate * 100)}%)</span>
+        <span>-{formatMoney(pricing.saving)}</span>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.12)] pt-3">
+        <span className="text-sm font-semibold text-[#F7F7F2]">
+          Package total
+        </span>
+        <span className="font-serif text-2xl text-[#F7F7F2]">
+          {formatMoney(pricing.total)}
+        </span>
+      </div>
+      <p className="mt-2 text-[11px] text-[#9C9C94]">
+        Illustrative package saving. Final pricing confirmed on quote.
+      </p>
+    </div>
+  );
+}
+
+function StudioTextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: "text" | "email" | "tel";
+  autoComplete?: string;
+}) {
+  return (
+    <label className="block text-xs text-[#9C9C94]">
+      {label}
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3 text-sm text-[#F7F7F2] outline-none focus:border-[#F4C430]"
+      />
+    </label>
+  );
+}
+
+function QuoteSheet({
+  imageDataUrl,
+  products,
+  pricing,
+  name,
+  email,
+  phone,
+  onName,
+  onEmail,
+  onPhone,
+  onSubmit,
+  onClose,
+}: {
+  imageDataUrl: string;
+  products: Product[];
+  pricing: PackagePricing;
+  name: string;
+  email: string;
+  phone: string;
+  onName: (value: string) => void;
+  onEmail: (value: string) => void;
+  onPhone: (value: string) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+}) {
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canSubmit = name.trim().length > 0 && emailValid;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Request a quote"
+      className="fixed inset-0 z-[65] flex items-end bg-black/70 px-6 pb-[calc(env(safe-area-inset-bottom)_+_24px)]"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close quote request"
+        className="absolute inset-0"
+      />
+      <section className="relative z-10 max-h-[88vh] w-full overflow-y-auto overflow-x-hidden rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
+              Request quote
+            </p>
+            <h2 className="mt-1 font-serif text-2xl">Your room package</h2>
+          </div>
+          <StudioButton variant="ghost" onClick={onClose}>
+            Close
+          </StudioButton>
+        </div>
+
+        {imageDataUrl && (
+          <div className="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#050505]">
+            <img
+              src={imageDataUrl}
+              alt="Your generated room concept"
+              className="max-h-48 w-full object-cover"
+            />
+          </div>
+        )}
+
+        {products.length > 0 && (
+          <div className="mt-4 grid gap-2">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] px-3 py-2"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm text-[#F7F7F2]">
+                  {getShortProductName(product)}
+                </span>
+                <span className="shrink-0 text-xs text-[#9C9C94]">
+                  {formatPrice(product.price)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <PackageSummary pricing={pricing} />
+
+        <div className="mt-4 grid gap-3">
+          <StudioTextField
+            label="Full name"
+            value={name}
+            onChange={onName}
+            placeholder="Your name"
+            autoComplete="name"
+          />
+          <StudioTextField
+            label="Email"
+            value={email}
+            onChange={onEmail}
+            placeholder="you@email.com"
+            type="email"
+            autoComplete="email"
+          />
+          <StudioTextField
+            label="Phone (optional)"
+            value={phone}
+            onChange={onPhone}
+            placeholder="Mobile number"
+            type="tel"
+            autoComplete="tel"
+          />
+        </div>
+
+        <StudioButton
+          onClick={onSubmit}
+          disabled={!canSubmit}
+          className="mt-5 min-h-12 w-full rounded-xl text-base"
+        >
+          Request quote
+        </StudioButton>
+        <p className="mt-2 text-center text-[11px] text-[#9C9C94]">
+          We will email your room concept and package details. No payment
+          required.
+        </p>
+      </section>
+    </div>
+  );
+}
+
 function RefineSheet({
   selectedProductIds,
   openCategoryId,
@@ -808,10 +1007,16 @@ export function KoalaDesignStudio() {
   const [openRefinementCategoryId, setOpenRefinementCategoryId] = useState<
     string | null
   >(null);
+  const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
+  const [quoteName, setQuoteName] = useState("");
+  const [quoteEmail, setQuoteEmail] = useState("");
+  const [quotePhone, setQuotePhone] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const resultSwipeStartXRef = useRef<number | null>(null);
   const suppressResultViewerOpenRef = useRef(false);
+  const toastTimeoutRef = useRef<number | null>(null);
   const [loadingIndex, resetLoadingIndex] = useProgressIndex(
     loading || refining,
     loadingMessages.length,
@@ -820,7 +1025,41 @@ export function KoalaDesignStudio() {
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
   const activeConcept = generatedConcepts[selectedConceptIndex] || null;
   const activeImage = activeConcept?.imageBase64 || "";
+  const activeImageDataUrl = activeConcept
+    ? `data:${activeConcept.mimeType || "image/png"};base64,${activeConcept.imageBase64}`
+    : "";
+  const packagePricing = getPackagePricing(products);
   const selectedStylePrompt = getStylePrompt(style, customPrompt);
+
+  function showToast(message: string) {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
+
+    setToastMessage(message);
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToastMessage("");
+    }, 3200);
+  }
+
+  function openQuoteSheet() {
+    trackBundleAddToCartClicked(products);
+    setQuoteSheetOpen(true);
+  }
+
+  function submitQuoteRequest() {
+    trackQuoteRequested({
+      productCount: products.length,
+      productIds: products.map((product) => product.id),
+      hasPricing: packagePricing.hasAllPrices,
+      packageTotal: packagePricing.hasAllPrices ? packagePricing.total : null,
+    });
+    setQuoteSheetOpen(false);
+    setQuoteName("");
+    setQuoteEmail("");
+    setQuotePhone("");
+    showToast("Quote request sent — our design team will be in touch shortly.");
+  }
 
   useEffect(() => {
     const cached = localStorage.getItem(CACHE_KEY);
@@ -1651,7 +1890,7 @@ export function KoalaDesignStudio() {
             </div>
 
             <StudioButton
-              onClick={() => trackBundleAddToCartClicked(products)}
+              onClick={openQuoteSheet}
               className="min-h-12 w-full rounded-xl text-base"
             >
               Prepare room package
@@ -1729,8 +1968,12 @@ export function KoalaDesignStudio() {
                   Complete the look
                 </p>
                 <h2 className="mt-2 font-serif text-2xl">Products in this room</h2>
+                <p className="mt-1 text-sm text-[#9C9C94]">
+                  {products.length} {products.length === 1 ? "piece" : "pieces"}{" "}
+                  styled into your room.
+                </p>
                 <div className="mt-4 grid gap-4">
-                  {products.slice(0, 4).map((product) => {
+                  {products.map((product) => {
                     const productUrl = getProductUrl(product);
 
                     return (
@@ -1775,6 +2018,19 @@ export function KoalaDesignStudio() {
                     );
                   })}
                 </div>
+
+                <PackageSummary pricing={packagePricing} />
+
+                <StudioButton
+                  onClick={openQuoteSheet}
+                  className="mt-4 min-h-12 w-full rounded-xl text-base"
+                >
+                  Request quote
+                </StudioButton>
+                <p className="mt-2 text-center text-[11px] text-[#9C9C94]">
+                  No payment taken — a Koala consultant follows up with
+                  availability and final pricing.
+                </p>
               </section>
             )}
           </>
@@ -1883,6 +2139,34 @@ export function KoalaDesignStudio() {
           concept={activeConcept}
           onClose={() => setImageViewerOpen(false)}
         />
+      )}
+
+      {quoteSheetOpen && (
+        <QuoteSheet
+          imageDataUrl={activeImageDataUrl}
+          products={products}
+          pricing={packagePricing}
+          name={quoteName}
+          email={quoteEmail}
+          phone={quotePhone}
+          onName={setQuoteName}
+          onEmail={setQuoteEmail}
+          onPhone={setQuotePhone}
+          onSubmit={submitQuoteRequest}
+          onClose={() => setQuoteSheetOpen(false)}
+        />
+      )}
+
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)_+_24px)] z-[70] flex justify-center px-6"
+        >
+          <div className="pointer-events-auto w-full max-w-[382px] rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#111111] px-4 py-3 text-center text-sm text-[#F7F7F2] shadow-2xl">
+            {toastMessage}
+          </div>
+        </div>
       )}
 
       <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#050505] px-6 pt-6">

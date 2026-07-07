@@ -14,6 +14,9 @@ export type Product = {
   url: string;
   imageUrls?: string[];
   imageUrl?: string;
+  // Optional commercial fields. Nullable/undefined-safe: absent until a real
+  // Koala product feed populates them. Never fabricated.
+  stockStatus?: "in-stock" | "made-to-order" | "out-of-stock" | string | null;
 };
 
 export function getAllProducts(): Product[] {

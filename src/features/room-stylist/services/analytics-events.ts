@@ -142,6 +142,25 @@ export function trackBundleAddToCartClicked(products: Product[]) {
   });
 }
 
+export function trackQuoteRequested({
+  productCount,
+  productIds,
+  hasPricing,
+  packageTotal,
+}: {
+  productCount: number;
+  productIds: string[];
+  hasPricing: boolean;
+  packageTotal: number | null;
+}) {
+  trackEvent("quote_requested", {
+    productCount,
+    productIds,
+    hasPricing,
+    packageTotal,
+  });
+}
+
 export function trackGeneratedProviderCount(concepts: GeneratedConcept[]) {
   trackEvent("generated_provider_count", {
     providerCount: concepts.length,

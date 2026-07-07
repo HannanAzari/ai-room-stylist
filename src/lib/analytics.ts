@@ -12,6 +12,7 @@ export type AnalyticsEventName =
   | "favourite_clicked"
   | "add_to_cart_clicked"
   | "bundle_add_to_cart_clicked"
+  | "quote_requested"
   | "generated_provider_count"
   | "result_provider_viewed"
   | "result_provider_swiped"

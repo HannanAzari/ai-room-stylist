@@ -143,6 +143,58 @@ export function formatPrice(price: Product["price"]) {
     : "Price available on product page";
 }
 
+export function formatMoney(amount: number) {
+  return `$${Math.round(amount).toLocaleString()}`;
+}
+
+// Mock bundle saving applied to a fully-priced room package. Not a real
+// promotion — clearly labelled in the UI as an illustrative package saving.
+export const BUNDLE_SAVING_RATE = 0.1;
+
+export type PackagePricing =
+  | {
+      hasAllPrices: false;
+      totalItems: number;
+      pricedItems: number;
+    }
+  | {
+      hasAllPrices: true;
+      totalItems: number;
+      subtotal: number;
+      saving: number;
+      total: number;
+      savingRate: number;
+    };
+
+/**
+ * Computes package pricing only when EVERY product has a real price.
+ * If any price is missing we never fabricate a total — the caller shows
+ * "Pricing available on product pages" instead.
+ */
+export function getPackagePricing(
+  products: Product[],
+  savingRate = BUNDLE_SAVING_RATE
+): PackagePricing {
+  const totalItems = products.length;
+  const pricedProducts = products.filter(
+    (product) => typeof product.price === "number"
+  );
+  const hasAllPrices = totalItems > 0 && pricedProducts.length === totalItems;
+
+  if (!hasAllPrices) {
+    return { hasAllPrices: false, totalItems, pricedItems: pricedProducts.length };
+  }
+
+  const subtotal = pricedProducts.reduce(
+    (sum, product) => sum + (product.price as number),
+    0
+  );
+  const saving = Math.round(subtotal * savingRate);
+  const total = subtotal - saving;
+
+  return { hasAllPrices: true, totalItems, subtotal, saving, total, savingRate };
+}
+
 export function hasPositiveMeasurement(value: string) {
   const parsed = Number(value);
 
