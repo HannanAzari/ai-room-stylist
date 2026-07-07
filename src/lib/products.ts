@@ -17,6 +17,8 @@ export type Product = {
   // Optional commercial fields. Nullable/undefined-safe: absent until a real
   // Koala product feed populates them. Never fabricated.
   stockStatus?: "in-stock" | "made-to-order" | "out-of-stock" | string | null;
+  // Curated demo products that carry verified real price + product URL.
+  isHeroDemoProduct?: boolean;
 };
 
 export function getAllProducts(): Product[] {

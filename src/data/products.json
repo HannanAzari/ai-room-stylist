@@ -278,7 +278,9 @@
     "name": "Aspen White Sintered Stone Coffee Table Matte Black Legs",
     "category": "coffee-tables",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "contemporary",
+      "minimal"
     ],
     "colors": [
       "white",
@@ -291,18 +293,21 @@
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 1998,
     "imageUrls": [
       "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Aspen-White-Sintered-Stone-Coffee-Table---Matte-Black-Legs",
+    "isHeroDemoProduct": true
   },
   {
     "id": "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
     "name": "San Pierre Walnut Veneer Low Round Coffee Table With Travertine Finish Sintered Stone Top",
     "category": "coffee-tables",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "organic modern",
+      "warm neutral"
     ],
     "colors": [
       "walnut",
@@ -316,11 +321,12 @@
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 2598,
     "imageUrls": [
       "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/San-Pierre-Walnut-Veneer-Coffee-Table-Low-Travertine-Finish-Sintered-Stone-Top",
+    "isHeroDemoProduct": true
   },
   {
     "id": "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
@@ -441,7 +447,8 @@
     "name": "Millaray Iii Antique Gold Arch Mirror 120 Cm",
     "category": "decor",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "contemporary"
     ],
     "colors": [
       "gold"
@@ -450,11 +457,12 @@
     "widthCm": 120,
     "depthCm": null,
     "heightCm": 120,
-    "price": null,
+    "price": 598,
     "imageUrls": [
       "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Millaray-III-Antique-Gold-Arch-Mirror-120-cm",
+    "isHeroDemoProduct": true
   },
   {
     "id": "millaray-iii-antique-gold-round-mirror",
@@ -712,18 +720,20 @@
     "name": "Lunara Chandelier",
     "category": "lighting",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "contemporary"
     ],
     "colors": [],
     "materials": [],
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 2598,
     "imageUrls": [
       "/products/lighting/lunara-chandelier/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Lunara-Chandelier",
+    "isHeroDemoProduct": true
   },
   {
     "id": "margo-cocoa-brown-wooden-floor-lamp",
@@ -752,7 +762,9 @@
     "name": "Solene Chandelier Amber Glass",
     "category": "lighting",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "contemporary",
+      "warm neutral"
     ],
     "colors": [
       "amber"
@@ -763,18 +775,20 @@
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 2998,
     "imageUrls": [
       "/products/lighting/solene-chandelier-amber-glass/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Solene-Chandelier-Amber-Glass",
+    "isHeroDemoProduct": true
   },
   {
     "id": "arges-stone-green-floor-rug-large-250cm-x-350cm",
     "name": "Arges Stone Green Floor Rug Large 250cm X 350cm",
     "category": "rugs",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "organic modern"
     ],
     "colors": [
       "green",
@@ -784,11 +798,12 @@
     "widthCm": 250,
     "depthCm": 350,
     "heightCm": null,
-    "price": null,
+    "price": 1598,
     "imageUrls": [
       "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Arges-Stone-Green-Floor-Rug-Large-250cm-x-350cm",
+    "isHeroDemoProduct": true
   },
   {
     "id": "dixon-string-floor-rug-extra-large-300cm-x-350cm",
@@ -834,25 +849,30 @@
     "name": "Messina Nomad Floor Rug Medium 200cm X 300cm",
     "category": "rugs",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "warm neutral",
+      "organic modern"
     ],
     "colors": [],
     "materials": [],
     "widthCm": 200,
     "depthCm": 300,
     "heightCm": null,
-    "price": null,
+    "price": 1198,
     "imageUrls": [
       "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Messina-Nomad-Floor-Rug-Medium-200cm-x-300cm",
+    "isHeroDemoProduct": true
   },
   {
     "id": "bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform",
     "name": "Bellagio Stone Cream Woven Fabric 3 Pieces Modular Sofa With Left Terminal And Side Platform",
     "category": "sofas",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "warm neutral",
+      "minimal"
     ],
     "colors": [
       "cream",
@@ -864,11 +884,12 @@
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 8560,
     "imageUrls": [
       "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Bellagio-Stone-Cream-Woven-Fabric-3-Pieces-Modular-Sofa-With-Left-Terminal-and-Side-Platform",
+    "isHeroDemoProduct": true
   },
   {
     "id": "calma-pearl-beige-fabric-2-pieces-modular-sofa",
@@ -1032,7 +1053,9 @@
     "name": "Lennox Almond Cream Leather 3 Seater Sofa",
     "category": "sofas",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "contemporary",
+      "warm neutral"
     ],
     "colors": [
       "cream",
@@ -1044,11 +1067,12 @@
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 4398,
     "imageUrls": [
       "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Lennox-Cream-Leather-3-Seater-Sofa",
+    "isHeroDemoProduct": true
   },
   {
     "id": "marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa",
@@ -1170,7 +1194,10 @@
     "name": "Jamil Ash Oak Veneer Entertainment Unit",
     "category": "tv-units",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "warm neutral",
+      "organic modern",
+      "contemporary"
     ],
     "colors": [],
     "materials": [
@@ -1181,11 +1208,12 @@
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 3998,
     "imageUrls": [
       "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Jamil-Ash-Oak-Veneer-Entertainment-Unit",
+    "isHeroDemoProduct": true
   },
   {
     "id": "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
@@ -1216,7 +1244,8 @@
     "name": "Tinsley Brushed Champagne Gold Stainless Steel Entertainment Unit",
     "category": "tv-units",
     "styleTags": [
-      "modern luxury"
+      "modern luxury",
+      "contemporary"
     ],
     "colors": [
       "gold",
@@ -1228,10 +1257,11 @@
     "widthCm": null,
     "depthCm": null,
     "heightCm": null,
-    "price": null,
+    "price": 1758,
     "imageUrls": [
       "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/main.jpg"
     ],
-    "url": ""
+    "url": "https://koalaliving.com.au/Tinsley-Brushed-Champagne-Gold-Stainless-Steel-Entertainment-Unit",
+    "isHeroDemoProduct": true
   }
 ]

@@ -164,25 +164,25 @@ export function formatMoney(amount: number) {
 // promotion — clearly labelled in the UI as an illustrative package saving.
 export const BUNDLE_SAVING_RATE = 0.1;
 
-export type PackagePricing =
-  | {
-      hasAllPrices: false;
-      totalItems: number;
-      pricedItems: number;
-    }
-  | {
-      hasAllPrices: true;
-      totalItems: number;
-      subtotal: number;
-      saving: number;
-      total: number;
-      savingRate: number;
-    };
+export type PackagePricing = {
+  totalItems: number;
+  pricedItems: number;
+  unpricedItems: number;
+  hasAnyPrice: boolean;
+  hasAllPrices: boolean;
+  // Sums are over the priced items only — never fabricated for missing prices.
+  subtotal: number;
+  saving: number;
+  total: number;
+  savingRate: number;
+};
 
 /**
- * Computes package pricing only when EVERY product has a real price.
- * If any price is missing we never fabricate a total — the caller shows
- * "Pricing available on product pages" instead.
+ * Computes package pricing across whatever products carry a real price.
+ * Fully priced → subtotal/saving/total for the whole package.
+ * Partially priced → the same figures for the priced items only, and the
+ * caller surfaces "Some pricing available on product pages".
+ * No price is ever fabricated for a missing value.
  */
 export function getPackagePricing(
   products: Product[],
@@ -192,20 +192,28 @@ export function getPackagePricing(
   const pricedProducts = products.filter(
     (product) => typeof product.price === "number"
   );
-  const hasAllPrices = totalItems > 0 && pricedProducts.length === totalItems;
-
-  if (!hasAllPrices) {
-    return { hasAllPrices: false, totalItems, pricedItems: pricedProducts.length };
-  }
-
+  const pricedItems = pricedProducts.length;
   const subtotal = pricedProducts.reduce(
     (sum, product) => sum + (product.price as number),
     0
   );
   const saving = Math.round(subtotal * savingRate);
-  const total = subtotal - saving;
 
-  return { hasAllPrices: true, totalItems, subtotal, saving, total, savingRate };
+  return {
+    totalItems,
+    pricedItems,
+    unpricedItems: totalItems - pricedItems,
+    hasAnyPrice: pricedItems > 0,
+    hasAllPrices: totalItems > 0 && pricedItems === totalItems,
+    subtotal,
+    saving,
+    total: subtotal - saving,
+    savingRate,
+  };
+}
+
+export function getHeroDemoProducts(): Product[] {
+  return productList.filter((product) => product.isHeroDemoProduct);
 }
 
 export function hasPositiveMeasurement(value: string) {

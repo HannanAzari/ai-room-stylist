@@ -15,6 +15,7 @@ import {
   formatMoney,
   formatPrice,
   getCategoryLabel,
+  getHeroDemoProducts,
   getPackagePricing,
   getProductsFromIds,
   getProductUrl,
@@ -50,6 +51,18 @@ import {
   recommendMissingCategoryProducts,
   type RoomSummary,
 } from "@/features/room-stylist/services/room-consultant";
+import {
+  buildLead,
+  getLeads,
+  saveLead,
+  type LeadContactMethod,
+} from "@/features/room-stylist/services/leads";
+import {
+  computePilotMetrics,
+  downloadJson,
+  getAnalyticsEvents,
+  type PilotMetrics,
+} from "@/features/room-stylist/services/pilot-metrics";
 import { normalizeGeneratedConcepts } from "@/features/room-stylist/services/generated-concepts";
 import type {
   GeneratedConcept,
@@ -158,6 +171,27 @@ function triggerHaptic() {
   if (typeof navigator === "undefined") return;
   if (typeof navigator.vibrate === "function") navigator.vibrate(8);
 }
+
+// Curated demo products with verified real price + product URL.
+const heroDemoProducts = getHeroDemoProducts();
+
+type QuoteFormState = {
+  name: string;
+  email: string;
+  phone: string;
+  postcode: string;
+  preferredContact: LeadContactMethod;
+  notes: string;
+};
+
+const EMPTY_QUOTE_FORM: QuoteFormState = {
+  name: "",
+  email: "",
+  phone: "",
+  postcode: "",
+  preferredContact: "either",
+  notes: "",
+};
 
 const studioRoomMeasurementPayload: {
   roomWidthM: string | null;
@@ -689,7 +723,8 @@ function ImageViewerModal({
 }
 
 function PackageSummary({ pricing }: { pricing: PackagePricing }) {
-  if (!pricing.hasAllPrices) {
+  // No priced items — never fabricate a total.
+  if (!pricing.hasAnyPrice) {
     return (
       <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
         <div className="flex items-center justify-between gap-3">
@@ -702,27 +737,46 @@ function PackageSummary({ pricing }: { pricing: PackagePricing }) {
     );
   }
 
+  const totalLabel = pricing.hasAllPrices ? "Package total" : "Priced so far";
+
   return (
-    <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
-      <div className="flex items-center justify-between gap-3 text-sm text-[#9C9C94]">
-        <span>Subtotal</span>
-        <span>{formatMoney(pricing.subtotal)}</span>
+    <div className="mt-4 overflow-hidden rounded-2xl border border-[#C9A57A]/25 bg-gradient-to-b from-[#141210] to-[#0B0B0B]">
+      <div className="p-4">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+          Your room package
+        </p>
+
+        <div className="mt-3 flex items-center justify-between gap-3 text-sm text-[#9C9C94]">
+          <span>Subtotal</span>
+          <span>{formatMoney(pricing.subtotal)}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3 text-sm text-[#C9A57A]">
+          <span>Package saving ({Math.round(pricing.savingRate * 100)}%)</span>
+          <span>-{formatMoney(pricing.saving)}</span>
+        </div>
+
+        <div className="mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
+          <span className="pb-1 text-sm font-semibold text-[#F7F7F2]">
+            {totalLabel}
+          </span>
+          <span className="font-serif text-3xl leading-none text-[#F7F7F2]">
+            {formatMoney(pricing.total)}
+          </span>
+        </div>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-3 text-sm text-[#C9A57A]">
-        <span>Bundle saving ({Math.round(pricing.savingRate * 100)}%)</span>
-        <span>-{formatMoney(pricing.saving)}</span>
+
+      <div className="border-t border-white/10 px-4 py-2.5">
+        {pricing.hasAllPrices ? (
+          <p className="text-[11px] text-[#9C9C94]">
+            Illustrative package saving. Final pricing confirmed on quote.
+          </p>
+        ) : (
+          <p className="text-[11px] text-[#9C9C94]">
+            Some pricing available on product pages · {pricing.pricedItems} of{" "}
+            {pricing.totalItems} items priced.
+          </p>
+        )}
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.12)] pt-3">
-        <span className="text-sm font-semibold text-[#F7F7F2]">
-          Package total
-        </span>
-        <span className="font-serif text-2xl text-[#F7F7F2]">
-          {formatMoney(pricing.total)}
-        </span>
-      </div>
-      <p className="mt-2 text-[11px] text-[#9C9C94]">
-        Illustrative package saving. Final pricing confirmed on quote.
-      </p>
     </div>
   );
 }
@@ -1014,12 +1068,8 @@ function QuoteSheet({
   recommendations,
   pricing,
   summary,
-  name,
-  email,
-  phone,
-  onName,
-  onEmail,
-  onPhone,
+  form,
+  onField,
   onSubmit,
   onClose,
 }: {
@@ -1028,17 +1078,18 @@ function QuoteSheet({
   recommendations: Product[];
   pricing: PackagePricing;
   summary: RoomSummary | null;
-  name: string;
-  email: string;
-  phone: string;
-  onName: (value: string) => void;
-  onEmail: (value: string) => void;
-  onPhone: (value: string) => void;
+  form: QuoteFormState;
+  onField: (field: keyof QuoteFormState, value: string) => void;
   onSubmit: () => void;
   onClose: () => void;
 }) {
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const canSubmit = name.trim().length > 0 && emailValid;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const canSubmit = form.name.trim().length > 0 && emailValid;
+  const contactOptions: { id: LeadContactMethod; label: string }[] = [
+    { id: "email", label: "Email" },
+    { id: "phone", label: "Phone" },
+    { id: "either", label: "Either" },
+  ];
 
   return (
     <div
@@ -1113,27 +1164,70 @@ function QuoteSheet({
         <div className="mt-4 grid gap-3">
           <StudioTextField
             label="Full name"
-            value={name}
-            onChange={onName}
+            value={form.name}
+            onChange={(value) => onField("name", value)}
             placeholder="Your name"
             autoComplete="name"
           />
           <StudioTextField
             label="Email"
-            value={email}
-            onChange={onEmail}
+            value={form.email}
+            onChange={(value) => onField("email", value)}
             placeholder="you@email.com"
             type="email"
             autoComplete="email"
           />
-          <StudioTextField
-            label="Phone (optional)"
-            value={phone}
-            onChange={onPhone}
-            placeholder="Mobile number"
-            type="tel"
-            autoComplete="tel"
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <StudioTextField
+              label="Phone (optional)"
+              value={form.phone}
+              onChange={(value) => onField("phone", value)}
+              placeholder="Mobile number"
+              type="tel"
+              autoComplete="tel"
+            />
+            <StudioTextField
+              label="Postcode (optional)"
+              value={form.postcode}
+              onChange={(value) => onField("postcode", value)}
+              placeholder="e.g. 2000"
+              autoComplete="postal-code"
+            />
+          </div>
+
+          <div>
+            <p className="text-xs text-[#9C9C94]">Preferred contact</p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {contactOptions.map((option) => {
+                const active = form.preferredContact === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => onField("preferredContact", option.id)}
+                    aria-pressed={active}
+                    className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                      active
+                        ? "border-[#C9A57A]/55 bg-[#181818] text-[#F7F7F2]"
+                        : "border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] text-[#9C9C94] hover:border-white/25"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="block text-xs text-[#9C9C94]">
+            Notes (optional)
+            <textarea
+              value={form.notes}
+              onChange={(event) => onField("notes", event.target.value)}
+              placeholder="Anything else we should know — timing, budget, questions..."
+              className="mt-2 min-h-20 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3 text-sm text-[#F7F7F2] outline-none focus:border-[#C9A57A]"
+            />
+          </label>
         </div>
 
         <StudioButton
@@ -1147,6 +1241,118 @@ function QuoteSheet({
           A consultant can help confirm availability, pricing and next steps.
         </p>
       </section>
+    </div>
+  );
+}
+
+function AdminMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+        {label}
+      </p>
+      <p className="mt-1 font-serif text-2xl text-[#F7F7F2]">{value}</p>
+    </div>
+  );
+}
+
+function AdminPanel({
+  metrics,
+  leadCount,
+  onRefresh,
+  onExportAnalytics,
+  onExportLeads,
+  onClose,
+}: {
+  metrics: PilotMetrics | null;
+  leadCount: number;
+  onRefresh: () => void;
+  onExportAnalytics: () => void;
+  onExportLeads: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pilot admin panel"
+      className="fixed inset-0 z-[80] overflow-y-auto bg-[#050505]/95 px-6 py-8 backdrop-blur"
+    >
+      <div className="mx-auto w-full max-w-[430px]">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[#C9A57A]">
+              Pilot admin
+            </p>
+            <h2 className="mt-1 font-serif text-2xl text-[#F7F7F2]">
+              Metrics &amp; export
+            </h2>
+          </div>
+          <StudioButton variant="ghost" onClick={onClose}>
+            Close
+          </StudioButton>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <AdminMetric label="Generations" value={metrics?.generations ?? 0} />
+          <AdminMetric label="Quote submits" value={metrics?.quoteSubmissions ?? 0} />
+          <AdminMetric label="Package opens" value={metrics?.quoteOpens ?? 0} />
+          <AdminMetric label="Leads stored" value={leadCount} />
+          <AdminMetric label="Recs added" value={metrics?.recommendationsAdded ?? 0} />
+          <AdminMetric label="Recs removed" value={metrics?.recommendationsRemoved ?? 0} />
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
+            Most selected products
+          </p>
+          {metrics && metrics.topProducts.length > 0 ? (
+            <ul className="mt-3 grid gap-2">
+              {metrics.topProducts.map((product) => (
+                <li
+                  key={product.id}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[#F7F7F2]">
+                    {product.name}
+                  </span>
+                  <span className="shrink-0 text-[#C9A57A]">
+                    {product.count}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-[#9C9C94]">
+              No product selections recorded yet.
+            </p>
+          )}
+        </div>
+
+        <p className="mt-4 text-[11px] text-[#9C9C94]">
+          {metrics?.totalEvents ?? 0} analytics events recorded locally.
+        </p>
+
+        <div className="mt-3 grid gap-2">
+          <StudioButton onClick={onExportLeads} className="w-full rounded-xl">
+            Export leads JSON
+          </StudioButton>
+          <StudioButton
+            variant="secondary"
+            onClick={onExportAnalytics}
+            className="w-full rounded-xl"
+          >
+            Export analytics JSON
+          </StudioButton>
+          <StudioButton
+            variant="ghost"
+            onClick={onRefresh}
+            className="w-full rounded-xl"
+          >
+            Refresh
+          </StudioButton>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1321,9 +1527,10 @@ export function KoalaDesignStudio() {
     string | null
   >(null);
   const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
-  const [quoteName, setQuoteName] = useState("");
-  const [quoteEmail, setQuoteEmail] = useState("");
-  const [quotePhone, setQuotePhone] = useState("");
+  const [quoteForm, setQuoteForm] = useState<QuoteFormState>(EMPTY_QUOTE_FORM);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminMetrics, setAdminMetrics] = useState<PilotMetrics | null>(null);
+  const [adminLeadCount, setAdminLeadCount] = useState(0);
   const [addedRecommendationIds, setAddedRecommendationIds] = useState<
     string[]
   >([]);
@@ -1408,6 +1615,20 @@ export function KoalaDesignStudio() {
       ? packagePricing.total
       : null;
 
+    // Persist the lead locally for the pilot (no CRM connected yet).
+    saveLead(
+      buildLead({
+        form: quoteForm,
+        roomType,
+        style: selectedStylePrompt,
+        selectedProducts: products,
+        recommendedAdditions: addedRecommendations,
+        pricing: packagePricing,
+        imageProvider: activeConcept?.provider ?? null,
+        imageBase64: activeImage || null,
+      })
+    );
+
     // quote_requested retained from Sprint 1 for continuity; quote_submitted
     // is the canonical Sprint 2 event.
     trackQuoteRequested({
@@ -1423,11 +1644,31 @@ export function KoalaDesignStudio() {
       packageTotal,
     });
     setQuoteSheetOpen(false);
-    setQuoteName("");
-    setQuoteEmail("");
-    setQuotePhone("");
+    setQuoteForm(EMPTY_QUOTE_FORM);
     showToast("Quote request sent — our design team will be in touch shortly.");
   }
+
+  function refreshAdminData() {
+    setAdminMetrics(computePilotMetrics());
+    setAdminLeadCount(getLeads().length);
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isAdmin =
+      new URLSearchParams(window.location.search).get("admin") === "1";
+
+    if (!isAdmin) return;
+
+    const timeout = window.setTimeout(() => {
+      setAdminMetrics(computePilotMetrics());
+      setAdminLeadCount(getLeads().length);
+      setAdminOpen(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     const cached = localStorage.getItem(CACHE_KEY);
@@ -2142,6 +2383,31 @@ export function KoalaDesignStudio() {
               </button>
             )}
 
+            {heroDemoProducts.length > 0 && (
+              <section className="mt-4 overflow-hidden rounded-3xl border border-[#C9A57A]/25 bg-gradient-to-b from-[#141210] to-[#111111] p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+                  Hero demo collection
+                </p>
+                <h3 className="mt-1 font-serif text-lg text-[#F7F7F2]">
+                  Priced &amp; shoppable now
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-[#9C9C94]">
+                  Curated pieces with live pricing and product links — ideal for
+                  the pilot demo.
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {heroDemoProducts.map((product) => (
+                    <StudioProductCard
+                      key={product.id}
+                      product={product}
+                      selected={selectedProductIds.includes(product.id)}
+                      onToggle={() => toggleProduct(product.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
             <div className="mt-4 grid gap-4">
               {productsByCategory.map((category) => {
                 const isOpen = openProductCategoryId === category.id;
@@ -2529,12 +2795,10 @@ export function KoalaDesignStudio() {
           recommendations={addedRecommendations}
           pricing={packagePricing}
           summary={roomSummary}
-          name={quoteName}
-          email={quoteEmail}
-          phone={quotePhone}
-          onName={setQuoteName}
-          onEmail={setQuoteEmail}
-          onPhone={setQuotePhone}
+          form={quoteForm}
+          onField={(field, value) =>
+            setQuoteForm((current) => ({ ...current, [field]: value }))
+          }
           onSubmit={submitQuoteRequest}
           onClose={() => setQuoteSheetOpen(false)}
         />
@@ -2550,6 +2814,24 @@ export function KoalaDesignStudio() {
             {toastMessage}
           </div>
         </div>
+      )}
+
+      {adminOpen && (
+        <AdminPanel
+          metrics={adminMetrics}
+          leadCount={adminLeadCount}
+          onRefresh={refreshAdminData}
+          onExportAnalytics={() =>
+            downloadJson(
+              `koala-analytics-${Date.now()}.json`,
+              getAnalyticsEvents()
+            )
+          }
+          onExportLeads={() =>
+            downloadJson(`koala-leads-${Date.now()}.json`, getLeads())
+          }
+          onClose={() => setAdminOpen(false)}
+        />
       )}
 
       <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#050505] px-6 pt-6">

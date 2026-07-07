@@ -6,13 +6,13 @@ Total products: **55**
 
 | Field | Missing | Coverage gap |
 | --- | --- | --- |
-| price | 55 / 55 | 100% |
-| url | 55 / 55 | 100% |
+| price | 44 / 55 | 80% |
+| url | 44 / 55 | 80% |
 | dimensions | 40 / 55 | 73% |
 
 Dimensions = at least one of widthCm / depthCm / heightCm present.
 
-## Products missing price (55)
+## Products missing price (44)
 
 | ID | Name | Category |
 | --- | --- | --- |
@@ -27,14 +27,11 @@ Dimensions = at least one of widthCm / depthCm / heightCm present.
 | `gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs` | Gloria Sand Beige Vegan Leather Dining Chair Smoky Ash Legs | chairs |
 | `maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs` | Maggie Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs | chairs |
 | `romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs` | Romina Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs | chairs |
-| `aspen-white-sintered-stone-coffee-table-matte-black-legs` | Aspen White Sintered Stone Coffee Table Matte Black Legs | coffee-tables |
-| `san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top` | San Pierre Walnut Veneer Low Round Coffee Table With Travertine Finish Sintered Stone Top | coffee-tables |
 | `sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs` | Sir Lionell Gliding White Sintered Stone Coffee Table Walnut Brown Wooden Legs | coffee-tables |
 | `terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm` | Terra Linea Light Brown Ash Veneer High Triangular Coffee Table 90cm | coffee-tables |
 | `thames-calacatta-oro-white-sintered-stone-square-coffee-table` | Thames Calacatta Oro White Sintered Stone Square Coffee Table | coffee-tables |
 | `vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top` | Vania Brushed Bronze Coffee Table With Statuario White Sintered Stone Top | coffee-tables |
 | `crimson-silence-painting-180x180cm` | Crimson Silence Painting 180x180cm | decor |
-| `millaray-iii-antique-gold-arch-mirror-120-cm` | Millaray Iii Antique Gold Arch Mirror 120 Cm | decor |
 | `millaray-iii-antique-gold-round-mirror` | Millaray Iii Antique Gold Round Mirror | decor |
 | `muted-vermilion-painting-80x120cm` | Muted Vermilion Painting 80x120cm | decor |
 | `ochre-memory-painting-180x180cm` | Ochre Memory Painting 180x180cm | decor |
@@ -47,14 +44,9 @@ Dimensions = at least one of widthCm / depthCm / heightCm present.
 | `terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm` | Terra Linea Light Brown Ash Veneer Single Leg Rectangular Dining Table 240cm X 120cm | dining-tables |
 | `alina-wooden-metal-floor-lamp` | Alina Wooden Metal Floor Lamp | lighting |
 | `emmeline-chandelier` | Emmeline Chandelier | lighting |
-| `lunara-chandelier` | Lunara Chandelier | lighting |
 | `margo-cocoa-brown-wooden-floor-lamp` | Margo Cocoa Brown Wooden Floor Lamp | lighting |
-| `solene-chandelier-amber-glass` | Solene Chandelier Amber Glass | lighting |
-| `arges-stone-green-floor-rug-large-250cm-x-350cm` | Arges Stone Green Floor Rug Large 250cm X 350cm | rugs |
 | `dixon-string-floor-rug-extra-large-300cm-x-350cm` | Dixon String Floor Rug Extra Large 300cm X 350cm | rugs |
 | `estonia-ivory-beige-floor-rug-large-250cm-x-350cm` | Estonia Ivory Beige Floor Rug Large 250cm X 350cm | rugs |
-| `messina-nomad-floor-rug-medium-200cm-x-300cm` | Messina Nomad Floor Rug Medium 200cm X 300cm | rugs |
-| `bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform` | Bellagio Stone Cream Woven Fabric 3 Pieces Modular Sofa With Left Terminal And Side Platform | sofas |
 | `calma-pearl-beige-fabric-2-pieces-modular-sofa` | Calma Pearl Beige Fabric 2 Pieces Modular Sofa | sofas |
 | `celia-mid-beige-2-seater-woven-fabric-sofa` | Celia Mid Beige 2 Seater Woven Fabric Sofa | sofas |
 | `elva-green-pastel-nubuck-leather-3-seater-sofa` | Elva Green Pastel Nubuck Leather 3 Seater Sofa | sofas |
@@ -62,17 +54,14 @@ Dimensions = at least one of widthCm / depthCm / heightCm present.
 | `gabriella-vintage-mustard-3-seater-woven-fabric-sofa` | Gabriella Vintage Mustard 3 Seater Woven Fabric Sofa | sofas |
 | `kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs` | Kelly Pearl Beige Fabric 3 Seater Sofa Champagne Gold Legs | sofas |
 | `kensley-almond-cream-leather-2-seater-dual-electric-recliner` | Kensley Almond Cream Leather 2 Seater Dual Electric Recliner | sofas |
-| `lennox-almond-cream-leather-3-seater-sofa` | Lennox Almond Cream Leather 3 Seater Sofa | sofas |
 | `marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa` | Marvie Champagne Beige Semi Aniline Leather 3 Pieces Modular Sofa | sofas |
 | `pierce-shadow-white-woven-fabric-corner-electric-recliner` | Pierce Shadow White Woven Fabric Corner Electric Recliner | sofas |
 | `portia-vintage-tan-leather-4-seater-sofa` | Portia Vintage Tan Leather 4 Seater Sofa | sofas |
 | `soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal` | Soluna Powder White Chenille Fabric 4 Pieces Modular Corner Sofa With Left And Right Terminal | sofas |
 | `grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top` | Grayson Brushed Bronze Entertainment Unit With Statuario White Sintered Stone Top | tv-units |
-| `jamil-ash-oak-veneer-entertainment-unit` | Jamil Ash Oak Veneer Entertainment Unit | tv-units |
 | `sierra-walnut-brown-entertainment-unit-sintered-stone-top` | Sierra Walnut Brown Entertainment Unit Sintered Stone Top | tv-units |
-| `tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit` | Tinsley Brushed Champagne Gold Stainless Steel Entertainment Unit | tv-units |
 
-## Products missing url (55)
+## Products missing url (44)
 
 | ID | Name | Category |
 | --- | --- | --- |
@@ -87,14 +76,11 @@ Dimensions = at least one of widthCm / depthCm / heightCm present.
 | `gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs` | Gloria Sand Beige Vegan Leather Dining Chair Smoky Ash Legs | chairs |
 | `maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs` | Maggie Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs | chairs |
 | `romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs` | Romina Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs | chairs |
-| `aspen-white-sintered-stone-coffee-table-matte-black-legs` | Aspen White Sintered Stone Coffee Table Matte Black Legs | coffee-tables |
-| `san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top` | San Pierre Walnut Veneer Low Round Coffee Table With Travertine Finish Sintered Stone Top | coffee-tables |
 | `sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs` | Sir Lionell Gliding White Sintered Stone Coffee Table Walnut Brown Wooden Legs | coffee-tables |
 | `terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm` | Terra Linea Light Brown Ash Veneer High Triangular Coffee Table 90cm | coffee-tables |
 | `thames-calacatta-oro-white-sintered-stone-square-coffee-table` | Thames Calacatta Oro White Sintered Stone Square Coffee Table | coffee-tables |
 | `vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top` | Vania Brushed Bronze Coffee Table With Statuario White Sintered Stone Top | coffee-tables |
 | `crimson-silence-painting-180x180cm` | Crimson Silence Painting 180x180cm | decor |
-| `millaray-iii-antique-gold-arch-mirror-120-cm` | Millaray Iii Antique Gold Arch Mirror 120 Cm | decor |
 | `millaray-iii-antique-gold-round-mirror` | Millaray Iii Antique Gold Round Mirror | decor |
 | `muted-vermilion-painting-80x120cm` | Muted Vermilion Painting 80x120cm | decor |
 | `ochre-memory-painting-180x180cm` | Ochre Memory Painting 180x180cm | decor |
@@ -107,14 +93,9 @@ Dimensions = at least one of widthCm / depthCm / heightCm present.
 | `terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm` | Terra Linea Light Brown Ash Veneer Single Leg Rectangular Dining Table 240cm X 120cm | dining-tables |
 | `alina-wooden-metal-floor-lamp` | Alina Wooden Metal Floor Lamp | lighting |
 | `emmeline-chandelier` | Emmeline Chandelier | lighting |
-| `lunara-chandelier` | Lunara Chandelier | lighting |
 | `margo-cocoa-brown-wooden-floor-lamp` | Margo Cocoa Brown Wooden Floor Lamp | lighting |
-| `solene-chandelier-amber-glass` | Solene Chandelier Amber Glass | lighting |
-| `arges-stone-green-floor-rug-large-250cm-x-350cm` | Arges Stone Green Floor Rug Large 250cm X 350cm | rugs |
 | `dixon-string-floor-rug-extra-large-300cm-x-350cm` | Dixon String Floor Rug Extra Large 300cm X 350cm | rugs |
 | `estonia-ivory-beige-floor-rug-large-250cm-x-350cm` | Estonia Ivory Beige Floor Rug Large 250cm X 350cm | rugs |
-| `messina-nomad-floor-rug-medium-200cm-x-300cm` | Messina Nomad Floor Rug Medium 200cm X 300cm | rugs |
-| `bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform` | Bellagio Stone Cream Woven Fabric 3 Pieces Modular Sofa With Left Terminal And Side Platform | sofas |
 | `calma-pearl-beige-fabric-2-pieces-modular-sofa` | Calma Pearl Beige Fabric 2 Pieces Modular Sofa | sofas |
 | `celia-mid-beige-2-seater-woven-fabric-sofa` | Celia Mid Beige 2 Seater Woven Fabric Sofa | sofas |
 | `elva-green-pastel-nubuck-leather-3-seater-sofa` | Elva Green Pastel Nubuck Leather 3 Seater Sofa | sofas |
@@ -122,15 +103,12 @@ Dimensions = at least one of widthCm / depthCm / heightCm present.
 | `gabriella-vintage-mustard-3-seater-woven-fabric-sofa` | Gabriella Vintage Mustard 3 Seater Woven Fabric Sofa | sofas |
 | `kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs` | Kelly Pearl Beige Fabric 3 Seater Sofa Champagne Gold Legs | sofas |
 | `kensley-almond-cream-leather-2-seater-dual-electric-recliner` | Kensley Almond Cream Leather 2 Seater Dual Electric Recliner | sofas |
-| `lennox-almond-cream-leather-3-seater-sofa` | Lennox Almond Cream Leather 3 Seater Sofa | sofas |
 | `marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa` | Marvie Champagne Beige Semi Aniline Leather 3 Pieces Modular Sofa | sofas |
 | `pierce-shadow-white-woven-fabric-corner-electric-recliner` | Pierce Shadow White Woven Fabric Corner Electric Recliner | sofas |
 | `portia-vintage-tan-leather-4-seater-sofa` | Portia Vintage Tan Leather 4 Seater Sofa | sofas |
 | `soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal` | Soluna Powder White Chenille Fabric 4 Pieces Modular Corner Sofa With Left And Right Terminal | sofas |
 | `grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top` | Grayson Brushed Bronze Entertainment Unit With Statuario White Sintered Stone Top | tv-units |
-| `jamil-ash-oak-veneer-entertainment-unit` | Jamil Ash Oak Veneer Entertainment Unit | tv-units |
 | `sierra-walnut-brown-entertainment-unit-sintered-stone-top` | Sierra Walnut Brown Entertainment Unit Sintered Stone Top | tv-units |
-| `tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit` | Tinsley Brushed Champagne Gold Stainless Steel Entertainment Unit | tv-units |
 
 ## Products missing dimensions (40)
 
