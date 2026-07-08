@@ -673,6 +673,73 @@ function PackageSummary({ pricing }: { pricing: PackagePricing }) {
   );
 }
 
+function ShoppingSummaryCard({
+  productCount,
+  pricing,
+  onAddToCart,
+}: {
+  productCount: number;
+  pricing: PackagePricing;
+  onAddToCart: () => void;
+}) {
+  return (
+    <div className="v2-surface overflow-hidden rounded-[26px]">
+      <div className="p-5">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+          Your room package
+        </p>
+        <h2 className="mt-1 font-serif text-2xl leading-tight text-[#F5F3EE]">
+          Designed with {productCount} Koala{" "}
+          {productCount === 1 ? "piece" : "pieces"}
+        </h2>
+
+        {pricing.hasAnyPrice ? (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-sm text-[#9a978f]">
+              <span>Subtotal</span>
+              <span>{formatMoney(pricing.subtotal)}</span>
+            </div>
+            {pricing.saving > 0 && (
+              <div className="mt-2 flex items-center justify-between text-sm text-[#C9A57A]">
+                <span>
+                  Package saving ({Math.round(pricing.savingRate * 100)}%)
+                </span>
+                <span>-{formatMoney(pricing.saving)}</span>
+              </div>
+            )}
+            <div className="mt-3 flex items-end justify-between border-t border-white/10 pt-3">
+              <span className="pb-1 text-sm font-semibold text-[#F5F3EE]">
+                {pricing.hasAllPrices ? "Package total" : "Priced so far"}
+              </span>
+              <span className="font-serif text-3xl leading-none text-[#F5F3EE]">
+                {formatMoney(pricing.total)}
+              </span>
+            </div>
+            {!pricing.hasAllPrices && (
+              <p className="mt-2 text-[11px] text-[#9a978f]">
+                Some pricing available on product pages · {pricing.pricedItems}{" "}
+                of {pricing.totalItems} items priced.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm leading-6 text-[#9a978f]">
+            Pricing is shown on each product page.
+          </p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onAddToCart}
+        className="w-full border-t border-white/10 bg-[#F5F3EE] py-4 text-base font-semibold text-[#0b0b0d] transition active:scale-[0.99]"
+      >
+        Add room package to cart
+      </button>
+    </div>
+  );
+}
+
 function ShopProductCard({
   product,
   action,
@@ -2275,6 +2342,20 @@ export function KoalaDesignStudio() {
           Shop this room
         </StudioButton>
 
+        {packageAll.length > 0 && (
+          <>
+            <ShoppingSummaryCard
+              productCount={packageAll.length}
+              pricing={packagePricing}
+              onAddToCart={openQuoteSheet}
+            />
+            <p className="text-center text-[11px] leading-5 text-[#9a978f]">
+              No payment taken — a Koala consultant confirms availability,
+              pricing and next steps.
+            </p>
+          </>
+        )}
+
         <div className="v2-surface flex items-center justify-between rounded-2xl p-1.5">
           {[
             {
@@ -2329,22 +2410,6 @@ export function KoalaDesignStudio() {
                 <ShopProductCard key={product.id} product={product} />
               ))}
             </div>
-          </section>
-        )}
-
-        {packageAll.length > 0 && (
-          <section className="space-y-3">
-            <PackageSummary pricing={packagePricing} />
-            <StudioButton
-              onClick={openQuoteSheet}
-              className="min-h-13 w-full rounded-2xl text-base"
-            >
-              Add room package to cart
-            </StudioButton>
-            <p className="text-center text-[11px] leading-5 text-[#9a978f]">
-              No payment taken — a Koala consultant confirms availability,
-              pricing and next steps.
-            </p>
           </section>
         )}
 
@@ -2561,7 +2626,7 @@ export function KoalaDesignStudio() {
               {[
                 { n: 1, label: "Capture" },
                 { n: 2, label: "Design" },
-                { n: 3, label: "Result" },
+                { n: 3, label: "Shop" },
               ].map((s) => (
                 <div key={s.n} className="flex-1">
                   <div
