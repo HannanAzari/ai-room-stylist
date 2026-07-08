@@ -2275,15 +2275,15 @@ export function KoalaDesignStudio() {
           Shop this room
         </StudioButton>
 
-        <div className="grid grid-cols-5 gap-2">
+        <div className="v2-surface flex items-center justify-between rounded-2xl p-1.5">
           {[
             {
-              label: "Edit",
+              label: "Edit with AI",
               icon: <AiEditIcon />,
               onClick: () => setRefineSheetOpen(true),
             },
             {
-              label: "Redo",
+              label: "Regenerate",
               icon: <RegenerateIcon />,
               onClick: handleGenerate,
             },
@@ -2301,17 +2301,14 @@ export function KoalaDesignStudio() {
               type="button"
               onClick={action.onClick}
               aria-label={action.label}
-              className="v2-surface flex flex-col items-center gap-1.5 rounded-2xl py-2.5 transition active:scale-95"
+              className={`flex h-11 flex-1 items-center justify-center rounded-xl transition active:scale-90 ${
+                action.danger
+                  ? "text-[#9a978f] hover:bg-[#d98266]/12 hover:text-[#d98266]"
+                  : "text-[#F5F3EE] hover:bg-white/[0.06]"
+              }`}
             >
-              <span
-                className={`flex h-6 w-6 items-center justify-center ${
-                  action.danger ? "text-[#9a978f]" : "text-[#F5F3EE]"
-                }`}
-              >
+              <span className="flex h-5 w-5 items-center justify-center">
                 {action.icon}
-              </span>
-              <span className="text-[10px] font-medium text-[#9a978f]">
-                {action.label}
               </span>
             </button>
           ))}
