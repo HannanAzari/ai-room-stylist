@@ -2346,21 +2346,7 @@ export function KoalaDesignStudio() {
           Shop this room
         </StudioButton>
 
-        {packageAll.length > 0 && (
-          <>
-            <ShoppingSummaryCard
-              productCount={packageAll.length}
-              pricing={packagePricing}
-              onAddToCart={openQuoteSheet}
-            />
-            <p className="text-center text-[11px] leading-5 text-[#9a978f]">
-              No payment taken — a Koala consultant confirms availability,
-              pricing and next steps.
-            </p>
-          </>
-        )}
-
-        <div className="v2-surface flex items-center justify-between rounded-2xl p-1.5">
+        <div className="flex items-center justify-between gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] px-1 py-0.5">
           {[
             {
               label: "Edit with AI",
@@ -2386,13 +2372,13 @@ export function KoalaDesignStudio() {
               type="button"
               onClick={action.onClick}
               aria-label={action.label}
-              className={`flex h-11 flex-1 items-center justify-center rounded-xl transition active:scale-90 ${
+              className={`flex h-9 flex-1 items-center justify-center rounded-lg text-[#9a978f] transition active:scale-90 ${
                 action.danger
-                  ? "text-[#9a978f] hover:bg-[#d98266]/12 hover:text-[#d98266]"
-                  : "text-[#F5F3EE] hover:bg-white/[0.06]"
+                  ? "hover:text-[#d98266]"
+                  : "hover:text-[#F5F3EE]"
               }`}
             >
-              <span className="flex h-5 w-5 items-center justify-center">
+              <span className="flex h-[18px] w-[18px] items-center justify-center">
                 {action.icon}
               </span>
             </button>
@@ -2415,6 +2401,20 @@ export function KoalaDesignStudio() {
               ))}
             </div>
           </section>
+        )}
+
+        {packageAll.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <ShoppingSummaryCard
+              productCount={packageAll.length}
+              pricing={packagePricing}
+              onAddToCart={openQuoteSheet}
+            />
+            <p className="text-center text-[11px] leading-5 text-[#9a978f]">
+              No payment taken — a Koala consultant confirms availability,
+              pricing and next steps.
+            </p>
+          </div>
         )}
 
         {recommendations.length > 0 && (
@@ -2589,72 +2589,61 @@ export function KoalaDesignStudio() {
       )}
 
       <div className="v2-canvas mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden">
-        {step === 3 ? (
-          <header className="flex shrink-0 items-center justify-between px-5 pb-3 pt-[calc(env(safe-area-inset-top)_+_12px)]">
+        <header
+          className={`shrink-0 ${
+            step === 3
+              ? "px-5 pt-[calc(env(safe-area-inset-top)_+_12px)]"
+              : "px-6 pt-[calc(env(safe-area-inset-top)_+_18px)]"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-4">
             <Image
               src="/koala-logo.png"
               alt="Koala Living"
-              width={130}
-              height={56}
+              width={150}
+              height={65}
               priority
-              className="h-auto w-24"
+              className={step === 3 ? "h-auto w-24" : "h-auto w-28"}
             />
             <button
               type="button"
               onClick={resetWizard}
-              className="rounded-full border border-white/12 px-3.5 py-1.5 text-xs text-[#F5F3EE] transition hover:bg-white/5"
+              className="rounded-full border border-white/15 bg-white/[0.05] px-4 py-1.5 text-xs font-medium text-[#F5F3EE] shadow-sm transition hover:border-white/25 hover:bg-white/10"
             >
-              New room
+              {step === 3 ? "New room" : "Reset"}
             </button>
-          </header>
-        ) : (
-          <header className="shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_18px)]">
-            <div className="flex items-center justify-between gap-4">
-              <Image
-                src="/koala-logo.png"
-                alt="Koala Living"
-                width={150}
-                height={65}
-                priority
-                className="h-auto w-28"
-              />
-              <button
-                type="button"
-                onClick={resetWizard}
-                className="rounded-full border border-white/12 px-3.5 py-1.5 text-xs text-[#F5F3EE] transition hover:bg-white/5"
-              >
-                Reset
-              </button>
-            </div>
-            <div className="mt-5 flex items-end gap-2">
-              {[
-                { n: 1, label: "Capture" },
-                { n: 2, label: "Design" },
-                { n: 3, label: "Shop" },
-              ].map((s) => (
-                <div key={s.n} className="flex-1">
-                  <div
-                    className={`h-1 rounded-full transition-colors ${
-                      step >= s.n ? "bg-[#C9A57A]" : "bg-white/10"
-                    }`}
-                  />
-                  <p
-                    className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                      step >= s.n ? "text-[#F5F3EE]" : "text-[#9a978f]"
-                    }`}
-                  >
-                    {s.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </header>
-        )}
+          </div>
+          <div
+            className={`flex items-end gap-2 ${step === 3 ? "mt-3" : "mt-5"}`}
+          >
+            {[
+              { n: 1, label: "Capture" },
+              { n: 2, label: "Design" },
+              { n: 3, label: "Shop" },
+            ].map((s) => (
+              <div key={s.n} className="flex-1">
+                <div
+                  className={`h-1 rounded-full transition-colors ${
+                    step >= s.n ? "bg-[#C9A57A]" : "bg-white/10"
+                  }`}
+                />
+                <p
+                  className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                    step >= s.n ? "text-[#F5F3EE]" : "text-[#9a978f]"
+                  }`}
+                >
+                  {s.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </header>
+
 
         <div
           className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${
             step === 3
-              ? "px-5 pb-6"
+              ? "px-5 pb-6 pt-4"
               : step === 1
                 ? "px-6 pb-4 pt-4"
                 : "px-6 pb-32 pt-4"
