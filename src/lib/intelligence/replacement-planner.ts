@@ -50,6 +50,12 @@ export type PlacementTask = {
   productCategory: string;
   target: string;
   placement: string;
+  // "selected" — a customer-selected product with no existing counterpart to
+  // replace. "complementary" — an AI-suggested concept-mode accessory (only
+  // added when concept mode is on).
+  source: "selected" | "complementary";
+  // Whether this product's natural home is a wall (art/mirror) vs the floor.
+  onWall: boolean;
 };
 
 export type ReplacementPlan = {
@@ -161,7 +167,8 @@ function toReplacement(
 
 function toPlacement(
   profile: ProductProfile,
-  sceneGraph: SceneGraph | undefined
+  sceneGraph: SceneGraph | undefined,
+  source: "selected" | "complementary"
 ): PlacementTask {
   const rule = profile.replacementRules[0];
   return {
@@ -171,6 +178,8 @@ function toPlacement(
     productCategory: profile.categoryLabel,
     target: pickTargetZone(profile, sceneGraph),
     placement: rule?.placement || "in its natural location for this room",
+    source,
+    onWall: WALL_CATEGORIES.has(profile.category),
   };
 }
 
@@ -222,13 +231,13 @@ export function buildReplacementPlan(
       usedItemIds.add(match.id);
       replacements.push(toReplacement(profile, match));
     } else {
-      additions.push(toPlacement(profile, sceneGraph));
+      additions.push(toPlacement(profile, sceneGraph, "selected"));
     }
   }
 
   // Complementary products (only present in concept mode) are pure additions.
   for (const profile of complementaryProfiles) {
-    additions.push(toPlacement(profile, sceneGraph));
+    additions.push(toPlacement(profile, sceneGraph, "complementary"));
   }
 
   // Fixed objects + non-replaceable furniture, deduped case-insensitively so

@@ -1,28 +1,29 @@
 /**
- * Dynamic Prompt Builder (Phase 4, tuned).
+ * Prompt Builder — Generation Pipeline V2 (Sprint 3).
  *
- * Builds a per-request image prompt from the room analysis, the selected Koala
- * products and their intelligence profiles, camera/lighting/perspective, and
- * product-specific negative prompts and placement rules.
+ * The prompt no longer *describes* products. Instead it *executes* the
+ * deterministic Replacement Plan: an ordered list of imperative tasks — remove
+ * an existing item and replace it with a named Koala product, or place a
+ * product in a specific empty zone — wrapped in hard "lock the room" and
+ * "never do this" rules.
  *
- * Tuning priorities:
- *  - preserve the FULL visible room (no cropping / reframing / zoom)
- *  - keep camera angle, walls, windows, doors, ceiling and floor
- *  - replace only the categories of the user-selected products
- *  - concept mode ON  → add only complementary Koala items to complete the room
- *  - concept mode OFF → change only the selected products, add nothing else
- *  - never alter architecture
+ * Product appearance comes from the supplied reference images (ground truth),
+ * not from prose, which removes a whole class of "the model reimagined the
+ * product" drift. The plan already guarantees one destination per product, no
+ * duplicated furniture, and no fixed object ever touched — so the prompt can be
+ * a faithful executor of that plan.
+ *
+ * Concept mode OFF → execute the plan and nothing else.
+ * Concept mode ON  → execute the plan, then add ONLY tasteful complementary
+ *                    Koala accessories.
+ *
+ * Fully fallback-safe: with an empty/unanalysed plan it degrades to a
+ * room-preserving "keep everything as-is" instruction.
  */
 import type { RoomMeasurements } from "@/lib/prompts";
-import {
-  buildRoomPreservationInstructions,
-  buildScaleInstructions,
-} from "@/lib/prompts";
+import { buildScaleInstructions } from "@/lib/prompts";
 import type { ProductProfile } from "./product-profile";
-import {
-  formatReplacementPlan,
-  type ReplacementPlan,
-} from "./replacement-planner";
+import type { ReplacementPlan } from "./replacement-planner";
 import type { RoomAnalysis } from "./room-analysis";
 import type { SceneGraph } from "./scene-graph";
 
@@ -32,17 +33,14 @@ export type IntelligentPromptInput = {
   style: string;
   roomType: string;
   aiConceptMode: boolean;
-  // Ids the customer explicitly selected — their categories are the ones we
-  // replace; everything else stays as the original room.
+  // Ids the customer explicitly selected. The plan already encodes these; kept
+  // here for backward compatibility with callers.
   selectedProductIds?: string[];
   measurements?: RoomMeasurements;
   referenceViewCount?: number;
-  // Structured scene understanding — used to protect fixed objects and target
-  // replaceable furniture precisely.
+  // Structured scene understanding (kept for callers / future use).
   sceneGraph?: SceneGraph;
-  // Explicit, deterministic item→product swap plan (Sprint 2). When present it
-  // is rendered as a numbered REPLACEMENT PLAN so generation knows exactly what
-  // changes.
+  // The deterministic item→product swap plan this prompt executes.
   replacementPlan?: ReplacementPlan;
 };
 
@@ -55,12 +53,23 @@ const GLOBAL_NEGATIVE = [
   "cropping, zooming or reframing the room",
   "changing the camera angle or perspective",
   "altering walls, windows, doors, ceiling or floor",
-  "people or pets",
-  "text, captions, watermarks, logos",
-  "distorted, warped or duplicated furniture",
+  "moving or removing the TV, air conditioner, curtains, windows or doors",
+  "overlaying new furniture on top of existing furniture",
+  "duplicated, cloned or repeated furniture",
+  "inventing furniture that is not in the replacement plan",
+  "people, pets, text, captions, watermarks or logos",
+  "distorted, warped or floating furniture",
   "furniture at an unrealistic scale",
-  "impossible perspective or floating objects",
   "cartoonish, CGI or low-quality rendering",
+];
+
+// The fixed elements that must never move, always stated explicitly.
+const CANONICAL_FIXED = [
+  "the windows",
+  "the doors",
+  "the TV",
+  "the air conditioner",
+  "the curtains",
 ];
 
 function formatMeasurements(measurements?: RoomMeasurements): string {
@@ -72,165 +81,160 @@ function formatMeasurements(measurements?: RoomMeasurements): string {
       ? `ceiling height ${measurements.ceilingHeightM}m`
       : null,
   ].filter(Boolean);
-  return parts.length > 0 ? `\nRoom measurements: ${parts.join(", ")}.` : "";
+  return parts.length > 0
+    ? `- Keep the room dimensions exactly: ${parts.join(", ")}.`
+    : "";
 }
 
-function formatRoomSection(analysis: RoomAnalysis): string {
+/** "Never move ..." lines: the canonical fixed set + any extra preserved items. */
+function buildNeverMoveLines(preserved: string[]): string[] {
+  const seen = CANONICAL_FIXED.map((item) =>
+    item.replace(/^the\s+/i, "").toLowerCase()
+  );
+  const lines = CANONICAL_FIXED.map((item) => `- Never move or alter ${item}.`);
+  for (const raw of preserved) {
+    const name = raw.trim();
+    const key = name.toLowerCase();
+    if (!name) continue;
+    // Skip anything already covered by the canonical set.
+    if (seen.some((s) => key.includes(s) || s.includes(key))) continue;
+    seen.push(key);
+    lines.push(`- Never move or alter the ${name}.`);
+  }
+  return lines;
+}
+
+function formatReplacementTasks(plan: ReplacementPlan): {
+  tasks: string[];
+  count: number;
+} {
+  const tasks: string[] = [];
+  let n = 0;
+
+  for (const task of plan.replacements) {
+    n += 1;
+    const colour = task.existingColor ? ` (${task.existingColor})` : "";
+    const where = task.location ? `, currently ${task.location}` : "";
+    tasks.push(
+      `Task ${n} — Remove the existing ${task.existingCategory}${colour} completely${where}, then replace it with the ${task.productTitle}. ${task.placement}.`
+    );
+  }
+
+  // Only customer-selected products with no counterpart are part of the core
+  // plan; complementary items are handled by the concept-mode section.
+  for (const task of plan.additions.filter((a) => a.source === "selected")) {
+    n += 1;
+    const placement = task.onWall
+      ? `Place the ${task.productTitle} centred on ${task.target}`
+      : `Place the ${task.productTitle} in ${task.target}`;
+    tasks.push(`Task ${n} — ${placement}. ${task.placement}.`);
+  }
+
+  return { tasks, count: n };
+}
+
+function buildConceptSection(
+  aiConceptMode: boolean,
+  plan?: ReplacementPlan
+): string {
+  if (!aiConceptMode) {
+    return [
+      "CONCEPT MODE — OFF:",
+      "- Execute ONLY the replacement plan above.",
+      "- Do NOT add any other furniture, decor, lighting or accessories.",
+      "- Leave every unlisted item and all empty space exactly as in the uploaded photo.",
+    ].join("\n");
+  }
+
+  const complementary = (plan?.additions ?? []).filter(
+    (a) => a.source === "complementary"
+  );
+  const items =
+    complementary.length > 0
+      ? complementary
+          .map(
+            (task) =>
+              `  - ${task.productTitle} (${task.productCategory}) — ${task.onWall ? `on ${task.target}` : `in ${task.target}`}`
+          )
+          .join("\n")
+      : "  - a few subtle Koala-style accessories (cushions, throws, small decor) only where the room clearly needs them";
+
   return [
-    "PRESERVE THE CUSTOMER'S ROOM EXACTLY (from analysis of the uploaded photo):",
-    `- Room type: ${analysis.roomType}`,
-    `- Camera: ${analysis.cameraAngle}; vanishing point ${analysis.vanishingPoint} — DO NOT change the camera or crop the frame.`,
-    `- Floor: ${analysis.floor} (keep unchanged)`,
-    `- Walls: ${analysis.walls} (keep unchanged)`,
-    `- Windows: ${analysis.windows} (keep exactly, including light direction)`,
-    `- Doors: ${analysis.doors} (keep exactly)`,
-    `- Ceiling: ${analysis.ceiling} (keep unchanged)`,
-    `- Lighting: ${analysis.lighting}`,
-    analysis.existingFurniture.length > 0
-      ? `- Existing furniture: ${analysis.existingFurniture.join(", ")}`
-      : null,
-    analysis.emptyAreas.length > 0
-      ? `- Empty areas: ${analysis.emptyAreas.join(", ")}`
-      : null,
-    analysis.placementZones.length > 0
-      ? `- Natural placement zones: ${analysis.placementZones.join(", ")}`
-      : null,
-    analysis.colourPalette.length > 0
-      ? `- Existing palette: ${analysis.colourPalette.join(", ")}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function formatSceneGraphSection(sceneGraph?: SceneGraph): string {
-  if (!sceneGraph) return "";
-
-  const fixedNames = [
-    ...sceneGraph.fixedObjects.map((object) => object.name),
-    ...sceneGraph.furniture
-      .filter((item) => !item.replaceable)
-      .map((item) => item.category),
-  ];
-  const replaceable = sceneGraph.furniture
-    .filter((item) => item.replaceable)
-    .map(
-      (item) =>
-        `${item.category}${item.dominantColor && item.dominantColor !== "unknown" ? ` (${item.dominantColor})` : ""}`
-    );
-
-  const lines: string[] = [];
-  if (fixedNames.length > 0) {
-    lines.push(
-      `KEEP THESE FIXED OBJECTS EXACTLY — do not move, remove, restyle or cover them: ${[...new Set(fixedNames)].join(", ")}.`
-    );
-  }
-  if (replaceable.length > 0) {
-    lines.push(
-      `You may replace these existing pieces where a supplied product matches their role: ${[...new Set(replaceable)].join(", ")}.`
-    );
-  }
-  if (sceneGraph.emptyWalls.length > 0) {
-    lines.push(`Empty wall areas: ${sceneGraph.emptyWalls.join(", ")}.`);
-  }
-  return lines.length > 0 ? lines.join("\n") : "";
-}
-
-function formatProductLine(profile: ProductProfile, index: number): string {
-  const rule = profile.replacementRules[0];
-  return [
-    `${index + 1}. ${profile.title}`,
-    `   - ${profile.promptFragment}`,
-    `   - Materials/texture: ${profile.materials.join(", ") || "premium"} · ${profile.texture}`,
-    rule ? `   - Placement: replace ${rule.target}; ${rule.placement}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+    "CONCEPT MODE — ON:",
+    "- First execute the replacement plan above, then add ONLY tasteful complementary Koala accessories to complete the room:",
+    items,
+    "- Keep additions subtle and secondary; do NOT add large furniture or anything that competes with the planned products.",
+    "- Coordinate colours, materials and lighting into one curated, shoppable room package.",
+  ].join("\n");
 }
 
 export function buildIntelligentRoomPrompt(
   input: IntelligentPromptInput
 ): IntelligentPrompt {
-  const { roomAnalysis, profiles, style, roomType, aiConceptMode } = input;
-  const selectedIds = new Set(input.selectedProductIds || []);
+  const { style, roomType, aiConceptMode } = input;
+  const plan = input.replacementPlan;
 
-  // Partition into user-selected vs AI-complementary (only meaningful when
-  // concept mode added extra products).
-  const selectedProfiles = selectedIds.size
-    ? profiles.filter((p) => selectedIds.has(p.id))
-    : profiles;
-  const complementaryProfiles = selectedIds.size
-    ? profiles.filter((p) => !selectedIds.has(p.id))
-    : [];
+  const negativePrompt = [...GLOBAL_NEGATIVE];
 
-  const selectedCategories = [
-    ...new Set(selectedProfiles.map((p) => p.categoryLabel)),
-  ];
+  const lockSection = [
+    "LOCK THE ROOM — these must stay identical to the uploaded photo:",
+    "- Keep the camera exactly identical — same angle, height, focal length and framing.",
+    "- Keep the perspective and vanishing point identical.",
+    "- Keep the lighting identical — same direction, colour and intensity.",
+    "- Keep the architecture identical — walls, windows, doors, ceiling and floor.",
+    "- Keep the room dimensions and proportions identical.",
+    formatMeasurements(input.measurements),
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-  const productNegatives = profiles.flatMap((profile) => profile.negativePrompt);
-  const negativePrompt = [...new Set([...productNegatives, ...GLOBAL_NEGATIVE])];
+  const { tasks, count } = plan
+    ? formatReplacementTasks(plan)
+    : { tasks: [], count: 0 };
 
-  const selectedSection =
-    selectedProfiles.length > 0
+  const planSection =
+    count > 0
       ? [
-          "SELECTED KOALA PRODUCTS — place these, matching each product's visible colour, material, finish, shape, silhouette and base precisely:",
-          selectedProfiles.map(formatProductLine).join("\n\n"),
+          "REPLACEMENT PLAN — execute EXACTLY these tasks, in order, and NOTHING else:",
+          ...tasks,
         ].join("\n")
-      : "No specific products selected — style the room cohesively for the target style.";
+      : "No product changes were requested — keep the room exactly as it appears in the uploaded photo, changing nothing.";
 
-  const replacementScope =
-    selectedCategories.length > 0
-      ? `Replace ONLY these categories from the original room: ${selectedCategories.join(", ")}. Leave every other category exactly as it appears in the uploaded photo${aiConceptMode ? " unless a complementary item below is added" : ""}.`
-      : "Restyle cohesively while keeping the room's architecture and framing.";
+  const referenceSection = input.referenceViewCount
+    ? `PRODUCT REFERENCES — you are given ${input.referenceViewCount} product reference image(s). Treat them as the EXACT appearance of the named products: reproduce their shape, colour, material, finish and proportions faithfully. Do not reinterpret or restyle them.`
+    : "";
 
-  const conceptSection = aiConceptMode
-    ? [
-        "CONCEPT MODE — ON:",
-        "- Keep the selected products fixed and recognisable.",
-        complementaryProfiles.length > 0
-          ? `- You MAY add ONLY these complementary Koala items to complete the room (do not invent any other furniture):\n${complementaryProfiles.map(formatProductLine).join("\n\n")}`
-          : "- You may add a few complementary Koala-style pieces only where the room clearly needs them; do not overfill.",
-        "- Coordinate colours, materials and lighting into one curated, shoppable room package.",
-      ].join("\n")
-    : [
-        "CONCEPT MODE — OFF:",
-        "- Change ONLY the selected products. Do NOT add any extra furniture, decor or lighting.",
-        "- Leave all other furniture, styling and empty space exactly as in the uploaded photo.",
-      ].join("\n");
+  const neverSection = [
+    "DO NOT:",
+    "- Never overlay new furniture on top of existing furniture.",
+    "- Never duplicate furniture.",
+    "- Never crop the room.",
+    "- Never zoom or reframe.",
+    ...buildNeverMoveLines(plan?.preserved ?? []),
+    "- Never invent furniture that is not in the plan.",
+    "- Generate ONLY the requested replacements and placements.",
+  ].join("\n");
 
   const prompt = [
-    `You are producing ONE photorealistic ${style} interior photograph of the customer's real ${roomType}.`,
-    "The uploaded photo is the ground truth for the room. Keep the ENTIRE visible room in frame — do not crop, zoom, pan or reframe.",
+    `You are re-photographing the customer's real ${roomType} to show ${style} Koala Living furniture. The uploaded photo is the ground truth. Produce ONE photorealistic, full-room interior photograph — the whole room visible and uncropped.`,
     "",
-    formatRoomSection(roomAnalysis) + formatMeasurements(input.measurements),
+    lockSection,
     "",
-    buildRoomPreservationInstructions(),
+    planSection,
     "",
-    formatSceneGraphSection(input.sceneGraph),
+    referenceSection,
     "",
-    input.replacementPlan ? formatReplacementPlan(input.replacementPlan) : "",
+    buildConceptSection(aiConceptMode, plan),
     "",
-    replacementScope,
-    "",
-    selectedSection,
-    input.referenceViewCount
-      ? `\nYou are given ${input.referenceViewCount} product reference image(s) — treat them as the source of truth for the products' appearance.`
-      : "",
-    "",
-    conceptSection,
+    neverSection,
     "",
     "PLACEMENT & SCALE:",
     buildScaleInstructions(roomType),
-    "- Respect real clearances, circulation paths and sightlines. Anchor rugs under furniture; centre coffee tables; place lighting at believable heights.",
-    "",
-    "MATERIAL, LIGHTING & PERSPECTIVE FIDELITY:",
-    "- Match the room's existing lighting direction and warmth; render believable shadows and reflections.",
-    "- Keep fabric softness, leather sheen, wood grain, stone texture, glass reflection and metal highlights photorealistic.",
-    "- Do not change the camera angle, perspective or architecture, and do not crop the frame.",
+    "- Seat replacement furniture exactly where the removed item stood; anchor rugs under furniture; centre coffee tables; hang wall art centred at believable height.",
     "",
     `AVOID: ${negativePrompt.join("; ")}.`,
     "",
-    "Output: a single, photorealistic, full-room interior photograph (whole room visible, uncropped) suitable for furniture ecommerce.",
+    "Output: a single photorealistic, full-room interior photograph — whole room visible, uncropped, with the camera, perspective, lighting and architecture unchanged from the uploaded photo.",
   ]
     .filter((line) => line !== null && line !== undefined)
     .join("\n");
