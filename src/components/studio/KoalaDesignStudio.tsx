@@ -44,7 +44,6 @@ import {
   trackShareClicked,
 } from "@/features/room-stylist/services/analytics-events";
 import {
-  buildDesignRationale,
   buildRoomSummary,
   estimateFurnishingBudget,
   recommendMissingCategoryProducts,
@@ -177,8 +176,6 @@ const heroDemoProducts = getHeroDemoProducts();
 // AI-suggested defaults so the customer can proceed without choosing.
 const DEFAULT_ROOM_TYPE = "living room";
 const DEFAULT_STYLE = "Modern Luxury";
-
-type ResultTab = "room" | "shop" | "look" | "package";
 
 type QuoteFormState = {
   name: string;
@@ -392,70 +389,6 @@ function StudioProductCard({
           {getCategoryLabel(product.category)}
         </p>
       </div>
-    </button>
-  );
-}
-
-function ResultIconButton({
-  label,
-  icon,
-  onClick,
-  variant = "default",
-  compact = false,
-  quiet = false,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-  variant?: "default" | "primary" | "danger";
-  compact?: boolean;
-  quiet?: boolean;
-}) {
-  if (quiet) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={label}
-        className="flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium text-[#9C9C94] transition hover:bg-white/5 hover:text-[#F7F7F2]"
-      >
-        <span className="flex h-4 w-4 items-center justify-center">{icon}</span>
-        {label}
-      </button>
-    );
-  }
-
-  const variantClassName =
-    variant === "primary"
-      ? "border-white/25 bg-[#181818] text-[#F7F7F2] hover:border-white/40 hover:bg-[#111111]"
-      : variant === "danger"
-        ? "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#9C9C94] hover:border-white/25 hover:text-[#F7F7F2]"
-        : "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#F7F7F2] hover:border-white/25 hover:bg-[#181818]";
-  const iconClassName =
-    variant === "danger"
-      ? "border border-[rgba(255,255,255,0.12)] bg-[#050505] text-[#9C9C94]"
-      : variant === "primary"
-        ? "bg-[#F7F7F2] text-[#050505]"
-        : "border border-[rgba(255,255,255,0.12)] bg-[#050505] text-[#F7F7F2]";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex min-w-0 flex-col items-center rounded-2xl border text-center transition ${variantClassName} ${
-        compact ? "gap-1.5 px-2 py-2.5" : "gap-2 px-3 py-4"
-      }`}
-    >
-      <span
-        className={`flex items-center justify-center rounded-xl ${iconClassName} ${
-          compact ? "h-8 w-8" : "h-9 w-9"
-        }`}
-      >
-        {icon}
-      </span>
-      <span className={compact ? "text-[10px] font-semibold" : "text-xs font-semibold"}>
-        {label}
-      </span>
     </button>
   );
 }
@@ -736,155 +669,6 @@ function PackageSummary({ pricing }: { pricing: PackagePricing }) {
           </p>
         )}
       </div>
-    </div>
-  );
-}
-
-function RoomSummaryCard({ summary }: { summary: RoomSummary }) {
-  const { budget } = summary;
-  const budgetLabel =
-    budget.min === budget.max
-      ? formatMoney(budget.min)
-      : `${formatMoney(budget.min)} – ${formatMoney(budget.max)}`;
-
-  return (
-    <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-      <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-        Recommended direction
-      </p>
-      <h2 className="mt-2 font-serif text-2xl">Your room, considered</h2>
-
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-            Room
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#F7F7F2]">
-            {summary.roomTypeLabel}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-            Style
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#F7F7F2]">
-            {summary.styleLabel}
-          </p>
-        </div>
-        <div className="col-span-2 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-            Room mood
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#F7F7F2]">
-            {summary.mood}
-          </p>
-        </div>
-      </div>
-
-      {summary.palette.length > 0 && (
-        <div className="mt-4">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-            Suggested palette
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {summary.palette.map((swatch) => (
-              <span
-                key={swatch.name}
-                className="flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] px-2.5 py-1"
-              >
-                <span
-                  aria-hidden="true"
-                  className="h-3.5 w-3.5 rounded-full border border-white/20"
-                  style={{ background: swatch.hex }}
-                />
-                <span className="text-xs text-[#F7F7F2]">{swatch.name}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-4">
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-            Package estimate
-          </p>
-          <p className="mt-1 text-[11px] text-[#9C9C94]">
-            {budget.basis === "prices"
-              ? "From selected product pricing"
-              : "Indicative range for a room like this"}
-          </p>
-        </div>
-        <span className="shrink-0 font-serif text-xl text-[#F7F7F2]">
-          {budgetLabel}
-        </span>
-      </div>
-
-      <p className="mt-3 text-xs text-[#9C9C94]">
-        {summary.productCount}{" "}
-        {summary.productCount === 1 ? "piece" : "pieces"} styled · consultant
-        curated direction
-      </p>
-    </section>
-  );
-}
-
-function DesignRationaleSection({ bullets }: { bullets: string[] }) {
-  return (
-    <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-      <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-        From your consultant
-      </p>
-      <h2 className="mt-2 font-serif text-2xl">Designer Notes</h2>
-      <ul className="mt-4 grid gap-3">
-        {bullets.map((bullet) => (
-          <li
-            key={bullet}
-            className="flex gap-3 text-sm leading-6 text-[#D9D9D2]"
-          >
-            <span
-              aria-hidden="true"
-              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#C9A57A]"
-            />
-            <span>{bullet}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function ResultTabBar({
-  active,
-  onChange,
-}: {
-  active: ResultTab;
-  onChange: (tab: ResultTab) => void;
-}) {
-  const tabs: { id: ResultTab; label: string }[] = [
-    { id: "room", label: "Room" },
-    { id: "shop", label: "Shop" },
-    { id: "look", label: "Complete" },
-    { id: "package", label: "Package" },
-  ];
-
-  return (
-    <div className="v2-surface flex gap-1 rounded-full p-1">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onChange(tab.id)}
-          aria-pressed={active === tab.id}
-          className={`flex-1 rounded-full px-2 py-2 text-xs font-semibold transition ${
-            active === tab.id
-              ? "bg-[#F5F3EE] text-[#0b0b0d] shadow"
-              : "text-[#9a978f] hover:text-[#F5F3EE]"
-          }`}
-        >
-          {tab.label}
-        </button>
-      ))}
     </div>
   );
 }
@@ -1434,11 +1218,6 @@ export function KoalaDesignStudio() {
   const [stylePickerOpen, setStylePickerOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [letAiRecommendBundle, setLetAiRecommendBundle] = useState(true);
-  const [activeShopCategoryId, setActiveShopCategoryId] = useState<string>(
-    productsByCategory[0]?.id ?? ""
-  );
-  const [resultTab, setResultTab] = useState<ResultTab>("room");
-  const [insightsOpen, setInsightsOpen] = useState(false);
   const [generatedConcepts, setGeneratedConcepts] = useState<
     GeneratedConcept[]
   >([]);
@@ -1499,11 +1278,6 @@ export function KoalaDesignStudio() {
     products.length > 0
       ? buildRoomSummary(packageProducts, roomType, selectedStylePrompt)
       : null;
-  const designRationale = buildDesignRationale(
-    packageProducts,
-    roomType,
-    selectedStylePrompt
-  );
 
   function showToast(message: string) {
     if (toastTimeoutRef.current) {
@@ -1621,7 +1395,6 @@ export function KoalaDesignStudio() {
 
         if (cachedConcepts.length > 0) {
           setSelectedConceptIndex(0);
-          setResultTab("room");
           setStep(3);
         }
       }, 0);
@@ -1876,7 +1649,6 @@ export function KoalaDesignStudio() {
       setGeneratedConcepts(nextConcepts);
       setProducts(nextProducts);
       setSelectedConceptIndex(0);
-      setResultTab("room");
       setStep(3);
       trackGenerateCompleted({
         roomType,
@@ -2075,9 +1847,6 @@ export function KoalaDesignStudio() {
     setStylePickerOpen(false);
     setSelectedProductIds([]);
     setLetAiRecommendBundle(true);
-    setActiveShopCategoryId(productsByCategory[0]?.id ?? "");
-    setResultTab("room");
-    setInsightsOpen(false);
     setGeneratedConcepts([]);
     setProducts([]);
     setAddedRecommendationIds([]);
@@ -2177,9 +1946,6 @@ export function KoalaDesignStudio() {
     }
 
     if (step === 2) {
-      const activeCategory =
-        productsByCategory.find((c) => c.id === activeShopCategoryId) ||
-        productsByCategory[0];
       const roomLabel =
         roomTypes.find((r) => r.id === roomType)?.label || "Living room";
       const styleLabel =
@@ -2317,7 +2083,7 @@ export function KoalaDesignStudio() {
             </div>
           )}
 
-          <div className="v2-surface rounded-[26px] p-4">
+          <div>
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-serif text-xl text-[#F5F3EE]">
                 Browse products
@@ -2333,40 +2099,38 @@ export function KoalaDesignStudio() {
               )}
             </div>
 
-            <div className="v2-noscrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+            <div className="mt-3 space-y-5">
               {productsByCategory.map((category) => {
-                const active = activeCategory?.id === category.id;
                 const count = category.products.filter((product) =>
                   selectedProductIds.includes(product.id)
                 ).length;
 
                 return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setActiveShopCategoryId(category.id)}
-                    className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition ${
-                      active
-                        ? "border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
-                        : "border-white/10 bg-white/[0.03] text-[#9a978f]"
-                    }`}
-                  >
-                    {category.label}
-                    {count > 0 ? ` · ${count}` : ""}
-                  </button>
+                  <div key={category.id}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
+                        {category.label}
+                      </p>
+                      {count > 0 && (
+                        <span className="text-[11px] font-semibold text-[#C9A57A]">
+                          {count} added
+                        </span>
+                      )}
+                    </div>
+                    <div className="v2-noscrollbar -mx-6 mt-2 flex gap-3 overflow-x-auto px-6 pb-1">
+                      {category.products.map((product) => (
+                        <div key={product.id} className="w-[152px] shrink-0">
+                          <StudioProductCard
+                            product={product}
+                            selected={selectedProductIds.includes(product.id)}
+                            onToggle={() => toggleProduct(product.id)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 );
               })}
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {activeCategory?.products.map((product) => (
-                <StudioProductCard
-                  key={product.id}
-                  product={product}
-                  selected={selectedProductIds.includes(product.id)}
-                  onToggle={() => toggleProduct(product.id)}
-                />
-              ))}
             </div>
           </div>
         </section>
@@ -2389,308 +2153,174 @@ export function KoalaDesignStudio() {
     const packageAll = [...products, ...addedRecommendations];
 
     return (
-      <div className="space-y-3">
-        <ResultTabBar active={resultTab} onChange={setResultTab} />
-
-        {resultTab === "room" && (
-          <div
-            key="room"
-            className="animate-[tabFade_300ms_ease-out] space-y-3"
+      <div className="space-y-4 animate-[tabFade_300ms_ease-out]">
+        <div
+          className="v2-hero-shadow relative aspect-[4/5] max-h-[56vh] w-full overflow-hidden rounded-[26px] border border-white/10 bg-[#0B0B0B]"
+          onTouchStart={(event) => {
+            if (generatedConcepts.length < 2 || event.touches.length !== 1) {
+              return;
+            }
+            resultSwipeStartXRef.current = event.touches[0].clientX;
+          }}
+          onTouchEnd={(event) => {
+            if (
+              generatedConcepts.length < 2 ||
+              resultSwipeStartXRef.current === null
+            ) {
+              return;
+            }
+            const endX = event.changedTouches[0]?.clientX;
+            const deltaX =
+              typeof endX === "number" ? endX - resultSwipeStartXRef.current : 0;
+            resultSwipeStartXRef.current = null;
+            if (Math.abs(deltaX) < 48) return;
+            suppressResultViewerOpenRef.current = true;
+            window.setTimeout(() => {
+              suppressResultViewerOpenRef.current = false;
+            }, 500);
+            selectAdjacentConcept(deltaX < 0 ? 1 : -1, "swipe", "result");
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (suppressResultViewerOpenRef.current) {
+                suppressResultViewerOpenRef.current = false;
+                return;
+              }
+              openImageViewer();
+            }}
+            className="h-full w-full"
           >
-            <div
-              className="v2-hero-shadow relative aspect-[4/5] max-h-[50vh] w-full overflow-hidden rounded-[26px] border border-white/10 bg-[#0B0B0B]"
-              onTouchStart={(event) => {
-                if (
-                  generatedConcepts.length < 2 ||
-                  event.touches.length !== 1
-                ) {
-                  return;
-                }
-                resultSwipeStartXRef.current = event.touches[0].clientX;
-              }}
-              onTouchEnd={(event) => {
-                if (
-                  generatedConcepts.length < 2 ||
-                  resultSwipeStartXRef.current === null
-                ) {
-                  return;
-                }
-                const endX = event.changedTouches[0]?.clientX;
-                const deltaX =
-                  typeof endX === "number"
-                    ? endX - resultSwipeStartXRef.current
-                    : 0;
-                resultSwipeStartXRef.current = null;
-                if (Math.abs(deltaX) < 48) return;
-                suppressResultViewerOpenRef.current = true;
-                window.setTimeout(() => {
-                  suppressResultViewerOpenRef.current = false;
-                }, 500);
-                selectAdjacentConcept(deltaX < 0 ? 1 : -1, "swipe", "result");
-              }}
+            <img
+              key={`${selectedConceptIndex}-${activeImage.slice(0, 16)}`}
+              src={`data:${activeConcept?.mimeType || "image/png"};base64,${activeImage}`}
+              alt={`Generated concept ${selectedConceptIndex + 1}`}
+              className="h-full w-full animate-[imageReveal_600ms_ease-out] object-cover object-center"
+            />
+          </button>
+
+          {generatedConcepts.length > 1 && selectedConceptIndex > 0 && (
+            <button
+              type="button"
+              onClick={() => selectAdjacentConcept(-1, "arrow", "result")}
+              aria-label="Previous generated concept"
+              className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
             >
+              <ChevronIcon direction="left" />
+            </button>
+          )}
+          {generatedConcepts.length > 1 &&
+            selectedConceptIndex < generatedConcepts.length - 1 && (
               <button
                 type="button"
-                onClick={() => {
-                  if (suppressResultViewerOpenRef.current) {
-                    suppressResultViewerOpenRef.current = false;
-                    return;
-                  }
-                  openImageViewer();
-                }}
-                className="h-full w-full"
+                onClick={() => selectAdjacentConcept(1, "arrow", "result")}
+                aria-label="Next generated concept"
+                className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
               >
-                <img
-                  key={`${selectedConceptIndex}-${activeImage.slice(0, 16)}`}
-                  src={`data:${activeConcept?.mimeType || "image/png"};base64,${activeImage}`}
-                  alt={`Generated concept ${selectedConceptIndex + 1}`}
-                  className="h-full w-full animate-[imageReveal_600ms_ease-out] object-cover object-center"
-                />
+                <ChevronIcon direction="right" />
               </button>
-
-              {generatedConcepts.length > 1 && selectedConceptIndex > 0 && (
-                <button
-                  type="button"
-                  onClick={() => selectAdjacentConcept(-1, "arrow", "result")}
-                  aria-label="Previous generated concept"
-                  className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
-                >
-                  <ChevronIcon direction="left" />
-                </button>
-              )}
-              {generatedConcepts.length > 1 &&
-                selectedConceptIndex < generatedConcepts.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={() => selectAdjacentConcept(1, "arrow", "result")}
-                    aria-label="Next generated concept"
-                    className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
-                  >
-                    <ChevronIcon direction="right" />
-                  </button>
-                )}
-
-              {generatedConcepts.length > 1 && (
-                <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-2">
-                  {generatedConcepts.map((concept, index) => (
-                    <button
-                      key={`${concept.provider}-${index}`}
-                      type="button"
-                      onClick={() =>
-                        selectConcept({
-                          nextIndex: index,
-                          source: "dot",
-                          surface: "result",
-                        })
-                      }
-                      aria-label={`View ${concept.label} concept`}
-                      className={`h-1.5 rounded-full transition-all ${
-                        selectedConceptIndex === index
-                          ? "w-5 bg-[#F7F7F2]"
-                          : "w-1.5 bg-white/40"
-                      }`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <StudioButton
-              onClick={() => setResultTab("shop")}
-              className="min-h-13 w-full rounded-2xl text-base"
-            >
-              Shop this room
-            </StudioButton>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <ResultIconButton
-                label="Edit with AI"
-                icon={<AiEditIcon />}
-                onClick={() => setRefineSheetOpen(true)}
-                variant="primary"
-                compact
-              />
-              <ResultIconButton
-                label="Regenerate"
-                icon={<RegenerateIcon />}
-                onClick={handleGenerate}
-                compact
-              />
-            </div>
-
-            <div className="flex items-center justify-center gap-1">
-              <ResultIconButton
-                label="Save"
-                icon={<SaveIcon />}
-                onClick={downloadImage}
-                quiet
-              />
-              <ResultIconButton
-                label="Share"
-                icon={<ShareIcon />}
-                onClick={shareImage}
-                quiet
-              />
-              <ResultIconButton
-                label="Delete"
-                icon={<DeleteIcon />}
-                onClick={deleteResult}
-                variant="danger"
-                quiet
-              />
-            </div>
-
-            {(roomSummary || designRationale.length > 0) && (
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setInsightsOpen((o) => !o)}
-                  aria-expanded={insightsOpen}
-                  className="v2-surface flex w-full items-center justify-between rounded-2xl p-4 text-left"
-                >
-                  <span>
-                    <span className="block text-sm font-semibold text-[#F5F3EE]">
-                      Design insights
-                    </span>
-                    <span className="mt-0.5 block text-xs text-[#9a978f]">
-                      Palette, mood, budget &amp; designer notes
-                    </span>
-                  </span>
-                  <span className="text-xs font-medium text-[#C9A57A]">
-                    {insightsOpen ? "Hide" : "View"}
-                  </span>
-                </button>
-
-                {insightsOpen && (
-                  <div className="mt-3 space-y-3 animate-[tabFade_260ms_ease-out]">
-                    {roomSummary && <RoomSummaryCard summary={roomSummary} />}
-                    {designRationale.length > 0 && (
-                      <DesignRationaleSection bullets={designRationale} />
-                    )}
-                  </div>
-                )}
-              </div>
             )}
-          </div>
-        )}
 
-        {resultTab === "shop" && (
-          <div
-            key="shop"
-            className="animate-[tabFade_300ms_ease-out] space-y-4"
-          >
+          {generatedConcepts.length > 1 && (
+            <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-2">
+              {generatedConcepts.map((concept, index) => (
+                <button
+                  key={`${concept.provider}-${index}`}
+                  type="button"
+                  onClick={() =>
+                    selectConcept({
+                      nextIndex: index,
+                      source: "dot",
+                      surface: "result",
+                    })
+                  }
+                  aria-label={`View ${concept.label} concept`}
+                  className={`h-1.5 rounded-full transition-all ${
+                    selectedConceptIndex === index
+                      ? "w-5 bg-[#F7F7F2]"
+                      : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <StudioButton
+          onClick={() =>
+            document
+              .getElementById("room-shop-section")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+          className="min-h-13 w-full rounded-2xl text-base"
+        >
+          Shop this room
+        </StudioButton>
+
+        <div className="grid grid-cols-5 gap-2">
+          {[
+            {
+              label: "Edit",
+              icon: <AiEditIcon />,
+              onClick: () => setRefineSheetOpen(true),
+            },
+            {
+              label: "Redo",
+              icon: <RegenerateIcon />,
+              onClick: handleGenerate,
+            },
+            { label: "Save", icon: <SaveIcon />, onClick: downloadImage },
+            { label: "Share", icon: <ShareIcon />, onClick: shareImage },
+            {
+              label: "Delete",
+              icon: <DeleteIcon />,
+              onClick: deleteResult,
+              danger: true,
+            },
+          ].map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={action.onClick}
+              aria-label={action.label}
+              className="v2-surface flex flex-col items-center gap-1.5 rounded-2xl py-2.5 transition active:scale-95"
+            >
+              <span
+                className={`flex h-6 w-6 items-center justify-center ${
+                  action.danger ? "text-[#9a978f]" : "text-[#F5F3EE]"
+                }`}
+              >
+                {action.icon}
+              </span>
+              <span className="text-[10px] font-medium text-[#9a978f]">
+                {action.label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {packageAll.length > 0 && (
+          <section id="room-shop-section" className="space-y-3 pt-2">
             <div>
               <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
                 Shop this room
               </p>
               <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
-                {packageAll.length}{" "}
-                {packageAll.length === 1 ? "piece" : "pieces"} in your room
+                Products used in this room
               </h2>
             </div>
-
-            {packageAll.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {packageAll.map((product) => (
-                  <ShopProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-[#9a978f]">
-                No products matched this concept.
-              </p>
-            )}
-
-            <PackageSummary pricing={packagePricing} />
-
-            <StudioButton
-              onClick={openQuoteSheet}
-              className="min-h-13 w-full rounded-2xl text-base"
-            >
-              Add room package to cart
-            </StudioButton>
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              {packageAll.map((product) => (
+                <ShopProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </section>
         )}
 
-        {resultTab === "look" && (
-          <div
-            key="look"
-            className="animate-[tabFade_300ms_ease-out] space-y-4"
-          >
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
-                Recommended for this room
-              </p>
-              <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
-                Complete the Look
-              </h2>
-            </div>
-
-            {recommendations.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {recommendations.map((product) => {
-                  const added = addedRecommendationIds.includes(product.id);
-                  return (
-                    <ShopProductCard
-                      key={product.id}
-                      product={product}
-                      action={
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic();
-                            if (added) {
-                              removeRecommendation(product);
-                            } else {
-                              addRecommendation(product);
-                            }
-                          }}
-                          aria-pressed={added}
-                          className={`block w-full rounded-xl px-3 py-1.5 text-center text-xs font-semibold transition ${
-                            added
-                              ? "border border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
-                              : "bg-[#F5F3EE] text-[#0b0b0d]"
-                          }`}
-                        >
-                          {added ? "Added to package" : "Add to package"}
-                        </button>
-                      }
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-[#9a978f]">
-                Your room already looks complete — no additions needed.
-              </p>
-            )}
-          </div>
-        )}
-
-        {resultTab === "package" && (
-          <div
-            key="package"
-            className="animate-[tabFade_300ms_ease-out] space-y-4"
-          >
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
-                Your package
-              </p>
-              <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
-                Room package
-              </h2>
-            </div>
-
-            {packageAll.length > 0 && (
-              <div className="v2-surface grid gap-2 rounded-2xl p-4">
-                {packageAll.map((product) => (
-                  <QuoteLineItem key={product.id} product={product} />
-                ))}
-              </div>
-            )}
-
+        {packageAll.length > 0 && (
+          <section className="space-y-3">
             <PackageSummary pricing={packagePricing} />
-
             <StudioButton
               onClick={openQuoteSheet}
               className="min-h-13 w-full rounded-2xl text-base"
@@ -2701,7 +2331,52 @@ export function KoalaDesignStudio() {
               No payment taken — a Koala consultant confirms availability,
               pricing and next steps.
             </p>
-          </div>
+          </section>
+        )}
+
+        {recommendations.length > 0 && (
+          <section className="space-y-3 pt-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+                Recommended additions
+              </p>
+              <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
+                Complete the look
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {recommendations.map((product) => {
+                const added = addedRecommendationIds.includes(product.id);
+                return (
+                  <ShopProductCard
+                    key={product.id}
+                    product={product}
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          if (added) {
+                            removeRecommendation(product);
+                          } else {
+                            addRecommendation(product);
+                          }
+                        }}
+                        aria-pressed={added}
+                        className={`block w-full rounded-xl px-3 py-1.5 text-center text-xs font-semibold transition ${
+                          added
+                            ? "border border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
+                            : "bg-[#F5F3EE] text-[#0b0b0d]"
+                        }`}
+                      >
+                        {added ? "Added to package" : "Add to package"}
+                      </button>
+                    }
+                  />
+                );
+              })}
+            </div>
+          </section>
         )}
       </div>
     );
