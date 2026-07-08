@@ -1866,81 +1866,98 @@ export function KoalaDesignStudio() {
   function renderStep() {
     if (step === 1) {
       return (
-        <section className="space-y-4">
-          <div className="v2-surface rounded-[26px] p-5">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-[#9a978f]">
-              Design &amp; shop your room
-            </p>
-            <h1 className="mt-2 font-serif text-4xl font-semibold leading-tight text-[#F5F3EE]">
-              Start with your actual room
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-[#9a978f]">
-              Add a photo and we&apos;ll design a complete, shoppable room around
-              it in seconds.
-            </p>
+        <section className="space-y-3">
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
+            capture="environment"
+            className="hidden"
+            onChange={(event) =>
+              void handleImageChange(event.target.files?.[0] || null)
+            }
+          />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
+            className="hidden"
+            onChange={(event) =>
+              void handleImageChange(event.target.files?.[0] || null)
+            }
+          />
 
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
-              capture="environment"
-              className="hidden"
-              onChange={(event) =>
-                void handleImageChange(event.target.files?.[0] || null)
-              }
-            />
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
-              className="hidden"
-              onChange={(event) =>
-                void handleImageChange(event.target.files?.[0] || null)
-              }
-            />
-
-            {previewUrl ? (
-              <div className="mt-5 overflow-hidden rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#050505] shadow-inner">
+          {previewUrl ? (
+            <>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-[#9a978f]">
+                Your room
+              </p>
+              <div className="v2-hero-shadow relative w-full overflow-hidden rounded-[26px] border border-white/10 bg-[#0B0B0B]">
                 <img
                   src={previewUrl}
                   alt="Uploaded room preview"
-                  className="max-h-[52vh] w-full object-contain"
+                  className="h-[56vh] w-full object-cover object-center"
                 />
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-2 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3">
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-[#F5F3EE] backdrop-blur transition active:scale-95"
+                  >
+                    Retake
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-[#F5F3EE] backdrop-blur transition active:scale-95"
+                  >
+                    Change
+                  </button>
+                </div>
               </div>
-            ) : (
+            </>
+          ) : (
+            <div className="v2-surface rounded-[26px] p-5">
+              <p className="text-[11px] uppercase tracking-[0.28em] text-[#9a978f]">
+                Design &amp; shop your room
+              </p>
+              <h1 className="mt-2 font-serif text-3xl font-semibold leading-tight text-[#F5F3EE]">
+                Start with your actual room
+              </h1>
+
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
-                className="mt-5 flex aspect-[4/5] w-full flex-col items-center justify-center rounded-3xl border border-dashed border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 text-center transition hover:border-[#C9A57A] hover:bg-[#181818]"
+                className="mt-4 flex aspect-[5/4] max-h-[42vh] w-full flex-col items-center justify-center rounded-3xl border border-dashed border-white/12 bg-white/[0.02] p-5 text-center transition hover:border-[#C9A57A] hover:bg-white/[0.04]"
               >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[#050505] text-2xl text-[#C9A57A]">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/12 bg-[#0B0B0B] text-2xl text-[#C9A57A]">
                   +
                 </span>
-                <span className="mt-5 text-base font-semibold text-[#F7F7F2]">
+                <span className="mt-4 text-base font-semibold text-[#F5F3EE]">
                   Add your room photo
                 </span>
-                <span className="mt-2 max-w-56 text-sm leading-6 text-[#9C9C94]">
+                <span className="mt-1.5 max-w-56 text-xs leading-5 text-[#9a978f]">
                   Use a clear, wide shot facing the main wall or seating area.
                 </span>
               </button>
-            )}
 
-            <div className="mt-5 grid grid-cols-2 gap-4">
-              <StudioButton
-                className="rounded-xl"
-                onClick={() => cameraInputRef.current?.click()}
-              >
-                Take photo
-              </StudioButton>
-              <StudioButton
-                variant="secondary"
-                className="rounded-xl"
-                onClick={() => galleryInputRef.current?.click()}
-              >
-                Gallery
-              </StudioButton>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <StudioButton
+                  className="rounded-xl"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  Take photo
+                </StudioButton>
+                <StudioButton
+                  variant="secondary"
+                  className="rounded-xl"
+                  onClick={() => galleryInputRef.current?.click()}
+                >
+                  Gallery
+                </StudioButton>
+              </div>
             </div>
-          </div>
+          )}
         </section>
       );
     }
@@ -2570,7 +2587,11 @@ export function KoalaDesignStudio() {
 
         <div
           className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${
-            step === 3 ? "px-5 pb-6" : "px-6 pb-32 pt-4"
+            step === 3
+              ? "px-5 pb-6"
+              : step === 1
+                ? "px-6 pb-4 pt-4"
+                : "px-6 pb-32 pt-4"
           }`}
         >
           <div key={step} className="animate-[stepIn_360ms_ease-out]">
