@@ -7,6 +7,7 @@
  */
 import type { RoomAnalysis } from "@/lib/intelligence/room-analysis";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
+import type { ReplacementPlan } from "@/lib/intelligence/replacement-planner";
 import type { SceneGraph } from "@/lib/intelligence/scene-graph";
 
 export const AI_EVAL_STORAGE_KEY = "koala-ai-studio:ai-eval-log";
@@ -24,6 +25,7 @@ export type AiEvalRecord = {
   provider: string | null;
   sceneGraph: SceneGraph | null;
   roomAnalysis: RoomAnalysis | null;
+  replacementPlan: ReplacementPlan | null;
   prompt: string | null;
   imageHash: string | null;
   qualityScore: QualityScore | null;

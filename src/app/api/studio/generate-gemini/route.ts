@@ -21,6 +21,7 @@ import {
   sceneGraphToRoomAnalysis,
 } from "@/lib/intelligence/scene-graph";
 import { buildIntelligentRoomPrompt } from "@/lib/intelligence/prompt-builder";
+import { buildReplacementPlan } from "@/lib/intelligence/replacement-planner";
 import {
   meetsQualityThreshold,
   scoreRoomImage,
@@ -237,10 +238,22 @@ async function handleGeneration(req: Request) {
   });
   const roomAnalysis = sceneGraphToRoomAnalysis(sceneGraph);
 
-  // Phase 4 — dynamic prompt from scene graph + product intelligence.
+  // Sprint 2 — deterministic replacement plan: exactly one destination for
+  // every selected product (replace an existing item or place it in a zone),
+  // never touching fixed objects. Built before the prompt so generation knows
+  // precisely what changes. Fully deterministic and fallback-safe.
+  const replacementPlan = buildReplacementPlan({
+    sceneGraph,
+    profiles,
+    selectedProductIds,
+    aiConceptMode,
+  });
+
+  // Phase 4 — dynamic prompt from scene graph + product intelligence + plan.
   const { prompt, negativePrompt } = buildIntelligentRoomPrompt({
     roomAnalysis,
     sceneGraph,
+    replacementPlan,
     profiles,
     style,
     roomType,
@@ -262,6 +275,8 @@ async function handleGeneration(req: Request) {
     sceneAnalysed: sceneGraph.analysed,
     sceneFurnitureCount: sceneGraph.furniture.length,
     sceneFixedObjectCount: sceneGraph.fixedObjects.length,
+    planReplacements: replacementPlan.replacements.length,
+    planAdditions: replacementPlan.additions.length,
   });
 
   // Phase 5 — generate with quality-gated auto-regeneration.
@@ -316,6 +331,7 @@ async function handleGeneration(req: Request) {
       provider: best.image.provider,
       sceneGraph,
       roomAnalysis,
+      replacementPlan,
       qualityScore: best.score,
       generationAttempts: attempts.length,
       autoRegenerated,

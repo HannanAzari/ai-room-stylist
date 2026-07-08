@@ -19,6 +19,10 @@ import {
   buildScaleInstructions,
 } from "@/lib/prompts";
 import type { ProductProfile } from "./product-profile";
+import {
+  formatReplacementPlan,
+  type ReplacementPlan,
+} from "./replacement-planner";
 import type { RoomAnalysis } from "./room-analysis";
 import type { SceneGraph } from "./scene-graph";
 
@@ -36,6 +40,10 @@ export type IntelligentPromptInput = {
   // Structured scene understanding — used to protect fixed objects and target
   // replaceable furniture precisely.
   sceneGraph?: SceneGraph;
+  // Explicit, deterministic item→product swap plan (Sprint 2). When present it
+  // is rendered as a numbered REPLACEMENT PLAN so generation knows exactly what
+  // changes.
+  replacementPlan?: ReplacementPlan;
 };
 
 export type IntelligentPrompt = {
@@ -199,6 +207,8 @@ export function buildIntelligentRoomPrompt(
     buildRoomPreservationInstructions(),
     "",
     formatSceneGraphSection(input.sceneGraph),
+    "",
+    input.replacementPlan ? formatReplacementPlan(input.replacementPlan) : "",
     "",
     replacementScope,
     "",

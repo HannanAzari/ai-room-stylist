@@ -1597,6 +1597,8 @@ export function KoalaDesignStudio() {
       sceneGraph: (aiDebug?.sceneGraph as AiEvalRecord["sceneGraph"]) ?? null,
       roomAnalysis:
         (aiDebug?.roomAnalysis as AiEvalRecord["roomAnalysis"]) ?? null,
+      replacementPlan:
+        (aiDebug?.replacementPlan as AiEvalRecord["replacementPlan"]) ?? null,
       prompt: (aiDebug?.prompt as string) ?? null,
       imageHash: imageBase64 ? hashString(imageBase64.slice(0, 512)) : null,
       qualityScore:
