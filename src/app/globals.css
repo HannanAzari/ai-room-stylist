@@ -28,6 +28,77 @@ body {
   font-family: var(--font-sans);
 }
 
+/* ---------------------------------------------------------------------------
+   V2 "Soft layered luxury" (Option C) — atmospheric charcoal, depth, glass,
+   premium shadows, warm bronze accent. Applied to the Studio surfaces.
+--------------------------------------------------------------------------- */
+:root {
+  --c-accent: #c9a57a;
+  --c-text: #f5f3ee;
+  --c-muted: #9a978f;
+}
+
+/* App canvas: not flat black — soft vertical light + warm bloom + cool floor. */
+.v2-canvas {
+  background:
+    radial-gradient(115% 75% at 50% -12%, rgba(201, 165, 122, 0.1), transparent 55%),
+    radial-gradient(100% 60% at 50% 112%, rgba(120, 132, 150, 0.06), transparent 60%),
+    linear-gradient(180deg, #101015 0%, #0b0b0e 58%, #08080a 100%);
+}
+
+/* Layered translucent card with inner highlight + long premium shadow. */
+.v2-surface {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.018)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 22px 55px -32px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+.v2-surface-flat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.v2-hero-shadow {
+  box-shadow: 0 40px 90px -44px rgba(0, 0, 0, 0.92);
+}
+
+/* Warm bronze gradient hairline for section dividers/accents. */
+.v2-accent-rule {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 165, 122, 0.55),
+    transparent
+  );
+}
+
+/* Hide scrollbars on horizontal chip rails while keeping scroll. */
+.v2-noscrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.v2-noscrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes tabFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes softRise {
   from {
     opacity: 0;

@@ -97,6 +97,8 @@ export function getShortProductName(product: Product) {
 
   let shortName = product.name
     .replace(/\bwith\b.*$/i, "")
+    // Whole dimension phrases like "250cm x 350cm" or "180x180cm".
+    .replace(/\b\d+\s?(?:cm|mm|m)?\s?[x×]\s?\d+\s?(?:cm|mm|m)\b/gi, "")
     .replace(/\b\d+(?:\s?x\s?\d+)?\s?(?:cm|mm|m)\b/gi, "");
 
   descriptors.forEach((descriptor) => {
@@ -106,7 +108,12 @@ export function getShortProductName(product: Product) {
     );
   });
 
-  shortName = shortName.replace(/\s+/g, " ").trim();
+  shortName = shortName
+    // Drop any orphaned "x"/"×" left behind after dimension removal.
+    .replace(/\s+[x×]\s+/gi, " ")
+    .replace(/\s+[x×]$/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   if (!shortName) {
     shortName = product.name.replace(/\s+/g, " ").trim();

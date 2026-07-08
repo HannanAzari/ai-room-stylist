@@ -13,7 +13,6 @@ import {
 } from "@/features/room-stylist/services/image-upload";
 import {
   formatMoney,
-  formatPrice,
   getCategoryLabel,
   getHeroDemoProducts,
   getPackagePricing,
@@ -175,6 +174,12 @@ function triggerHaptic() {
 // Curated demo products with verified real price + product URL.
 const heroDemoProducts = getHeroDemoProducts();
 
+// AI-suggested defaults so the customer can proceed without choosing.
+const DEFAULT_ROOM_TYPE = "living room";
+const DEFAULT_STYLE = "Modern Luxury";
+
+type ResultTab = "room" | "shop" | "look" | "package";
+
 type QuoteFormState = {
   name: string;
   email: string;
@@ -243,6 +248,64 @@ function conceptToFile(concept: GeneratedConcept, index: number) {
   );
 }
 
+function SuggestionRow({
+  label,
+  value,
+  open,
+  onToggle,
+}: {
+  label: string;
+  value: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="v2-surface-flat mt-3 flex items-center justify-between gap-3 rounded-2xl px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-[#9a978f]">
+          {label}
+        </p>
+        <p className="mt-0.5 truncate font-serif text-lg text-[#F5F3EE]">
+          {value}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="shrink-0 rounded-full border border-white/12 px-3.5 py-1.5 text-xs font-medium text-[#F5F3EE] transition hover:bg-white/5"
+      >
+        {open ? "Done" : "Change"}
+      </button>
+    </div>
+  );
+}
+
+function SelectChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+        active
+          ? "border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
+          : "border-white/10 bg-white/[0.03] text-[#9a978f] hover:border-white/25"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function StudioButton({
   children,
   onClick,
@@ -272,110 +335,6 @@ function StudioButton({
     >
       {children}
     </button>
-  );
-}
-
-function RoomTypeIcon({
-  type,
-  selected,
-}: {
-  type: string;
-  selected: boolean;
-}) {
-  const stroke = selected ? "#F7F7F2" : "#F7F7F2";
-  const commonProps = {
-    fill: "none",
-    stroke,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    strokeWidth: 1.8,
-  };
-
-  if (type === "dining room") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="h-11 w-11">
-        <path {...commonProps} d="M13 20h22M16 20l-3 18M32 20l3 18" />
-        <path {...commonProps} d="M18 13h12M18 13v7M30 13v7" />
-        <path {...commonProps} d="M10 28h9M29 28h9M13 28v10M35 28v10" />
-      </svg>
-    );
-  }
-
-  if (type === "bedroom") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="h-11 w-11">
-        <path {...commonProps} d="M9 18v20M39 25v13M9 28h30" />
-        <path {...commonProps} d="M12 18h12v10H12zM24 22h11a4 4 0 0 1 4 4v2" />
-        <path {...commonProps} d="M9 38h30" />
-      </svg>
-    );
-  }
-
-  if (type === "office") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="h-11 w-11">
-        <path {...commonProps} d="M11 20h26v7H11zM15 27v11M33 27v11" />
-        <path {...commonProps} d="M18 14h12a4 4 0 0 1 4 4v2H14v-2a4 4 0 0 1 4-4z" />
-        <path {...commonProps} d="M20 38h8M24 27v11" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 48 48" aria-hidden="true" className="h-11 w-11">
-      <path {...commonProps} d="M12 25v-5a5 5 0 0 1 5-5h14a5 5 0 0 1 5 5v5" />
-      <path {...commonProps} d="M10 25h28a3 3 0 0 1 3 3v10H7V28a3 3 0 0 1 3-3z" />
-      <path {...commonProps} d="M12 38v3M36 38v3M17 25v-4h14v4" />
-    </svg>
-  );
-}
-
-function RoomTypePreview({
-  item,
-  selected,
-}: {
-  item: (typeof roomTypes)[number];
-  selected: boolean;
-}) {
-  return (
-    <span className="relative block h-28 overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#111111]">
-      <span className="absolute inset-0" style={{ background: item.visual }} />
-      <span className="absolute inset-0 backdrop-blur-[1px]" />
-      <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_42%,rgba(5,5,5,0.76))]" />
-      <span className="absolute inset-x-5 bottom-5 h-px bg-white/20" />
-      <span
-        className={`absolute right-3 top-3 flex h-12 w-12 items-center justify-center rounded-2xl border backdrop-blur-md ${
-          selected
-            ? "border-[#C9A57A]/70 bg-[#050505]/72"
-            : "border-[#F7F7F2]/10 bg-[#050505]/52"
-        }`}
-      >
-        <RoomTypeIcon type={item.id} selected={selected} />
-      </span>
-    </span>
-  );
-}
-
-function StyleVisualPreview({
-  visual,
-  selected,
-}: {
-  visual: string;
-  selected: boolean;
-}) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`relative block h-32 overflow-hidden rounded-2xl border ${
-        selected ? "border-[#C9A57A]/60" : "border-[rgba(255,255,255,0.12)]"
-      }`}
-      style={{ background: visual }}
-    >
-      <span className="absolute inset-0 backdrop-blur-[1px]" />
-      <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent_38%,rgba(5,5,5,0.72))]" />
-      <span className="absolute inset-x-5 bottom-5 h-px bg-white/20" />
-      <span className="absolute left-5 top-5 h-2 w-16 rounded-full bg-white/15" />
-    </span>
   );
 }
 
@@ -781,62 +740,6 @@ function PackageSummary({ pricing }: { pricing: PackagePricing }) {
   );
 }
 
-function ProductRow({
-  product,
-  action,
-  addedBadge = false,
-}: {
-  product: Product;
-  action?: React.ReactNode;
-  addedBadge?: boolean;
-}) {
-  const productUrl = getProductUrl(product);
-
-  return (
-    <article className="flex min-h-32 gap-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-3">
-      <ProductImage
-        product={product}
-        className="h-20 w-20 shrink-0 rounded-xl object-cover"
-        placeholderClassName="h-20 w-20 shrink-0 rounded-xl"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className="line-clamp-2 text-sm font-semibold">{product.name}</p>
-          {addedBadge && (
-            <span className="shrink-0 rounded-full border border-[#C9A57A]/40 bg-[#C9A57A]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#C9A57A]">
-              Added
-            </span>
-          )}
-        </div>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#9C9C94]">
-          {getCategoryLabel(product.category)}
-        </p>
-        <p className="mt-1 text-xs text-[#9C9C94]">
-          {formatPrice(product.price)}
-        </p>
-        <div className="mt-2 flex gap-2">
-          {action ??
-            (productUrl ? (
-              <a
-                href={productUrl}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => trackAddToCartClicked(product)}
-                className="rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs font-semibold text-[#050505]"
-              >
-                View product
-              </a>
-            ) : (
-              <span className="rounded-xl border border-[rgba(255,255,255,0.12)] px-3 py-1 text-xs text-[#9C9C94]">
-                Available in store
-              </span>
-            ))}
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function RoomSummaryCard({ summary }: { summary: RoomSummary }) {
   const { budget } = summary;
   const budgetLabel =
@@ -926,69 +829,6 @@ function RoomSummaryCard({ summary }: { summary: RoomSummary }) {
   );
 }
 
-function RecommendationsSection({
-  recommendations,
-  addedIds,
-  onAdd,
-  onRemove,
-}: {
-  recommendations: Product[];
-  addedIds: string[];
-  onAdd: (product: Product) => void;
-  onRemove: (product: Product) => void;
-}) {
-  return (
-    <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-      <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-        Recommended additions
-      </p>
-      <h2 className="mt-2 font-serif text-2xl">Complete the Look</h2>
-      <p className="mt-1 text-sm text-[#9C9C94]">
-        Selected to complement your room package.
-      </p>
-
-      <div className="mt-4 grid gap-4">
-        {recommendations.map((product) => {
-          const added = addedIds.includes(product.id);
-
-          return (
-            <ProductRow
-              key={product.id}
-              product={product}
-              action={
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    if (added) {
-                      onRemove(product);
-                    } else {
-                      onAdd(product);
-                    }
-                  }}
-                  aria-pressed={added}
-                  aria-label={
-                    added
-                      ? `Remove ${getShortProductName(product)} from package`
-                      : `Add ${getShortProductName(product)} to package`
-                  }
-                  className={`rounded-xl px-3 py-1 text-xs font-semibold transition ${
-                    added
-                      ? "border border-[#C9A57A]/50 bg-[#C9A57A]/10 text-[#C9A57A]"
-                      : "bg-[#F7F7F2] text-[#050505] hover:bg-white"
-                  }`}
-                >
-                  {added ? "Added" : "Add to package"}
-                </button>
-              }
-            />
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function DesignRationaleSection({ bullets }: { bullets: string[] }) {
   return (
     <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
@@ -1011,6 +851,91 @@ function DesignRationaleSection({ bullets }: { bullets: string[] }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+function ResultTabBar({
+  active,
+  onChange,
+}: {
+  active: ResultTab;
+  onChange: (tab: ResultTab) => void;
+}) {
+  const tabs: { id: ResultTab; label: string }[] = [
+    { id: "room", label: "Room" },
+    { id: "shop", label: "Shop" },
+    { id: "look", label: "Complete" },
+    { id: "package", label: "Package" },
+  ];
+
+  return (
+    <div className="v2-surface flex gap-1 rounded-full p-1">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onChange(tab.id)}
+          aria-pressed={active === tab.id}
+          className={`flex-1 rounded-full px-2 py-2 text-xs font-semibold transition ${
+            active === tab.id
+              ? "bg-[#F5F3EE] text-[#0b0b0d] shadow"
+              : "text-[#9a978f] hover:text-[#F5F3EE]"
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ShopProductCard({
+  product,
+  action,
+}: {
+  product: Product;
+  action?: React.ReactNode;
+}) {
+  const productUrl = getProductUrl(product);
+
+  return (
+    <article className="v2-surface overflow-hidden rounded-2xl">
+      <div className="relative aspect-square bg-[#0B0B0B]">
+        <ProductImage
+          product={product}
+          className="h-full w-full object-cover"
+          placeholderClassName="h-full w-full"
+        />
+      </div>
+      <div className="p-3">
+        <p className="line-clamp-2 min-h-9 text-xs font-semibold leading-snug text-[#F5F3EE]">
+          {getShortProductName(product)}
+        </p>
+        <p className="mt-1 text-sm text-[#C9A57A]">
+          {typeof product.price === "number"
+            ? formatMoney(product.price)
+            : "On product page"}
+        </p>
+        <div className="mt-2.5">
+          {action ??
+            (productUrl ? (
+              <a
+                href={productUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackAddToCartClicked(product)}
+                className="block rounded-xl bg-[#F5F3EE] px-3 py-1.5 text-center text-xs font-semibold text-[#0b0b0d]"
+              >
+                View on Koala
+              </a>
+            ) : (
+              <span className="block rounded-xl border border-white/10 px-3 py-1.5 text-center text-xs text-[#9a978f]">
+                Available in store
+              </span>
+            ))}
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -1501,14 +1426,19 @@ export function KoalaDesignStudio() {
   const [step, setStep] = useState(1);
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
-  const [roomType, setRoomType] = useState("");
-  const [style, setStyle] = useState("");
+  // Suggested defaults — the user proceeds without choosing unless AI is wrong.
+  const [roomType, setRoomType] = useState(DEFAULT_ROOM_TYPE);
+  const [style, setStyle] = useState(DEFAULT_STYLE);
   const [customPrompt, setCustomPrompt] = useState("");
+  const [roomPickerOpen, setRoomPickerOpen] = useState(false);
+  const [stylePickerOpen, setStylePickerOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [letAiRecommendBundle, setLetAiRecommendBundle] = useState(true);
-  const [openProductCategoryId, setOpenProductCategoryId] = useState<
-    string | null
-  >(null);
+  const [activeShopCategoryId, setActiveShopCategoryId] = useState<string>(
+    productsByCategory[0]?.id ?? ""
+  );
+  const [resultTab, setResultTab] = useState<ResultTab>("room");
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const [generatedConcepts, setGeneratedConcepts] = useState<
     GeneratedConcept[]
   >([]);
@@ -1691,7 +1621,8 @@ export function KoalaDesignStudio() {
 
         if (cachedConcepts.length > 0) {
           setSelectedConceptIndex(0);
-          setStep(5);
+          setResultTab("room");
+          setStep(3);
         }
       }, 0);
 
@@ -1704,7 +1635,7 @@ export function KoalaDesignStudio() {
   // Fire room_summary_viewed once each time a result summary becomes visible.
   useEffect(() => {
     const showingSummary =
-      step === 5 && products.length > 0 && Boolean(activeImage);
+      step === 3 && products.length > 0 && Boolean(activeImage);
 
     if (showingSummary && !summaryViewedRef.current) {
       summaryViewedRef.current = true;
@@ -1865,13 +1796,7 @@ export function KoalaDesignStudio() {
   }
 
   function canContinue() {
-    if (step === 1) return Boolean(image && previewUrl);
-    if (step === 2) return Boolean(roomType);
-    if (step === 3) {
-      return style === "Custom" ? Boolean(customPrompt.trim()) : Boolean(style);
-    }
-    if (step === 4) return letAiRecommendBundle || selectedProductIds.length > 0;
-    return generatedConcepts.length > 0;
+    return Boolean(image && previewUrl);
   }
 
   function canGenerateConcept() {
@@ -1951,6 +1876,8 @@ export function KoalaDesignStudio() {
       setGeneratedConcepts(nextConcepts);
       setProducts(nextProducts);
       setSelectedConceptIndex(0);
+      setResultTab("room");
+      setStep(3);
       trackGenerateCompleted({
         roomType,
         style: selectedStylePrompt,
@@ -2141,12 +2068,16 @@ export function KoalaDesignStudio() {
     setStep(1);
     setImage(null);
     setPreviewUrl("");
-    setRoomType("");
-    setStyle("");
+    setRoomType(DEFAULT_ROOM_TYPE);
+    setStyle(DEFAULT_STYLE);
     setCustomPrompt("");
+    setRoomPickerOpen(false);
+    setStylePickerOpen(false);
     setSelectedProductIds([]);
     setLetAiRecommendBundle(true);
-    setOpenProductCategoryId(null);
+    setActiveShopCategoryId(productsByCategory[0]?.id ?? "");
+    setResultTab("room");
+    setInsightsOpen(false);
     setGeneratedConcepts([]);
     setProducts([]);
     setAddedRecommendationIds([]);
@@ -2167,16 +2098,16 @@ export function KoalaDesignStudio() {
     if (step === 1) {
       return (
         <section className="space-y-4">
-          <div className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-              Upload Room Photo
+          <div className="v2-surface rounded-[26px] p-5">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[#9a978f]">
+              Design &amp; shop your room
             </p>
-            <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight">
+            <h1 className="mt-2 font-serif text-4xl font-semibold leading-tight text-[#F5F3EE]">
               Start with your actual room
             </h1>
-            <p className="mt-3 text-sm leading-6 text-[#9C9C94]">
-              Take a fresh photo or choose one from your gallery. iPhone HEIC
-              photos will be converted when the browser supports it.
+            <p className="mt-3 text-sm leading-6 text-[#9a978f]">
+              Add a photo and we&apos;ll design a complete, shoppable room around
+              it in seconds.
             </p>
 
             <input
@@ -2246,226 +2177,228 @@ export function KoalaDesignStudio() {
     }
 
     if (step === 2) {
-      return (
-        <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-          <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-            Select Room Type
-          </p>
-          <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight">
-            What are we styling?
-          </h1>
+      const activeCategory =
+        productsByCategory.find((c) => c.id === activeShopCategoryId) ||
+        productsByCategory[0];
+      const roomLabel =
+        roomTypes.find((r) => r.id === roomType)?.label || "Living room";
+      const styleLabel =
+        designStyles.find((s) => s.id === style)?.title ||
+        style ||
+        "Modern Luxury";
 
-          <div className="mt-5 grid grid-cols-2 gap-4">
-            {roomTypes.map((item) => {
-              const selected = roomType === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setRoomType(item.id)}
-                  className={`min-h-44 rounded-3xl border p-3 text-left transition ${
-                    selected
-                      ? "border-[#C9A57A]/55 bg-[#181818] text-[#F7F7F2]"
-                      : "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#F7F7F2]"
-                  }`}
-                >
-                  <RoomTypePreview item={item} selected={selected} />
-                  <span className="mt-4 block px-2 text-sm font-semibold">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      );
-    }
-
-    if (step === 3) {
-      return (
-        <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-          <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-            Select Design Style
-          </p>
-          <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight">
-            Choose the mood
-          </h1>
-
-          <div className="mt-5 grid gap-4">
-            {designStyles.map((item) => {
-              const selected = style === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setStyle(item.id)}
-                  className={`grid gap-4 rounded-3xl border p-4 text-left transition ${
-                    selected
-                      ? "border-[#C9A57A]/55 bg-[#181818] text-[#F7F7F2]"
-                      : "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#F7F7F2]"
-                  }`}
-                >
-                  <StyleVisualPreview visual={item.visual} selected={selected} />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold">
-                      {item.title}
-                    </span>
-                    <span className="mt-2 block text-xs leading-5 text-[#9C9C94]">
-                      {item.description}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {style === "Custom" && (
-            <textarea
-              value={customPrompt}
-              onChange={(event) => setCustomPrompt(event.target.value)}
-              placeholder="Describe the mood, colours, materials or layout you want..."
-              className="mt-4 min-h-28 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-4 text-sm text-[#F7F7F2] outline-none focus:border-[#C9A57A]"
-            />
-          )}
-        </section>
-      );
-    }
-
-    if (step === 4) {
       return (
         <section className="space-y-4">
-          <div className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-              Select Koala Products
+          <div className="v2-surface rounded-[26px] p-5">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+              Design brief
             </p>
-            <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight">
-              Anchor the concept
+            <h1 className="mt-2 font-serif text-3xl font-semibold leading-tight text-[#F5F3EE]">
+              Style your room
             </h1>
+            <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+              We&apos;ve suggested a direction. Change anything, or just
+              continue.
+            </p>
 
-            <button
-              type="button"
-              onClick={() => setLetAiRecommendBundle((current) => !current)}
-              className={`mt-5 flex w-full items-center justify-between rounded-xl border p-4 text-left ${
-                letAiRecommendBundle
-                  ? "border-[#C9A57A]/55 bg-[#181818] text-[#F7F7F2]"
-                  : "border-[rgba(255,255,255,0.12)] bg-[#111111] text-[#F7F7F2]"
-              }`}
-            >
-              <span>
-                <span className="block text-sm font-semibold">
-                  AI concept mode
-                </span>
-                <span className="mt-1 block text-xs opacity-70">
-                  {letAiRecommendBundle
-                    ? "AI can complete the room using matching Koala products."
-                    : "Only selected products will be changed."}
-                </span>
-              </span>
-              <span>{letAiRecommendBundle ? "On" : "Off"}</span>
-            </button>
-
-            {selectedProducts.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setSelectedSheetOpen(true)}
-                className="sticky top-3 z-10 mt-4 flex w-full items-center justify-between rounded-xl border border-[rgba(255,255,255,0.12)] bg-[#050505]/95 px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur"
-              >
-                <span>
-                  {selectedProducts.length}{" "}
-                  {selectedProducts.length === 1 ? "product" : "products"}{" "}
-                  selected
-                </span>
-                <span className="rounded-xl bg-[#F7F7F2] px-3 py-1 text-xs text-[#050505]">
-                  View
-                </span>
-              </button>
+            <SuggestionRow
+              label="Room"
+              value={roomLabel}
+              open={roomPickerOpen}
+              onToggle={() => {
+                setRoomPickerOpen((o) => !o);
+                setStylePickerOpen(false);
+              }}
+            />
+            {roomPickerOpen && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {roomTypes.map((item) => (
+                  <SelectChip
+                    key={item.id}
+                    active={roomType === item.id}
+                    onClick={() => {
+                      setRoomType(item.id);
+                      setRoomPickerOpen(false);
+                    }}
+                  >
+                    {item.label}
+                  </SelectChip>
+                ))}
+              </div>
             )}
 
-            {heroDemoProducts.length > 0 && (
-              <section className="mt-4 overflow-hidden rounded-3xl border border-[#C9A57A]/25 bg-gradient-to-b from-[#141210] to-[#111111] p-4">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
-                  Hero demo collection
-                </p>
-                <h3 className="mt-1 font-serif text-lg text-[#F7F7F2]">
-                  Priced &amp; shoppable now
-                </h3>
-                <p className="mt-1 text-xs leading-5 text-[#9C9C94]">
-                  Curated pieces with live pricing and product links — ideal for
-                  the pilot demo.
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  {heroDemoProducts.map((product) => (
+            <SuggestionRow
+              label="Style"
+              value={styleLabel}
+              open={stylePickerOpen}
+              onToggle={() => {
+                setStylePickerOpen((o) => !o);
+                setRoomPickerOpen(false);
+              }}
+            />
+            {stylePickerOpen && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {designStyles.map((item) => (
+                  <SelectChip
+                    key={item.id}
+                    active={style === item.id}
+                    onClick={() => {
+                      setStyle(item.id);
+                      if (item.id !== "Custom") setStylePickerOpen(false);
+                    }}
+                  >
+                    {item.title}
+                  </SelectChip>
+                ))}
+              </div>
+            )}
+            {style === "Custom" && (
+              <textarea
+                value={customPrompt}
+                onChange={(event) => setCustomPrompt(event.target.value)}
+                placeholder="Describe the mood, colours, materials or layout you want..."
+                className="mt-3 min-h-20 w-full rounded-xl border border-white/10 bg-[#0B0B0B] p-3 text-sm text-[#F5F3EE] outline-none focus:border-[#C9A57A]"
+              />
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setLetAiRecommendBundle((current) => !current)}
+            aria-pressed={letAiRecommendBundle}
+            className={`v2-surface flex w-full items-center justify-between gap-4 rounded-2xl p-4 text-left transition ${
+              letAiRecommendBundle ? "ring-1 ring-[#C9A57A]/40" : ""
+            }`}
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-[#F5F3EE]">
+                AI Concept
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-[#9a978f]">
+                {letAiRecommendBundle
+                  ? "Your picks stay fixed — AI completes the rest of the room with matching Koala pieces."
+                  : "Only the products you choose are changed. Everything else stays as-is."}
+              </span>
+            </span>
+            <span
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                letAiRecommendBundle
+                  ? "bg-[#C9A57A] text-[#0b0b0d]"
+                  : "border border-white/12 text-[#9a978f]"
+              }`}
+            >
+              {letAiRecommendBundle ? "On" : "Off"}
+            </span>
+          </button>
+
+          {heroDemoProducts.length > 0 && (
+            <div className="v2-surface rounded-[26px] p-4">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+                    Featured collection
+                  </p>
+                  <h3 className="mt-1 font-serif text-xl text-[#F5F3EE]">
+                    Best sellers
+                  </h3>
+                </div>
+              </div>
+              <div className="v2-noscrollbar -mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-1">
+                {heroDemoProducts.map((product) => (
+                  <div key={product.id} className="w-[46%] shrink-0">
                     <StudioProductCard
-                      key={product.id}
                       product={product}
                       selected={selectedProductIds.includes(product.id)}
                       onToggle={() => toggleProduct(product.id)}
                     />
-                  ))}
-                </div>
-              </section>
-            )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-            <div className="mt-4 grid gap-4">
+          <div className="v2-surface rounded-[26px] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-serif text-xl text-[#F5F3EE]">
+                Browse products
+              </h3>
+              {selectedProducts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedSheetOpen(true)}
+                  className="rounded-full bg-[#F5F3EE] px-3 py-1.5 text-xs font-semibold text-[#0b0b0d]"
+                >
+                  {selectedProducts.length} selected
+                </button>
+              )}
+            </div>
+
+            <div className="v2-noscrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
               {productsByCategory.map((category) => {
-                const isOpen = openProductCategoryId === category.id;
+                const active = activeCategory?.id === category.id;
+                const count = category.products.filter((product) =>
+                  selectedProductIds.includes(product.id)
+                ).length;
 
                 return (
-                  <section
+                  <button
                     key={category.id}
-                    className="overflow-hidden rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111]"
+                    type="button"
+                    onClick={() => setActiveShopCategoryId(category.id)}
+                    className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                      active
+                        ? "border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
+                        : "border-white/10 bg-white/[0.03] text-[#9a978f]"
+                    }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenProductCategoryId((current) =>
-                          current === category.id ? null : category.id
-                        )
-                      }
-                      className="flex w-full items-center justify-between p-4 text-left"
-                    >
-                      <span className="text-xs font-semibold uppercase tracking-widest text-[#9C9C94]">
-                        {category.label}
-                      </span>
-                      <span className="text-xs text-[#9C9C94]">
-                        {
-                          category.products.filter((product) =>
-                            selectedProductIds.includes(product.id)
-                          ).length
-                        }
-                        /{category.products.length} {isOpen ? "-" : "+"}
-                      </span>
-                    </button>
-
-                    {isOpen && (
-                      <div className="grid grid-cols-2 gap-3 px-3 pb-3">
-                        {category.products.map((product) => (
-                          <StudioProductCard
-                            key={product.id}
-                            product={product}
-                            selected={selectedProductIds.includes(product.id)}
-                            onToggle={() => toggleProduct(product.id)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </section>
+                    {category.label}
+                    {count > 0 ? ` · ${count}` : ""}
+                  </button>
                 );
               })}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {activeCategory?.products.map((product) => (
+                <StudioProductCard
+                  key={product.id}
+                  product={product}
+                  selected={selectedProductIds.includes(product.id)}
+                  onToggle={() => toggleProduct(product.id)}
+                />
+              ))}
             </div>
           </div>
         </section>
       );
     }
 
+    if (!activeImage) {
+      return (
+        <div className="v2-surface rounded-[26px] p-5">
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9a978f]">
+            Result
+          </p>
+          <h1 className="mt-2 font-serif text-3xl font-semibold leading-tight text-[#F5F3EE]">
+            Your room is on the way
+          </h1>
+        </div>
+      );
+    }
+
+    const packageAll = [...products, ...addedRecommendations];
+
     return (
-      <section className="space-y-4">
-        {activeImage ? (
-          <>
+      <div className="space-y-3">
+        <ResultTabBar active={resultTab} onChange={setResultTab} />
+
+        {resultTab === "room" && (
+          <div
+            key="room"
+            className="animate-[tabFade_300ms_ease-out] space-y-3"
+          >
             <div
-              className="relative aspect-[4/5] max-h-[56vh] w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#0B0B0B] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+              className="v2-hero-shadow relative aspect-[4/5] max-h-[50vh] w-full overflow-hidden rounded-[26px] border border-white/10 bg-[#0B0B0B]"
               onTouchStart={(event) => {
                 if (
                   generatedConcepts.length < 2 ||
@@ -2473,7 +2406,6 @@ export function KoalaDesignStudio() {
                 ) {
                   return;
                 }
-
                 resultSwipeStartXRef.current = event.touches[0].clientX;
               }}
               onTouchEnd={(event) => {
@@ -2483,26 +2415,18 @@ export function KoalaDesignStudio() {
                 ) {
                   return;
                 }
-
                 const endX = event.changedTouches[0]?.clientX;
                 const deltaX =
                   typeof endX === "number"
                     ? endX - resultSwipeStartXRef.current
                     : 0;
-
                 resultSwipeStartXRef.current = null;
-
                 if (Math.abs(deltaX) < 48) return;
-
                 suppressResultViewerOpenRef.current = true;
                 window.setTimeout(() => {
                   suppressResultViewerOpenRef.current = false;
                 }, 500);
-                selectAdjacentConcept(
-                  deltaX < 0 ? 1 : -1,
-                  "swipe",
-                  "result"
-                );
+                selectAdjacentConcept(deltaX < 0 ? 1 : -1, "swipe", "result");
               }}
             >
               <button
@@ -2512,7 +2436,6 @@ export function KoalaDesignStudio() {
                     suppressResultViewerOpenRef.current = false;
                     return;
                   }
-
                   openImageViewer();
                 }}
                 className="h-full w-full"
@@ -2521,193 +2444,266 @@ export function KoalaDesignStudio() {
                   key={`${selectedConceptIndex}-${activeImage.slice(0, 16)}`}
                   src={`data:${activeConcept?.mimeType || "image/png"};base64,${activeImage}`}
                   alt={`Generated concept ${selectedConceptIndex + 1}`}
-                  className="h-full w-full animate-[imageReveal_600ms_ease-out] object-contain object-center"
+                  className="h-full w-full animate-[imageReveal_600ms_ease-out] object-cover object-center"
                 />
               </button>
-
-              {activeConcept && (
-                <span className="pointer-events-none absolute right-3 top-3 rounded-full border border-white/15 bg-[#050505]/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#F7F7F2] backdrop-blur">
-                  {activeConcept.label}
-                </span>
-              )}
 
               {generatedConcepts.length > 1 && selectedConceptIndex > 0 && (
                 <button
                   type="button"
-                  onClick={() =>
-                    selectAdjacentConcept(-1, "arrow", "result")
-                  }
+                  onClick={() => selectAdjacentConcept(-1, "arrow", "result")}
                   aria-label="Previous generated concept"
                   className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
                 >
                   <ChevronIcon direction="left" />
                 </button>
               )}
-
               {generatedConcepts.length > 1 &&
                 selectedConceptIndex < generatedConcepts.length - 1 && (
                   <button
                     type="button"
-                    onClick={() =>
-                      selectAdjacentConcept(1, "arrow", "result")
-                    }
+                    onClick={() => selectAdjacentConcept(1, "arrow", "result")}
                     aria-label="Next generated concept"
                     className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#050505]/70 text-[#F7F7F2] backdrop-blur"
                   >
                     <ChevronIcon direction="right" />
                   </button>
                 )}
+
+              {generatedConcepts.length > 1 && (
+                <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-2">
+                  {generatedConcepts.map((concept, index) => (
+                    <button
+                      key={`${concept.provider}-${index}`}
+                      type="button"
+                      onClick={() =>
+                        selectConcept({
+                          nextIndex: index,
+                          source: "dot",
+                          surface: "result",
+                        })
+                      }
+                      aria-label={`View ${concept.label} concept`}
+                      className={`h-1.5 rounded-full transition-all ${
+                        selectedConceptIndex === index
+                          ? "w-5 bg-[#F7F7F2]"
+                          : "w-1.5 bg-white/40"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
-            {generatedConcepts.length > 1 && (
-              <div className="flex items-center justify-center gap-2">
-                {generatedConcepts.map((concept, index) => (
-                  <button
-                    key={`${concept.provider}-${index}`}
-                    type="button"
-                    onClick={() =>
-                      selectConcept({
-                        nextIndex: index,
-                        source: "dot",
-                        surface: "result",
-                      })
-                    }
-                    aria-label={`View ${concept.label} concept`}
-                    aria-current={
-                      selectedConceptIndex === index ? "true" : undefined
-                    }
-                    className={`h-1.5 rounded-full transition-all ${
-                      selectedConceptIndex === index
-                        ? "w-5 bg-[#F7F7F2]"
-                        : "w-1.5 bg-white/35"
-                    }`}
-                  />
+            <StudioButton
+              onClick={() => setResultTab("shop")}
+              className="min-h-13 w-full rounded-2xl text-base"
+            >
+              Shop this room
+            </StudioButton>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <ResultIconButton
+                label="Edit with AI"
+                icon={<AiEditIcon />}
+                onClick={() => setRefineSheetOpen(true)}
+                variant="primary"
+                compact
+              />
+              <ResultIconButton
+                label="Regenerate"
+                icon={<RegenerateIcon />}
+                onClick={handleGenerate}
+                compact
+              />
+            </div>
+
+            <div className="flex items-center justify-center gap-1">
+              <ResultIconButton
+                label="Save"
+                icon={<SaveIcon />}
+                onClick={downloadImage}
+                quiet
+              />
+              <ResultIconButton
+                label="Share"
+                icon={<ShareIcon />}
+                onClick={shareImage}
+                quiet
+              />
+              <ResultIconButton
+                label="Delete"
+                icon={<DeleteIcon />}
+                onClick={deleteResult}
+                variant="danger"
+                quiet
+              />
+            </div>
+
+            {(roomSummary || designRationale.length > 0) && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setInsightsOpen((o) => !o)}
+                  aria-expanded={insightsOpen}
+                  className="v2-surface flex w-full items-center justify-between rounded-2xl p-4 text-left"
+                >
+                  <span>
+                    <span className="block text-sm font-semibold text-[#F5F3EE]">
+                      Design insights
+                    </span>
+                    <span className="mt-0.5 block text-xs text-[#9a978f]">
+                      Palette, mood, budget &amp; designer notes
+                    </span>
+                  </span>
+                  <span className="text-xs font-medium text-[#C9A57A]">
+                    {insightsOpen ? "Hide" : "View"}
+                  </span>
+                </button>
+
+                {insightsOpen && (
+                  <div className="mt-3 space-y-3 animate-[tabFade_260ms_ease-out]">
+                    {roomSummary && <RoomSummaryCard summary={roomSummary} />}
+                    {designRationale.length > 0 && (
+                      <DesignRationaleSection bullets={designRationale} />
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {resultTab === "shop" && (
+          <div
+            key="shop"
+            className="animate-[tabFade_300ms_ease-out] space-y-4"
+          >
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+                Shop this room
+              </p>
+              <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
+                {packageAll.length}{" "}
+                {packageAll.length === 1 ? "piece" : "pieces"} in your room
+              </h2>
+            </div>
+
+            {packageAll.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {packageAll.map((product) => (
+                  <ShopProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[#9a978f]">
+                No products matched this concept.
+              </p>
+            )}
+
+            <PackageSummary pricing={packagePricing} />
+
+            <StudioButton
+              onClick={openQuoteSheet}
+              className="min-h-13 w-full rounded-2xl text-base"
+            >
+              Add room package to cart
+            </StudioButton>
+          </div>
+        )}
+
+        {resultTab === "look" && (
+          <div
+            key="look"
+            className="animate-[tabFade_300ms_ease-out] space-y-4"
+          >
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+                Recommended for this room
+              </p>
+              <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
+                Complete the Look
+              </h2>
+            </div>
+
+            {recommendations.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {recommendations.map((product) => {
+                  const added = addedRecommendationIds.includes(product.id);
+                  return (
+                    <ShopProductCard
+                      key={product.id}
+                      product={product}
+                      action={
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            if (added) {
+                              removeRecommendation(product);
+                            } else {
+                              addRecommendation(product);
+                            }
+                          }}
+                          aria-pressed={added}
+                          className={`block w-full rounded-xl px-3 py-1.5 text-center text-xs font-semibold transition ${
+                            added
+                              ? "border border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
+                              : "bg-[#F5F3EE] text-[#0b0b0d]"
+                          }`}
+                        >
+                          {added ? "Added to package" : "Add to package"}
+                        </button>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-[#9a978f]">
+                Your room already looks complete — no additions needed.
+              </p>
+            )}
+          </div>
+        )}
+
+        {resultTab === "package" && (
+          <div
+            key="package"
+            className="animate-[tabFade_300ms_ease-out] space-y-4"
+          >
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+                Your package
+              </p>
+              <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
+                Room package
+              </h2>
+            </div>
+
+            {packageAll.length > 0 && (
+              <div className="v2-surface grid gap-2 rounded-2xl p-4">
+                {packageAll.map((product) => (
+                  <QuoteLineItem key={product.id} product={product} />
                 ))}
               </div>
             )}
 
-            <div className="space-y-2.5">
-              <StudioButton
-                onClick={openQuoteSheet}
-                className="min-h-13 w-full rounded-2xl text-base"
-              >
-                Prepare room package
-              </StudioButton>
+            <PackageSummary pricing={packagePricing} />
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <ResultIconButton
-                  label="Edit with AI"
-                  icon={<AiEditIcon />}
-                  onClick={() => setRefineSheetOpen(true)}
-                  variant="primary"
-                  compact
-                />
-                <ResultIconButton
-                  label="Regenerate"
-                  icon={<RegenerateIcon />}
-                  onClick={handleGenerate}
-                  compact
-                />
-              </div>
-
-              <div className="flex items-center justify-center gap-1 pt-0.5">
-                <ResultIconButton
-                  label="Save"
-                  icon={<SaveIcon />}
-                  onClick={downloadImage}
-                  quiet
-                />
-                <ResultIconButton
-                  label="Share"
-                  icon={<ShareIcon />}
-                  onClick={shareImage}
-                  quiet
-                />
-                <ResultIconButton
-                  label="Delete"
-                  icon={<DeleteIcon />}
-                  onClick={deleteResult}
-                  variant="danger"
-                  quiet
-                />
-              </div>
-            </div>
-
-            {roomSummary && <RoomSummaryCard summary={roomSummary} />}
-
-            {products.length > 0 && (
-              <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-                <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-                  Your package
-                </p>
-                <h2 className="mt-2 font-serif text-2xl">Products in this room</h2>
-                <p className="mt-1 text-sm text-[#9C9C94]">
-                  {products.length} {products.length === 1 ? "piece" : "pieces"}{" "}
-                  styled into your room.
-                </p>
-                <div className="mt-4 grid gap-4">
-                  {products.map((product) => (
-                    <ProductRow key={product.id} product={product} />
-                  ))}
-                  {addedRecommendations.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      addedBadge
-                    />
-                  ))}
-                </div>
-
-                <PackageSummary pricing={packagePricing} />
-              </section>
-            )}
-
-            {recommendations.length > 0 && (
-              <RecommendationsSection
-                recommendations={recommendations}
-                addedIds={addedRecommendationIds}
-                onAdd={addRecommendation}
-                onRemove={removeRecommendation}
-              />
-            )}
-
-            {designRationale.length > 0 && (
-              <DesignRationaleSection bullets={designRationale} />
-            )}
-
-            {products.length > 0 && (
-              <div className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
-                <p className="font-serif text-xl text-[#F7F7F2]">
-                  Ready to make it yours?
-                </p>
-                <p className="mt-1 text-sm leading-6 text-[#9C9C94]">
-                  Save this package and a Koala consultant will help with
-                  availability, pricing and next steps.
-                </p>
-                <StudioButton
-                  onClick={openQuoteSheet}
-                  className="mt-4 min-h-13 w-full rounded-2xl text-base"
-                >
-                  Prepare room package
-                </StudioButton>
-              </div>
-            )}
-          </>
-        ) : (
-          <section className="rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5">
-            <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-              Generate / Result
+            <StudioButton
+              onClick={openQuoteSheet}
+              className="min-h-13 w-full rounded-2xl text-base"
+            >
+              Add room package to cart
+            </StudioButton>
+            <p className="text-center text-[11px] leading-5 text-[#9a978f]">
+              No payment taken — a Koala consultant confirms availability,
+              pricing and next steps.
             </p>
-            <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight">
-              Ready to render
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-[#9C9C94]">
-              The studio will create one pilot concept using your room, style
-              and product references.
-            </p>
-          </section>
+          </div>
         )}
-      </section>
+      </div>
     );
   }
 
@@ -2834,42 +2830,72 @@ export function KoalaDesignStudio() {
         />
       )}
 
-      <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#050505] px-6 pt-6">
-        <header className="mb-4 shrink-0 rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111]/80 p-5 shadow-2xl">
-          <div className="flex items-center justify-between gap-4">
+      <div className="v2-canvas mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden">
+        {step === 3 ? (
+          <header className="flex shrink-0 items-center justify-between px-5 pb-3 pt-[calc(env(safe-area-inset-top)_+_12px)]">
             <Image
               src="/koala-logo.png"
               alt="Koala Living"
-              width={150}
-              height={65}
+              width={130}
+              height={56}
               priority
-              className="h-auto w-28"
+              className="h-auto w-24"
             />
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={resetWizard}
+              className="rounded-full border border-white/12 px-3.5 py-1.5 text-xs text-[#F5F3EE] transition hover:bg-white/5"
+            >
+              New room
+            </button>
+          </header>
+        ) : (
+          <header className="shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_18px)]">
+            <div className="flex items-center justify-between gap-4">
+              <Image
+                src="/koala-logo.png"
+                alt="Koala Living"
+                width={150}
+                height={65}
+                priority
+                className="h-auto w-28"
+              />
               <button
                 type="button"
                 onClick={resetWizard}
-                className="rounded-xl border border-[rgba(255,255,255,0.12)] px-3 py-1 text-xs text-[#F7F7F2] transition hover:bg-[#181818]"
+                className="rounded-full border border-white/12 px-3.5 py-1.5 text-xs text-[#F5F3EE] transition hover:bg-white/5"
               >
                 Reset
               </button>
             </div>
-          </div>
-          <div className="mt-4 grid grid-cols-5 gap-1">
-            {[1, 2, 3, 4, 5].map((item) => (
-              <div
-                key={item}
-                className={`h-1 rounded-full ${
-                  item <= step ? "bg-[#C9A57A]" : "bg-[rgba(255,255,255,0.12)]"
-                }`}
-              />
-            ))}
-          </div>
-        </header>
+            <div className="mt-5 flex items-end gap-2">
+              {[
+                { n: 1, label: "Capture" },
+                { n: 2, label: "Design" },
+                { n: 3, label: "Result" },
+              ].map((s) => (
+                <div key={s.n} className="flex-1">
+                  <div
+                    className={`h-1 rounded-full transition-colors ${
+                      step >= s.n ? "bg-[#C9A57A]" : "bg-white/10"
+                    }`}
+                  />
+                  <p
+                    className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                      step >= s.n ? "text-[#F5F3EE]" : "text-[#9a978f]"
+                    }`}
+                  >
+                    {s.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </header>
+        )}
 
         <div
-          className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ${
-            step === 5 && activeImage ? "pb-8" : "pb-32"
+          className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${
+            step === 3 ? "px-5 pb-6" : "px-6 pb-32 pt-4"
           }`}
         >
           <div key={step} className="animate-[stepIn_360ms_ease-out]">
@@ -2883,27 +2909,27 @@ export function KoalaDesignStudio() {
           )}
         </div>
 
-        {!(step === 5 && activeImage) && (
+        {step !== 3 && (
           <footer
-            className={`sticky bottom-0 z-40 grid shrink-0 gap-4 border-t border-[rgba(255,255,255,0.12)] bg-[#050505]/95 pb-[calc(env(safe-area-inset-bottom)_+_24px)] pt-4 shadow-2xl backdrop-blur ${
+            className={`sticky bottom-0 z-40 grid shrink-0 gap-3 border-t border-white/10 bg-[#0b0b0d]/90 px-6 pb-[calc(env(safe-area-inset-bottom)_+_20px)] pt-4 backdrop-blur ${
               step === 1 ? "grid-cols-1" : "grid-cols-[auto_1fr]"
             }`}
           >
-            {step > 1 && (
+            {step === 2 && (
               <StudioButton
                 variant="ghost"
-                onClick={() => setStep((current) => Math.max(current - 1, 1))}
+                onClick={() => setStep(1)}
                 disabled={loading || refining}
-                className="min-w-24 rounded-xl"
+                className="min-w-20 rounded-2xl"
               >
                 Back
               </StudioButton>
             )}
-            {step < 5 ? (
+            {step === 1 ? (
               <StudioButton
-                onClick={() => setStep((current) => Math.min(current + 1, 5))}
+                onClick={() => setStep(2)}
                 disabled={!canContinue()}
-                className="min-h-14 rounded-xl text-base"
+                className="min-h-14 rounded-2xl text-base"
               >
                 Continue
               </StudioButton>
@@ -2911,9 +2937,9 @@ export function KoalaDesignStudio() {
               <StudioButton
                 onClick={handleGenerate}
                 disabled={!canGenerateConcept() || loading}
-                className="min-h-14 rounded-xl text-base"
+                className="min-h-14 rounded-2xl text-base"
               >
-                {loading ? "Generating..." : "Generate concept"}
+                {loading ? "Generating..." : "Generate my room"}
               </StudioButton>
             )}
           </footer>
