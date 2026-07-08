@@ -7,6 +7,7 @@
  */
 import type { RoomAnalysis } from "@/lib/intelligence/room-analysis";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
+import type { QualityReview } from "@/lib/intelligence/quality-reviewer";
 import type { ReplacementPlan } from "@/lib/intelligence/replacement-planner";
 import type { SceneGraph } from "@/lib/intelligence/scene-graph";
 
@@ -29,6 +30,7 @@ export type AiEvalRecord = {
   prompt: string | null;
   imageHash: string | null;
   qualityScore: QualityScore | null;
+  qualityReview: QualityReview | null;
   generationAttempts: number;
   autoRegenerated: boolean;
   referenceViewCount: number;

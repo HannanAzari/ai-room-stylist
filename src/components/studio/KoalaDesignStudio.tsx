@@ -1603,6 +1603,8 @@ export function KoalaDesignStudio() {
       imageHash: imageBase64 ? hashString(imageBase64.slice(0, 512)) : null,
       qualityScore:
         (aiDebug?.qualityScore as AiEvalRecord["qualityScore"]) ?? null,
+      qualityReview:
+        (aiDebug?.qualityReview as AiEvalRecord["qualityReview"]) ?? null,
       generationAttempts: (aiDebug?.generationAttempts as number) ?? 0,
       autoRegenerated: Boolean(aiDebug?.autoRegenerated),
       referenceViewCount: (aiDebug?.referenceViewCount as number) ?? 0,

@@ -22,11 +22,13 @@ import {
 } from "@/lib/intelligence/scene-graph";
 import { buildIntelligentRoomPrompt } from "@/lib/intelligence/prompt-builder";
 import { buildReplacementPlan } from "@/lib/intelligence/replacement-planner";
+import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
-  meetsQualityThreshold,
-  scoreRoomImage,
-  type QualityScore,
-} from "@/lib/intelligence/quality-score";
+  reviewGeneratedRoom,
+  reviewRecommendsRegeneration,
+  reviewToQualityScore,
+  type QualityReview,
+} from "@/lib/intelligence/quality-reviewer";
 
 // Up to 2 generation attempts; regenerate once if the first is below the
 // quality threshold. Kept small to bound latency/cost.
@@ -279,11 +281,13 @@ async function handleGeneration(req: Request) {
     planAdditions: replacementPlan.additions.length,
   });
 
-  // Phase 5 — generate with quality-gated auto-regeneration.
-  const productSummary = profiles.map((profile) => profile.title).join("; ");
+  // Phase 5 — generate, then run the second-pass Quality Reviewer V2 against the
+  // original room + replacement plan. A critical failure (duplicated furniture,
+  // wrong placement, missing product, changed architecture) or a below-threshold
+  // overall triggers exactly one automatic regeneration.
   const attempts: {
     image: GeneratedImageResult;
-    score: QualityScore | null;
+    review: QualityReview | null;
   }[] = [];
 
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
@@ -293,29 +297,35 @@ async function handleGeneration(req: Request) {
       productImages: productImageFiles,
       apiKey,
     });
-    const score = await scoreRoomImage({
+    const review = await reviewGeneratedRoom({
       generatedBase64: generatedImage.imageBase64,
       generatedMimeType: generatedImage.mimeType,
       roomImage: image,
-      productSummary,
+      replacementPlan,
       apiKey,
     });
 
-    attempts.push({ image: generatedImage, score });
+    attempts.push({ image: generatedImage, review });
 
-    if (meetsQualityThreshold(score)) break;
+    // Accept as soon as the reviewer is satisfied (or unavailable).
+    if (!reviewRecommendsRegeneration(review)) break;
   }
 
   const best = attempts.reduce((bestSoFar, candidate) =>
-    (candidate.score?.overall ?? -1) > (bestSoFar.score?.overall ?? -1)
+    (candidate.review?.overall ?? -1) > (bestSoFar.review?.overall ?? -1)
       ? candidate
       : bestSoFar
   );
   const autoRegenerated = attempts.length > 1;
+  // Legacy 5-axis score kept populated for the existing debug view.
+  const qualityScore: QualityScore | null = best.review
+    ? reviewToQualityScore(best.review)
+    : null;
 
   devLog("[studio-gemini] generation result", {
     attempts: attempts.length,
-    qualityScore: best.score,
+    recommendation: best.review?.recommendation ?? "n/a",
+    reviewOverall: best.review?.overall ?? null,
   });
 
   const responseBody: Record<string, unknown> = {
@@ -332,7 +342,8 @@ async function handleGeneration(req: Request) {
       sceneGraph,
       roomAnalysis,
       replacementPlan,
-      qualityScore: best.score,
+      qualityScore,
+      qualityReview: best.review,
       generationAttempts: attempts.length,
       autoRegenerated,
       prompt,
