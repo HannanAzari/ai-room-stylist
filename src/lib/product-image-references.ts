@@ -1,8 +1,11 @@
 import { readFile } from "fs/promises";
 import type { Product } from "./products";
+import { getProductReferenceViewUrls } from "./intelligence/product-references";
 
-const MAX_PRODUCT_IMAGES_PER_PRODUCT = 2;
-const MAX_TOTAL_PRODUCT_IMAGES = 6;
+// Feed multiple reference views per product (front / 45° / side / lifestyle /
+// detail) so the image model has richer product context.
+const MAX_PRODUCT_IMAGES_PER_PRODUCT = 3;
+const MAX_TOTAL_PRODUCT_IMAGES = 8;
 const PRODUCT_IMAGE_TYPES_BY_EXTENSION = new Map([
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
@@ -53,37 +56,10 @@ function isProductImageBufferValid(buffer: Buffer, imageType: string) {
   return false;
 }
 
-function getPriorityScore(imageUrl: string) {
-  const cleanImageUrl = imageUrl.split(/[?#]/)[0].toLowerCase();
-
-  if (/\/main\.(?:jpe?g|png|webp)$/.test(cleanImageUrl)) return 0;
-  if (/angle|lifestyle/.test(cleanImageUrl)) return 1;
-
-  return 2;
-}
-
 function getPrioritizedProductImageUrls(product: Product) {
-  const imageUrls = [...(product.imageUrls || []), product.imageUrl || ""];
-  const seenImageUrls = new Set<string>();
-
-  return imageUrls
-    .map((imageUrl, index) => ({
-      imageUrl: imageUrl.trim(),
-      index,
-    }))
-    .filter(({ imageUrl }) => {
-      if (!imageUrl || seenImageUrls.has(imageUrl)) return false;
-
-      seenImageUrls.add(imageUrl);
-      return true;
-    })
-    .sort((a, b) => {
-      const priorityDelta =
-        getPriorityScore(a.imageUrl) - getPriorityScore(b.imageUrl);
-
-      return priorityDelta || a.index - b.index;
-    })
-    .map(({ imageUrl }) => imageUrl);
+  // Ordered reference views (main, front, 45°, side, lifestyle, detail...),
+  // resolved from feed data, scraped images, and conventional per-view paths.
+  return getProductReferenceViewUrls(product).map((view) => view.url);
 }
 
 export async function loadProductReferenceImageFiles(

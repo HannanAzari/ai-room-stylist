@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import {
   generateGeminiImage,
 } from "@/features/room-stylist/services/image-providers/gemini";
+import type { GeneratedImageResult } from "@/features/room-stylist/services/image-providers/types";
 import { loadProductReferenceImageFiles } from "@/lib/product-image-references";
 import {
   buildRoomPreservationInstructions,
-  buildRoomPrompt,
   buildScaleInstructions,
   formatProductForPrompt,
   type RoomMeasurements,
@@ -15,6 +15,18 @@ import {
   getProductsForStyle,
   type Product,
 } from "@/lib/products";
+import { getProductProfiles } from "@/lib/intelligence/product-profile";
+import { analyzeRoom } from "@/lib/intelligence/room-analysis";
+import { buildIntelligentRoomPrompt } from "@/lib/intelligence/prompt-builder";
+import {
+  meetsQualityThreshold,
+  scoreRoomImage,
+  type QualityScore,
+} from "@/lib/intelligence/quality-score";
+
+// Up to 2 generation attempts; regenerate once if the first is below the
+// quality threshold. Kept small to bound latency/cost.
+const MAX_GENERATION_ATTEMPTS = 2;
 
 const SUPPORTED_UPLOAD_TYPES = new Set([
   "image/jpeg",
@@ -200,17 +212,33 @@ async function handleGeneration(req: Request) {
     ? mergeProductsById(selectedProducts, styleProducts)
     : selectedProducts;
   const roomMeasurements = parseRoomMeasurements(formData);
-  const prompt = buildRoomPrompt({
-    style,
-    roomType,
-    products,
-    roomMeasurements,
-    aiConceptMode,
-  });
+  const apiKey = getStudioGeminiApiKey();
+
+  // Phase 1 — product intelligence profiles.
+  const profiles = getProductProfiles(products);
+
+  // Phase 2 — multiple product reference views.
   const productImageFiles = await loadProductReferenceImageFiles(
     products,
     "[studio-gemini]"
   );
+
+  // Phase 3 — room understanding (fallback-safe).
+  const roomAnalysis = await analyzeRoom(image, {
+    apiKey,
+    roomTypeHint: roomType,
+  });
+
+  // Phase 4 — dynamic prompt from room + product intelligence.
+  const { prompt, negativePrompt } = buildIntelligentRoomPrompt({
+    roomAnalysis,
+    profiles,
+    style,
+    roomType,
+    aiConceptMode,
+    measurements: roomMeasurements,
+    referenceViewCount: productImageFiles.length,
+  });
 
   devLog("[studio-gemini] generation request", {
     imageName: image.name,
@@ -221,19 +249,56 @@ async function handleGeneration(req: Request) {
     aiConceptMode,
     selectedProductIds,
     productReferenceCount: productImageFiles.length,
+    roomAnalysed: roomAnalysis.analysed,
   });
 
-  const generatedImage = await generateGeminiImage({
-    prompt,
-    roomImage: image,
-    productImages: productImageFiles,
-    apiKey: getStudioGeminiApiKey(),
+  // Phase 5 — generate with quality-gated auto-regeneration.
+  const productSummary = profiles.map((profile) => profile.title).join("; ");
+  const attempts: {
+    image: GeneratedImageResult;
+    score: QualityScore | null;
+  }[] = [];
+
+  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
+    const generatedImage = await generateGeminiImage({
+      prompt,
+      roomImage: image,
+      productImages: productImageFiles,
+      apiKey,
+    });
+    const score = await scoreRoomImage({
+      generatedBase64: generatedImage.imageBase64,
+      generatedMimeType: generatedImage.mimeType,
+      roomImage: image,
+      productSummary,
+      apiKey,
+    });
+
+    attempts.push({ image: generatedImage, score });
+
+    if (meetsQualityThreshold(score)) break;
+  }
+
+  const best = attempts.reduce((bestSoFar, candidate) =>
+    (candidate.score?.overall ?? -1) > (bestSoFar.score?.overall ?? -1)
+      ? candidate
+      : bestSoFar
+  );
+
+  devLog("[studio-gemini] generation result", {
+    attempts: attempts.length,
+    qualityScore: best.score,
   });
 
   return NextResponse.json({
-    images: [generatedImage],
-    imageBase64: generatedImage.imageBase64,
+    images: [best.image],
+    imageBase64: best.image.imageBase64,
     products,
+    // Observability fields — ignored by the frozen UI, useful for admin/debug.
+    roomAnalysis,
+    qualityScore: best.score,
+    generationAttempts: attempts.length,
+    negativePrompt,
   });
 }
 

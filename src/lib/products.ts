@@ -19,6 +19,21 @@ export type Product = {
   stockStatus?: "in-stock" | "made-to-order" | "out-of-stock" | string | null;
   // Curated demo products that carry verified real price + product URL.
   isHeroDemoProduct?: boolean;
+
+  // ---- Product Intelligence (optional, nullable-safe) ----------------------
+  // Populated by a real Koala product feed or an offline enrichment pass.
+  // Absent fields are inferred at runtime by the intelligence layer, never
+  // fabricated into the catalogue.
+  availability?: string | null;
+  finish?: string | null;
+  shape?: string | null;
+  silhouette?: string | null;
+  legsBase?: string | null;
+  texture?: string | null;
+  roomCompatibility?: string[];
+  description?: string | null;
+  // Named reference views, e.g. { front: "/products/.../front.jpg", angle: ... }.
+  referenceViews?: Record<string, string>;
 };
 
 export function getAllProducts(): Product[] {

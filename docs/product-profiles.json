@@ -1,0 +1,4510 @@
+[
+  {
+    "id": "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+    "title": "Archie Cream Wooden Oval Bedside Table With White Sintered Stone Top",
+    "category": "bed-sides",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "cream",
+      "white",
+      "stone"
+    ],
+    "materials": [
+      "wood",
+      "sintered stone"
+    ],
+    "finish": "sintered stone",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "bedroom"
+    ],
+    "shape": "oval",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "bed-sides",
+      "cream",
+      "white",
+      "stone",
+      "wood",
+      "sintered stone",
+      "oval"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "cream / white / stone",
+      "materials": [
+        "wood",
+        "sintered stone"
+      ],
+      "shape": "oval",
+      "promptFragment": "bedside table in cream / white / stone wood and sintered stone (sintered stone finish, oval shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "bedside table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing bedside tables",
+          "placement": "flanking the bed symmetrically"
+        }
+      ],
+      "roomTypes": [
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "thames-calacatta-oro-white-sintered-stone-square-coffee-table",
+        "vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top",
+        "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm"
+      ]
+    }
+  },
+  {
+    "id": "costanza-mocha-walnut-brown-wooden-dresser",
+    "title": "Costanza Mocha Walnut Brown Wooden Dresser",
+    "category": "bed-sides",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "brown",
+      "walnut",
+      "tan",
+      "mocha"
+    ],
+    "materials": [
+      "wood"
+    ],
+    "finish": "wood grain",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "bedroom"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "walnut base",
+    "texture": "wood",
+    "tags": [
+      "modern luxury",
+      "bed-sides",
+      "brown",
+      "walnut",
+      "tan",
+      "mocha",
+      "wood",
+      "straight-lined",
+      "wood grain"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "brown / walnut / tan / mocha",
+      "materials": [
+        "wood"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "bedside table in brown / walnut / tan / mocha wood (wood grain finish, straight-lined shape, clean-lined silhouette, walnut base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "bedside table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing bedside tables",
+          "placement": "flanking the bed symmetrically"
+        }
+      ],
+      "roomTypes": [
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "sierra-walnut-brown-dining-table-wooden-top-240x120cm",
+        "terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm",
+        "terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm",
+        "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg"
+      ]
+    }
+  },
+  {
+    "id": "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+    "title": "Sir Lionell Gliding White Sintered Stone Dresser Walnut Brown Wooden Leg",
+    "category": "bed-sides",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "brown",
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "wood",
+      "sintered stone"
+    ],
+    "finish": "sintered stone",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "bedroom"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "walnut base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "bed-sides",
+      "white",
+      "brown",
+      "walnut",
+      "stone",
+      "wood",
+      "sintered stone",
+      "straight-lined"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / brown / walnut / stone",
+      "materials": [
+        "wood",
+        "sintered stone"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "bedside table in white / brown / walnut / stone wood and sintered stone (sintered stone finish, straight-lined shape, clean-lined silhouette, walnut base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "bedside table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing bedside tables",
+          "placement": "flanking the bed symmetrically"
+        }
+      ],
+      "roomTypes": [
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+        "thames-calacatta-oro-white-sintered-stone-square-coffee-table"
+      ]
+    }
+  },
+  {
+    "id": "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+    "title": "Estelle Velvet Mustard Velveteen Fabric Queen Bed",
+    "category": "beds",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "mustard"
+    ],
+    "materials": [
+      "fabric",
+      "velvet"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "bedroom"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "velvet",
+    "tags": [
+      "modern luxury",
+      "beds",
+      "mustard",
+      "fabric",
+      "velvet",
+      "straight-lined",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "mustard",
+      "materials": [
+        "fabric",
+        "velvet"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "bed in mustard fabric and velvet (soft matte textile finish, straight-lined shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "bed at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing bed",
+          "placement": "centred against the main bedroom wall as the room's anchor"
+        }
+      ],
+      "roomTypes": [
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "gabriella-vintage-mustard-3-seater-woven-fabric-sofa",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "martina-soft-beige-vegan-leather-queen-bed",
+    "title": "Martina Soft Beige Vegan Leather Queen Bed",
+    "category": "beds",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "bedroom"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "beds",
+      "beige",
+      "leather",
+      "vegan leather",
+      "straight-lined",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige",
+      "materials": [
+        "leather",
+        "vegan leather"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "bed in beige leather and vegan leather (natural leather sheen finish, straight-lined shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "bed at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing bed",
+          "placement": "centred against the main bedroom wall as the room's anchor"
+        }
+      ],
+      "roomTypes": [
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "estonia-ivory-beige-floor-rug-large-250cm-x-350cm",
+        "calma-pearl-beige-fabric-2-pieces-modular-sofa"
+      ]
+    }
+  },
+  {
+    "id": "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+    "title": "Ophelia Mid Beige Fabric Queen Bed With Smoky Walnut Bed Frame",
+    "category": "beds",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "walnut"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "bedroom"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "walnut base",
+    "texture": "fabric",
+    "tags": [
+      "modern luxury",
+      "beds",
+      "beige",
+      "walnut",
+      "fabric",
+      "straight-lined",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / walnut",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "bed in beige / walnut fabric (soft matte textile finish, straight-lined shape, clean-lined silhouette, walnut base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "bed at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing bed",
+          "placement": "centred against the main bedroom wall as the room's anchor"
+        }
+      ],
+      "roomTypes": [
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+    "title": "Summerton Stone White Fabric Queen Bed Toffee Brown Ash",
+    "category": "beds",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "brown",
+      "stone",
+      "toffee"
+    ],
+    "materials": [
+      "fabric",
+      "ash"
+    ],
+    "finish": "wood grain",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "bedroom"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "ash base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "beds",
+      "white",
+      "brown",
+      "stone",
+      "toffee",
+      "fabric",
+      "ash",
+      "straight-lined",
+      "wood grain"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / brown / stone / toffee",
+      "materials": [
+        "fabric",
+        "ash"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "bed in white / brown / stone / toffee fabric and ash (wood grain finish, straight-lined shape, clean-lined silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "bed at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing bed",
+          "placement": "centred against the main bedroom wall as the room's anchor"
+        }
+      ],
+      "roomTypes": [
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "thames-calacatta-oro-white-sintered-stone-square-coffee-table",
+        "vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top"
+      ]
+    }
+  },
+  {
+    "id": "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+    "title": "Ballina Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs",
+    "category": "chairs",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "brown",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room",
+      "living room",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "compact, sculptural",
+    "legsBase": "ash base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "chairs",
+      "beige",
+      "brown",
+      "sand",
+      "leather",
+      "vegan leather",
+      "ash",
+      "straight-lined",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / brown / sand",
+      "materials": [
+        "leather",
+        "vegan leather",
+        "ash"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "chair in beige / brown / sand leather and vegan leather and ash (natural leather sheen finish, straight-lined shape, compact, sculptural silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "chair at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing chairs/accent seating",
+          "placement": "around the table or as accent seating in the room"
+        }
+      ],
+      "roomTypes": [
+        "dining room",
+        "living room",
+        "office"
+      ],
+      "matchingProducts": [
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+    "title": "Gloria Sand Beige Vegan Leather Dining Chair Smoky Ash Legs",
+    "category": "chairs",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room",
+      "living room",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "compact, sculptural",
+    "legsBase": "ash base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "chairs",
+      "beige",
+      "sand",
+      "leather",
+      "vegan leather",
+      "ash",
+      "straight-lined",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / sand",
+      "materials": [
+        "leather",
+        "vegan leather",
+        "ash"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "chair in beige / sand leather and vegan leather and ash (natural leather sheen finish, straight-lined shape, compact, sculptural silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "chair at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing chairs/accent seating",
+          "placement": "around the table or as accent seating in the room"
+        }
+      ],
+      "roomTypes": [
+        "dining room",
+        "living room",
+        "office"
+      ],
+      "matchingProducts": [
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "estonia-ivory-beige-floor-rug-large-250cm-x-350cm"
+      ]
+    }
+  },
+  {
+    "id": "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+    "title": "Maggie Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs",
+    "category": "chairs",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "brown",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room",
+      "living room",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "compact, sculptural",
+    "legsBase": "ash base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "chairs",
+      "beige",
+      "brown",
+      "sand",
+      "leather",
+      "vegan leather",
+      "ash",
+      "straight-lined",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / brown / sand",
+      "materials": [
+        "leather",
+        "vegan leather",
+        "ash"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "chair in beige / brown / sand leather and vegan leather and ash (natural leather sheen finish, straight-lined shape, compact, sculptural silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "chair at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing chairs/accent seating",
+          "placement": "around the table or as accent seating in the room"
+        }
+      ],
+      "roomTypes": [
+        "dining room",
+        "living room",
+        "office"
+      ],
+      "matchingProducts": [
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+    "title": "Romina Sand Beige Vegan Leather Dining Chair Ebony Brown Ash Legs",
+    "category": "chairs",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "brown",
+      "sand"
+    ],
+    "materials": [
+      "leather",
+      "vegan leather",
+      "ash"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room",
+      "living room",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "compact, sculptural",
+    "legsBase": "ash base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "chairs",
+      "beige",
+      "brown",
+      "sand",
+      "leather",
+      "vegan leather",
+      "ash",
+      "straight-lined",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / brown / sand",
+      "materials": [
+        "leather",
+        "vegan leather",
+        "ash"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "chair in beige / brown / sand leather and vegan leather and ash (natural leather sheen finish, straight-lined shape, compact, sculptural silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "chair at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing chairs/accent seating",
+          "placement": "around the table or as accent seating in the room"
+        }
+      ],
+      "roomTypes": [
+        "dining room",
+        "living room",
+        "office"
+      ],
+      "matchingProducts": [
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+    "title": "Aspen White Sintered Stone Coffee Table Matte Black Legs",
+    "category": "coffee-tables",
+    "price": 1998,
+    "url": "https://koalaliving.com.au/Aspen-White-Sintered-Stone-Coffee-Table---Matte-Black-Legs",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "black",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "finish": "matte",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "low-profile",
+    "legsBase": "black legs base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "coffee-tables",
+      "white",
+      "black",
+      "stone",
+      "sintered stone",
+      "straight-lined",
+      "matte"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / black / stone",
+      "materials": [
+        "sintered stone"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "coffee table in white / black / stone sintered stone (matte finish, straight-lined shape, low-profile silhouette, black legs base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "coffee table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing coffee/centre table",
+          "placement": "centred in front of the sofa with realistic walking clearance"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs"
+      ]
+    }
+  },
+  {
+    "id": "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+    "title": "San Pierre Walnut Veneer Low Round Coffee Table With Travertine Finish Sintered Stone Top",
+    "category": "coffee-tables",
+    "price": 2598,
+    "url": "https://koalaliving.com.au/San-Pierre-Walnut-Veneer-Coffee-Table-Low-Travertine-Finish-Sintered-Stone-Top",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "travertine",
+      "veneer",
+      "sintered stone"
+    ],
+    "finish": "veneer",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "round",
+    "silhouette": "low-profile",
+    "legsBase": "walnut base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "coffee-tables",
+      "walnut",
+      "stone",
+      "travertine",
+      "veneer",
+      "sintered stone",
+      "round"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "walnut / stone",
+      "materials": [
+        "travertine",
+        "veneer",
+        "sintered stone"
+      ],
+      "shape": "round",
+      "promptFragment": "coffee table in walnut / stone travertine and veneer and sintered stone (veneer finish, round shape, low-profile silhouette, walnut base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "coffee table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing coffee/centre table",
+          "placement": "centred in front of the sofa with realistic walking clearance"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash"
+      ]
+    }
+  },
+  {
+    "id": "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+    "title": "Sir Lionell Gliding White Sintered Stone Coffee Table Walnut Brown Wooden Legs",
+    "category": "coffee-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "brown",
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "wood",
+      "sintered stone"
+    ],
+    "finish": "sintered stone",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "low-profile",
+    "legsBase": "wooden legs base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "coffee-tables",
+      "white",
+      "brown",
+      "walnut",
+      "stone",
+      "wood",
+      "sintered stone",
+      "straight-lined"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / brown / walnut / stone",
+      "materials": [
+        "wood",
+        "sintered stone"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "coffee table in white / brown / walnut / stone wood and sintered stone (sintered stone finish, straight-lined shape, low-profile silhouette, wooden legs base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "coffee table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing coffee/centre table",
+          "placement": "centred in front of the sofa with realistic walking clearance"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm"
+      ]
+    }
+  },
+  {
+    "id": "terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm",
+    "title": "Terra Linea Light Brown Ash Veneer High Triangular Coffee Table 90cm",
+    "category": "coffee-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 90,
+      "depthCm": 90,
+      "heightCm": null
+    },
+    "colours": [
+      "brown"
+    ],
+    "materials": [
+      "ash",
+      "veneer"
+    ],
+    "finish": "veneer",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "triangular",
+    "silhouette": "low-profile",
+    "legsBase": "ash base",
+    "texture": "ash",
+    "tags": [
+      "modern luxury",
+      "coffee-tables",
+      "brown",
+      "ash",
+      "veneer",
+      "triangular"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "brown",
+      "materials": [
+        "ash",
+        "veneer"
+      ],
+      "shape": "triangular",
+      "promptFragment": "coffee table in brown ash and veneer (veneer finish, triangular shape, low-profile silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "coffee table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing coffee/centre table",
+          "placement": "centred in front of the sofa with realistic walking clearance"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "thames-calacatta-oro-white-sintered-stone-square-coffee-table",
+    "title": "Thames Calacatta Oro White Sintered Stone Square Coffee Table",
+    "category": "coffee-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "finish": "sintered stone",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "square",
+    "silhouette": "low-profile",
+    "legsBase": "concealed or minimal base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "coffee-tables",
+      "white",
+      "stone",
+      "sintered stone",
+      "square"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / stone",
+      "materials": [
+        "sintered stone"
+      ],
+      "shape": "square",
+      "promptFragment": "coffee table in white / stone sintered stone (sintered stone finish, square shape, low-profile silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "coffee table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing coffee/centre table",
+          "placement": "centred in front of the sofa with realistic walking clearance"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+        "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs"
+      ]
+    }
+  },
+  {
+    "id": "vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top",
+    "title": "Vania Brushed Bronze Coffee Table With Statuario White Sintered Stone Top",
+    "category": "coffee-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "stone",
+      "bronze"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "finish": "brushed",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "low-profile",
+    "legsBase": "bronze base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "coffee-tables",
+      "white",
+      "stone",
+      "bronze",
+      "sintered stone",
+      "straight-lined",
+      "brushed"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / stone / bronze",
+      "materials": [
+        "sintered stone"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "coffee table in white / stone / bronze sintered stone (brushed finish, straight-lined shape, low-profile silhouette, bronze base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "coffee table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing coffee/centre table",
+          "placement": "centred in front of the sofa with realistic walking clearance"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs"
+      ]
+    }
+  },
+  {
+    "id": "crimson-silence-painting-180x180cm",
+    "title": "Crimson Silence Painting 180x180cm",
+    "category": "decor",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 180,
+      "depthCm": null,
+      "heightCm": 180
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "decor",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "straight-lined",
+      "promptFragment": "decor piece in neutral premium materials (natural finish, straight-lined shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "decor piece at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "bare walls or empty surfaces",
+          "placement": "on a wall or surface at believable height and scale"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "millaray-iii-antique-gold-arch-mirror-120-cm",
+    "title": "Millaray Iii Antique Gold Arch Mirror 120 Cm",
+    "category": "decor",
+    "price": 598,
+    "url": "https://koalaliving.com.au/Millaray-III-Antique-Gold-Arch-Mirror-120-cm",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 120,
+      "depthCm": null,
+      "heightCm": 120
+    },
+    "colours": [
+      "gold"
+    ],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "arch",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "decor",
+      "gold",
+      "arch",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "gold",
+      "materials": [],
+      "shape": "arch",
+      "promptFragment": "decor piece in gold premium materials (natural finish, arch shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "decor piece at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "bare walls or empty surfaces",
+          "placement": "on a wall or surface at believable height and scale"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs",
+        "tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed"
+      ]
+    }
+  },
+  {
+    "id": "millaray-iii-antique-gold-round-mirror",
+    "title": "Millaray Iii Antique Gold Round Mirror",
+    "category": "decor",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "gold"
+    ],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "round",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "decor",
+      "gold",
+      "round",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "gold",
+      "materials": [],
+      "shape": "round",
+      "promptFragment": "decor piece in gold premium materials (natural finish, round shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "decor piece at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "bare walls or empty surfaces",
+          "placement": "on a wall or surface at believable height and scale"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs",
+        "tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed"
+      ]
+    }
+  },
+  {
+    "id": "muted-vermilion-painting-80x120cm",
+    "title": "Muted Vermilion Painting 80x120cm",
+    "category": "decor",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 80,
+      "depthCm": null,
+      "heightCm": 120
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "decor",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "straight-lined",
+      "promptFragment": "decor piece in neutral premium materials (natural finish, straight-lined shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "decor piece at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "bare walls or empty surfaces",
+          "placement": "on a wall or surface at believable height and scale"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "ochre-memory-painting-180x180cm",
+    "title": "Ochre Memory Painting 180x180cm",
+    "category": "decor",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 180,
+      "depthCm": null,
+      "heightCm": 180
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "decor",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "straight-lined",
+      "promptFragment": "decor piece in neutral premium materials (natural finish, straight-lined shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "decor piece at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "bare walls or empty surfaces",
+          "placement": "on a wall or surface at believable height and scale"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "rust-on-pulse-painting-230x140cm",
+    "title": "Rust On Pulse Painting 230x140cm",
+    "category": "decor",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 230,
+      "depthCm": null,
+      "heightCm": 140
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "decor",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "straight-lined",
+      "promptFragment": "decor piece in neutral premium materials (natural finish, straight-lined shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "decor piece at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "bare walls or empty surfaces",
+          "placement": "on a wall or surface at believable height and scale"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "static-trace-painting-120x200cm",
+    "title": "Static Trace Painting 120x200cm",
+    "category": "decor",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 120,
+      "depthCm": null,
+      "heightCm": 200
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "decor",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "straight-lined",
+      "promptFragment": "decor piece in neutral premium materials (natural finish, straight-lined shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "decor piece at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "bare walls or empty surfaces",
+          "placement": "on a wall or surface at believable height and scale"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+    "title": "Grayson Black Rectangular Dining Table With Statuario White Sintered Stone Top 240x105cm",
+    "category": "dining-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 240,
+      "depthCm": 105,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "black",
+      "gray",
+      "tan",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "finish": "sintered stone",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room"
+    ],
+    "shape": "rectangular",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "dining-tables",
+      "white",
+      "black",
+      "gray",
+      "tan",
+      "stone",
+      "sintered stone",
+      "rectangular"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / black / gray / tan / stone",
+      "materials": [
+        "sintered stone"
+      ],
+      "shape": "rectangular",
+      "promptFragment": "dining table in white / black / gray / tan / stone sintered stone (sintered stone finish, rectangular shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "dining table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing dining table",
+          "placement": "in the dining zone with chairs tucked around it"
+        }
+      ],
+      "roomTypes": [
+        "dining room"
+      ],
+      "matchingProducts": [
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs"
+      ]
+    }
+  },
+  {
+    "id": "ophelia-ii-smoky-walnut-veneer-curved-dining-table",
+    "title": "Ophelia Ii Smoky Walnut Veneer Curved Dining Table",
+    "category": "dining-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "walnut"
+    ],
+    "materials": [
+      "veneer"
+    ],
+    "finish": "veneer",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room"
+    ],
+    "shape": "curved",
+    "silhouette": "clean-lined",
+    "legsBase": "walnut base",
+    "texture": "veneer",
+    "tags": [
+      "modern luxury",
+      "dining-tables",
+      "walnut",
+      "veneer",
+      "curved"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "walnut",
+      "materials": [
+        "veneer"
+      ],
+      "shape": "curved",
+      "promptFragment": "dining table in walnut veneer (veneer finish, curved shape, clean-lined silhouette, walnut base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "dining table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing dining table",
+          "placement": "in the dining zone with chairs tucked around it"
+        }
+      ],
+      "roomTypes": [
+        "dining room"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "sierra-walnut-brown-entertainment-unit-sintered-stone-top"
+      ]
+    }
+  },
+  {
+    "id": "sierra-walnut-brown-dining-table-wooden-top-240x120cm",
+    "title": "Sierra Walnut Brown Dining Table Wooden Top 240x120cm",
+    "category": "dining-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 240,
+      "depthCm": 120,
+      "heightCm": null
+    },
+    "colours": [
+      "brown",
+      "walnut"
+    ],
+    "materials": [
+      "wood"
+    ],
+    "finish": "wood grain",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "clean-lined",
+    "legsBase": "walnut base",
+    "texture": "wood",
+    "tags": [
+      "modern luxury",
+      "dining-tables",
+      "brown",
+      "walnut",
+      "wood",
+      "straight-lined",
+      "wood grain"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "brown / walnut",
+      "materials": [
+        "wood"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "dining table in brown / walnut wood (wood grain finish, straight-lined shape, clean-lined silhouette, walnut base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "dining table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing dining table",
+          "placement": "in the dining zone with chairs tucked around it"
+        }
+      ],
+      "roomTypes": [
+        "dining room"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash"
+      ]
+    }
+  },
+  {
+    "id": "terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm",
+    "title": "Terra Linea Amber Brown Ash Veneer Two Triangular Leg Rectangular Dining Table 240cm X 120cm",
+    "category": "dining-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 240,
+      "depthCm": 120,
+      "heightCm": null
+    },
+    "colours": [
+      "brown",
+      "tan",
+      "amber"
+    ],
+    "materials": [
+      "ash",
+      "veneer"
+    ],
+    "finish": "veneer",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room"
+    ],
+    "shape": "rectangular",
+    "silhouette": "clean-lined",
+    "legsBase": "ash base",
+    "texture": "ash",
+    "tags": [
+      "modern luxury",
+      "dining-tables",
+      "brown",
+      "tan",
+      "amber",
+      "ash",
+      "veneer",
+      "rectangular"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "brown / tan / amber",
+      "materials": [
+        "ash",
+        "veneer"
+      ],
+      "shape": "rectangular",
+      "promptFragment": "dining table in brown / tan / amber ash and veneer (veneer finish, rectangular shape, clean-lined silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "dining table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing dining table",
+          "placement": "in the dining zone with chairs tucked around it"
+        }
+      ],
+      "roomTypes": [
+        "dining room"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm",
+    "title": "Terra Linea Light Brown Ash Veneer Single Leg Rectangular Dining Table 240cm X 120cm",
+    "category": "dining-tables",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 240,
+      "depthCm": 120,
+      "heightCm": null
+    },
+    "colours": [
+      "brown",
+      "tan"
+    ],
+    "materials": [
+      "ash",
+      "veneer"
+    ],
+    "finish": "veneer",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "dining room"
+    ],
+    "shape": "rectangular",
+    "silhouette": "clean-lined",
+    "legsBase": "ash base",
+    "texture": "ash",
+    "tags": [
+      "modern luxury",
+      "dining-tables",
+      "brown",
+      "tan",
+      "ash",
+      "veneer",
+      "rectangular"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "brown / tan",
+      "materials": [
+        "ash",
+        "veneer"
+      ],
+      "shape": "rectangular",
+      "promptFragment": "dining table in brown / tan ash and veneer (veneer finish, rectangular shape, clean-lined silhouette, ash base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "dining table at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing dining table",
+          "placement": "in the dining zone with chairs tucked around it"
+        }
+      ],
+      "roomTypes": [
+        "dining room"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "alina-wooden-metal-floor-lamp",
+    "title": "Alina Wooden Metal Floor Lamp",
+    "category": "lighting",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [],
+    "materials": [
+      "metal",
+      "wood"
+    ],
+    "finish": "wood grain",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "slim, vertical",
+    "legsBase": "metal base",
+    "texture": "metal",
+    "tags": [
+      "modern luxury",
+      "lighting",
+      "metal",
+      "wood",
+      "straight-lined",
+      "wood grain"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [
+        "metal",
+        "wood"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "light in neutral metal and wood (wood grain finish, straight-lined shape, slim, vertical silhouette, metal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "light at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing lighting fixture",
+          "placement": "a floor lamp beside seating, or a pendant/chandelier centred overhead at believable ceiling height"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "emmeline-chandelier",
+    "title": "Emmeline Chandelier",
+    "category": "lighting",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "slim, vertical",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "lighting",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "straight-lined",
+      "promptFragment": "light in neutral premium materials (natural finish, straight-lined shape, slim, vertical silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "light at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing lighting fixture",
+          "placement": "a floor lamp beside seating, or a pendant/chandelier centred overhead at believable ceiling height"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "lunara-chandelier",
+    "title": "Lunara Chandelier",
+    "category": "lighting",
+    "price": 2598,
+    "url": "https://koalaliving.com.au/Lunara-Chandelier",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "slim, vertical",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "lighting",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "straight-lined",
+      "promptFragment": "light in neutral premium materials (natural finish, straight-lined shape, slim, vertical silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "light at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing lighting fixture",
+          "placement": "a floor lamp beside seating, or a pendant/chandelier centred overhead at believable ceiling height"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "margo-cocoa-brown-wooden-floor-lamp",
+    "title": "Margo Cocoa Brown Wooden Floor Lamp",
+    "category": "lighting",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "brown"
+    ],
+    "materials": [
+      "wood"
+    ],
+    "finish": "wood grain",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "slim, vertical",
+    "legsBase": "concealed or minimal base",
+    "texture": "wood",
+    "tags": [
+      "modern luxury",
+      "lighting",
+      "brown",
+      "wood",
+      "straight-lined",
+      "wood grain"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "brown",
+      "materials": [
+        "wood"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "light in brown wood (wood grain finish, straight-lined shape, slim, vertical silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "light at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing lighting fixture",
+          "placement": "a floor lamp beside seating, or a pendant/chandelier centred overhead at believable ceiling height"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "solene-chandelier-amber-glass",
+    "title": "Solene Chandelier Amber Glass",
+    "category": "lighting",
+    "price": 2998,
+    "url": "https://koalaliving.com.au/Solene-Chandelier-Amber-Glass",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "amber"
+    ],
+    "materials": [
+      "glass"
+    ],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom",
+      "office"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "slim, vertical",
+    "legsBase": "concealed or minimal base",
+    "texture": "glass",
+    "tags": [
+      "modern luxury",
+      "lighting",
+      "amber",
+      "glass",
+      "straight-lined",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "amber",
+      "materials": [
+        "glass"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "light in amber glass (natural finish, straight-lined shape, slim, vertical silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "light at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing lighting fixture",
+          "placement": "a floor lamp beside seating, or a pendant/chandelier centred overhead at believable ceiling height"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom",
+        "office"
+      ],
+      "matchingProducts": [
+        "terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed"
+      ]
+    }
+  },
+  {
+    "id": "arges-stone-green-floor-rug-large-250cm-x-350cm",
+    "title": "Arges Stone Green Floor Rug Large 250cm X 350cm",
+    "category": "rugs",
+    "price": 1598,
+    "url": "https://koalaliving.com.au/Arges-Stone-Green-Floor-Rug-Large-250cm-x-350cm",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 250,
+      "depthCm": 350,
+      "heightCm": null
+    },
+    "colours": [
+      "green",
+      "stone"
+    ],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom"
+    ],
+    "shape": "rectangular",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "rugs",
+      "green",
+      "stone",
+      "rectangular",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "green / stone",
+      "materials": [],
+      "shape": "rectangular",
+      "promptFragment": "rug in green / stone premium materials (natural finish, rectangular shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "rug at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing rug/bare floor under the seating area",
+          "placement": "under the seating or dining group, large enough to anchor the furniture"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs"
+      ]
+    }
+  },
+  {
+    "id": "dixon-string-floor-rug-extra-large-300cm-x-350cm",
+    "title": "Dixon String Floor Rug Extra Large 300cm X 350cm",
+    "category": "rugs",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 300,
+      "depthCm": 350,
+      "heightCm": null
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom"
+    ],
+    "shape": "rectangular",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "rugs",
+      "rectangular",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "rectangular",
+      "promptFragment": "rug in neutral premium materials (natural finish, rectangular shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "rug at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing rug/bare floor under the seating area",
+          "placement": "under the seating or dining group, large enough to anchor the furniture"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "estonia-ivory-beige-floor-rug-large-250cm-x-350cm",
+    "title": "Estonia Ivory Beige Floor Rug Large 250cm X 350cm",
+    "category": "rugs",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 250,
+      "depthCm": 350,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "ivory"
+    ],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom"
+    ],
+    "shape": "rectangular",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "rugs",
+      "beige",
+      "ivory",
+      "rectangular",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / ivory",
+      "materials": [],
+      "shape": "rectangular",
+      "promptFragment": "rug in beige / ivory premium materials (natural finish, rectangular shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "rug at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing rug/bare floor under the seating area",
+          "placement": "under the seating or dining group, large enough to anchor the furniture"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "messina-nomad-floor-rug-medium-200cm-x-300cm",
+    "title": "Messina Nomad Floor Rug Medium 200cm X 300cm",
+    "category": "rugs",
+    "price": 1198,
+    "url": "https://koalaliving.com.au/Messina-Nomad-Floor-Rug-Medium-200cm-x-300cm",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": 200,
+      "depthCm": 300,
+      "heightCm": null
+    },
+    "colours": [],
+    "materials": [],
+    "finish": "natural",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room",
+      "dining room",
+      "bedroom"
+    ],
+    "shape": "rectangular",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "smooth",
+    "tags": [
+      "modern luxury",
+      "rugs",
+      "rectangular",
+      "natural"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [],
+      "shape": "rectangular",
+      "promptFragment": "rug in neutral premium materials (natural finish, rectangular shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "rug at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing rug/bare floor under the seating area",
+          "placement": "under the seating or dining group, large enough to anchor the furniture"
+        }
+      ],
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "bedroom"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform",
+    "title": "Bellagio Stone Cream Woven Fabric 3 Pieces Modular Sofa With Left Terminal And Side Platform",
+    "category": "sofas",
+    "price": 8560,
+    "url": "https://koalaliving.com.au/Bellagio-Stone-Cream-Woven-Fabric-3-Pieces-Modular-Sofa-With-Left-Terminal-and-Side-Platform",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "cream",
+      "stone"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "modular",
+    "silhouette": "generous, sectional",
+    "legsBase": "plinth base",
+    "texture": "woven",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "cream",
+      "stone",
+      "fabric",
+      "modular",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "cream / stone",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "modular",
+      "promptFragment": "sofa in cream / stone fabric (soft matte textile finish, modular shape, generous, sectional silhouette, plinth base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs"
+      ]
+    }
+  },
+  {
+    "id": "calma-pearl-beige-fabric-2-pieces-modular-sofa",
+    "title": "Calma Pearl Beige Fabric 2 Pieces Modular Sofa",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "modular",
+    "silhouette": "generous, sectional",
+    "legsBase": "concealed or minimal base",
+    "texture": "fabric",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "beige",
+      "fabric",
+      "modular",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "modular",
+      "promptFragment": "sofa in beige fabric (soft matte textile finish, modular shape, generous, sectional silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "celia-mid-beige-2-seater-woven-fabric-sofa",
+    "title": "Celia Mid Beige 2 Seater Woven Fabric Sofa",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "woven",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "beige",
+      "fabric",
+      "linear",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in beige fabric (soft matte textile finish, linear shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "elva-green-pastel-nubuck-leather-3-seater-sofa",
+    "title": "Elva Green Pastel Nubuck Leather 3 Seater Sofa",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "green"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "finish": "nubuck",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "nubuck",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "green",
+      "leather",
+      "linear",
+      "nubuck"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "green",
+      "materials": [
+        "leather"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in green leather (nubuck finish, linear shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "arges-stone-green-floor-rug-large-250cm-x-350cm",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed"
+      ]
+    }
+  },
+  {
+    "id": "gabriella-mid-beige-3-seater-woven-fabric-sofa",
+    "title": "Gabriella Mid Beige 3 Seater Woven Fabric Sofa",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "woven",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "beige",
+      "fabric",
+      "linear",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in beige fabric (soft matte textile finish, linear shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "gabriella-vintage-mustard-3-seater-woven-fabric-sofa",
+    "title": "Gabriella Vintage Mustard 3 Seater Woven Fabric Sofa",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "mustard"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "woven",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "mustard",
+      "fabric",
+      "linear",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "mustard",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in mustard fabric (soft matte textile finish, linear shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs",
+    "title": "Kelly Pearl Beige Fabric 3 Seater Sofa Champagne Gold Legs",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "gold",
+      "champagne"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "champagne gold",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "clean-lined",
+    "legsBase": "gold legs base",
+    "texture": "fabric",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "beige",
+      "gold",
+      "champagne",
+      "fabric",
+      "linear",
+      "champagne gold"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / gold / champagne",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in beige / gold / champagne fabric (champagne gold finish, linear shape, clean-lined silhouette, gold legs base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "kensley-almond-cream-leather-2-seater-dual-electric-recliner",
+    "title": "Kensley Almond Cream Leather 2 Seater Dual Electric Recliner",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "cream",
+      "almond"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "generous, sectional",
+    "legsBase": "concealed or minimal base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "cream",
+      "almond",
+      "leather",
+      "linear",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "cream / almond",
+      "materials": [
+        "leather"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in cream / almond leather (natural leather sheen finish, linear shape, generous, sectional silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "lennox-almond-cream-leather-3-seater-sofa",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed"
+      ]
+    }
+  },
+  {
+    "id": "lennox-almond-cream-leather-3-seater-sofa",
+    "title": "Lennox Almond Cream Leather 3 Seater Sofa",
+    "category": "sofas",
+    "price": 4398,
+    "url": "https://koalaliving.com.au/Lennox-Cream-Leather-3-Seater-Sofa",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "cream",
+      "almond"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "clean-lined",
+    "legsBase": "concealed or minimal base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "cream",
+      "almond",
+      "leather",
+      "linear",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "cream / almond",
+      "materials": [
+        "leather"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in cream / almond leather (natural leather sheen finish, linear shape, clean-lined silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "kensley-almond-cream-leather-2-seater-dual-electric-recliner",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed"
+      ]
+    }
+  },
+  {
+    "id": "marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa",
+    "title": "Marvie Champagne Beige Semi Aniline Leather 3 Pieces Modular Sofa",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "beige",
+      "champagne"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "finish": "aniline",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "modular",
+    "silhouette": "generous, sectional",
+    "legsBase": "concealed or minimal base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "beige",
+      "champagne",
+      "leather",
+      "modular",
+      "aniline"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "beige / champagne",
+      "materials": [
+        "leather"
+      ],
+      "shape": "modular",
+      "promptFragment": "sofa in beige / champagne leather (aniline finish, modular shape, generous, sectional silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+        "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+        "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+        "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs"
+      ]
+    }
+  },
+  {
+    "id": "pierce-shadow-white-woven-fabric-corner-electric-recliner",
+    "title": "Pierce Shadow White Woven Fabric Corner Electric Recliner",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white"
+    ],
+    "materials": [
+      "fabric"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "corner",
+    "silhouette": "generous, sectional",
+    "legsBase": "concealed or minimal base",
+    "texture": "woven",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "white",
+      "fabric",
+      "corner",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white",
+      "materials": [
+        "fabric"
+      ],
+      "shape": "corner",
+      "promptFragment": "sofa in white fabric (soft matte textile finish, corner shape, generous, sectional silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "thames-calacatta-oro-white-sintered-stone-square-coffee-table"
+      ]
+    }
+  },
+  {
+    "id": "portia-vintage-tan-leather-4-seater-sofa",
+    "title": "Portia Vintage Tan Leather 4 Seater Sofa",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "tan"
+    ],
+    "materials": [
+      "leather"
+    ],
+    "finish": "natural leather sheen",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "linear",
+    "silhouette": "generous, sectional",
+    "legsBase": "concealed or minimal base",
+    "texture": "leather",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "tan",
+      "leather",
+      "linear",
+      "natural leather sheen"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "tan",
+      "materials": [
+        "leather"
+      ],
+      "shape": "linear",
+      "promptFragment": "sofa in tan leather (natural leather sheen finish, linear shape, generous, sectional silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+        "terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm",
+        "terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg"
+      ]
+    }
+  },
+  {
+    "id": "soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal",
+    "title": "Soluna Powder White Chenille Fabric 4 Pieces Modular Corner Sofa With Left And Right Terminal",
+    "category": "sofas",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white"
+    ],
+    "materials": [
+      "fabric",
+      "chenille"
+    ],
+    "finish": "soft matte textile",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "modular",
+    "silhouette": "generous, sectional",
+    "legsBase": "concealed or minimal base",
+    "texture": "chenille",
+    "tags": [
+      "modern luxury",
+      "sofas",
+      "white",
+      "fabric",
+      "chenille",
+      "modular",
+      "soft matte textile"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white",
+      "materials": [
+        "fabric",
+        "chenille"
+      ],
+      "shape": "modular",
+      "promptFragment": "sofa in white fabric and chenille (soft matte textile finish, modular shape, generous, sectional silhouette, concealed or minimal base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "sofa at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing main seating",
+          "placement": "against the primary wall or within the main seating zone, facing the room's focal point"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "thames-calacatta-oro-white-sintered-stone-square-coffee-table"
+      ]
+    }
+  },
+  {
+    "id": "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top",
+    "title": "Grayson Brushed Bronze Entertainment Unit With Statuario White Sintered Stone Top",
+    "category": "tv-units",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "white",
+      "gray",
+      "stone",
+      "bronze"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "finish": "brushed",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "low-profile",
+    "legsBase": "bronze base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "tv-units",
+      "white",
+      "gray",
+      "stone",
+      "bronze",
+      "sintered stone",
+      "straight-lined",
+      "brushed"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "white / gray / stone / bronze",
+      "materials": [
+        "sintered stone"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "entertainment unit in white / gray / stone / bronze sintered stone (brushed finish, straight-lined shape, low-profile silhouette, bronze base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "entertainment unit at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing TV/media unit",
+          "placement": "against the media wall beneath the TV position"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top",
+        "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "aspen-white-sintered-stone-coffee-table-matte-black-legs"
+      ]
+    }
+  },
+  {
+    "id": "jamil-ash-oak-veneer-entertainment-unit",
+    "title": "Jamil Ash Oak Veneer Entertainment Unit",
+    "category": "tv-units",
+    "price": 3998,
+    "url": "https://koalaliving.com.au/Jamil-Ash-Oak-Veneer-Entertainment-Unit",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [],
+    "materials": [
+      "oak",
+      "ash",
+      "veneer"
+    ],
+    "finish": "veneer",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "low-profile",
+    "legsBase": "oak base",
+    "texture": "oak",
+    "tags": [
+      "modern luxury",
+      "tv-units",
+      "oak",
+      "ash",
+      "veneer",
+      "straight-lined"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "neutral",
+      "materials": [
+        "oak",
+        "ash",
+        "veneer"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "entertainment unit in neutral oak and ash and veneer (veneer finish, straight-lined shape, low-profile silhouette, oak base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "entertainment unit at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing TV/media unit",
+          "placement": "against the media wall beneath the TV position"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+        "martina-soft-beige-vegan-leather-queen-bed",
+        "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame"
+      ]
+    }
+  },
+  {
+    "id": "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+    "title": "Sierra Walnut Brown Entertainment Unit Sintered Stone Top",
+    "category": "tv-units",
+    "price": null,
+    "url": null,
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "brown",
+      "walnut",
+      "stone"
+    ],
+    "materials": [
+      "sintered stone"
+    ],
+    "finish": "sintered stone",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "low-profile",
+    "legsBase": "walnut base",
+    "texture": "stone",
+    "tags": [
+      "modern luxury",
+      "tv-units",
+      "brown",
+      "walnut",
+      "stone",
+      "sintered stone",
+      "straight-lined"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "brown / walnut / stone",
+      "materials": [
+        "sintered stone"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "entertainment unit in brown / walnut / stone sintered stone (sintered stone finish, straight-lined shape, low-profile silhouette, walnut base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "entertainment unit at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing TV/media unit",
+          "placement": "against the media wall beneath the TV position"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+        "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+        "costanza-mocha-walnut-brown-wooden-dresser",
+        "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+        "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+        "sierra-walnut-brown-dining-table-wooden-top-240x120cm"
+      ]
+    }
+  },
+  {
+    "id": "tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit",
+    "title": "Tinsley Brushed Champagne Gold Stainless Steel Entertainment Unit",
+    "category": "tv-units",
+    "price": 1758,
+    "url": "https://koalaliving.com.au/Tinsley-Brushed-Champagne-Gold-Stainless-Steel-Entertainment-Unit",
+    "availability": "unknown",
+    "dimensions": {
+      "widthCm": null,
+      "depthCm": null,
+      "heightCm": null
+    },
+    "colours": [
+      "gold",
+      "champagne"
+    ],
+    "materials": [
+      "stainless steel"
+    ],
+    "finish": "brushed",
+    "style": "modern luxury",
+    "roomCompatibility": [
+      "living room"
+    ],
+    "shape": "straight-lined",
+    "silhouette": "low-profile",
+    "legsBase": "champagne gold base",
+    "texture": "stainless steel",
+    "tags": [
+      "modern luxury",
+      "tv-units",
+      "gold",
+      "champagne",
+      "stainless steel",
+      "straight-lined",
+      "brushed"
+    ],
+    "referenceViews": [
+      "main",
+      "front",
+      "angle",
+      "45",
+      "side",
+      "lifestyle",
+      "detail",
+      "closeup",
+      "close-up"
+    ],
+    "aiProfile": {
+      "style": "modern luxury",
+      "colour": "gold / champagne",
+      "materials": [
+        "stainless steel"
+      ],
+      "shape": "straight-lined",
+      "promptFragment": "entertainment unit in gold / champagne stainless steel (brushed finish, straight-lined shape, low-profile silhouette, champagne gold base)",
+      "negativePrompt": [
+        "wrong colour or material for this product",
+        "distorted or duplicated furniture",
+        "entertainment unit at an unrealistic scale",
+        "warped legs, floating furniture, incorrect proportions"
+      ],
+      "replacementRules": [
+        {
+          "target": "existing TV/media unit",
+          "placement": "against the media wall beneath the TV position"
+        }
+      ],
+      "roomTypes": [
+        "living room"
+      ],
+      "matchingProducts": [
+        "kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs",
+        "millaray-iii-antique-gold-arch-mirror-120-cm",
+        "millaray-iii-antique-gold-round-mirror",
+        "marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa",
+        "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+        "costanza-mocha-walnut-brown-wooden-dresser"
+      ]
+    }
+  }
+]
