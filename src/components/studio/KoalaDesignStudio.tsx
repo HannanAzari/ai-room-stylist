@@ -354,10 +354,10 @@ function StudioProductCard({
         triggerHaptic();
         onToggle();
       }}
-      className={`relative flex h-[218px] min-w-0 flex-col overflow-hidden rounded-2xl border bg-[#111111] p-2.5 text-left transition-all duration-200 ease-out will-change-transform active:scale-[0.985] ${
+      className={`relative flex h-[220px] min-w-0 flex-col overflow-hidden rounded-2xl border bg-[#111111] p-2.5 text-left transition-all duration-200 ease-out active:scale-[0.985] ${
         selected
-          ? "-translate-y-0.5 border-[#C9A57A]/60 bg-[#181818] shadow-[0_10px_28px_-14px_rgba(201,165,122,0.55)]"
-          : "border-[rgba(255,255,255,0.12)] hover:-translate-y-0.5 hover:border-white/25"
+          ? "border-[#C9A57A]/70 bg-[#161514]"
+          : "border-[rgba(255,255,255,0.12)] hover:border-white/25"
       }`}
     >
       <div className="relative">
@@ -2183,7 +2183,7 @@ export function KoalaDesignStudio() {
               )}
             </div>
 
-            <div className="mt-3 space-y-5">
+            <div className="mt-4 space-y-8">
               {productsByCategory.map((category) => {
                 const count = category.products.filter((product) =>
                   selectedProductIds.includes(product.id)
@@ -2191,8 +2191,8 @@ export function KoalaDesignStudio() {
 
                 return (
                   <div key={category.id}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-[#F5F3EE]">
                         {category.label}
                       </p>
                       {count > 0 && (
@@ -2201,9 +2201,9 @@ export function KoalaDesignStudio() {
                         </span>
                       )}
                     </div>
-                    <div className="v2-noscrollbar -mx-6 mt-2 flex gap-3 overflow-x-auto px-6 pb-1">
+                    <div className="v2-noscrollbar -mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-1">
                       {category.products.map((product) => (
-                        <div key={product.id} className="w-[152px] shrink-0">
+                        <div key={product.id} className="w-[150px] shrink-0">
                           <StudioProductCard
                             product={product}
                             selected={selectedProductIds.includes(product.id)}
@@ -2211,6 +2211,10 @@ export function KoalaDesignStudio() {
                           />
                         </div>
                       ))}
+                      <div
+                        aria-hidden="true"
+                        className="w-1 shrink-0"
+                      />
                     </div>
                   </div>
                 );
@@ -2420,7 +2424,7 @@ export function KoalaDesignStudio() {
                 Recommended additions
               </p>
               <h2 className="mt-1 font-serif text-2xl text-[#F5F3EE]">
-                Complete the look
+                Complete the room
               </h2>
             </div>
             <div className="grid grid-cols-2 gap-3">
