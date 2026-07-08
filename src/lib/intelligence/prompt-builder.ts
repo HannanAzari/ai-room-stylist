@@ -20,6 +20,7 @@ import {
 } from "@/lib/prompts";
 import type { ProductProfile } from "./product-profile";
 import type { RoomAnalysis } from "./room-analysis";
+import type { SceneGraph } from "./scene-graph";
 
 export type IntelligentPromptInput = {
   roomAnalysis: RoomAnalysis;
@@ -32,6 +33,9 @@ export type IntelligentPromptInput = {
   selectedProductIds?: string[];
   measurements?: RoomMeasurements;
   referenceViewCount?: number;
+  // Structured scene understanding — used to protect fixed objects and target
+  // replaceable furniture precisely.
+  sceneGraph?: SceneGraph;
 };
 
 export type IntelligentPrompt = {
@@ -89,6 +93,39 @@ function formatRoomSection(analysis: RoomAnalysis): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function formatSceneGraphSection(sceneGraph?: SceneGraph): string {
+  if (!sceneGraph) return "";
+
+  const fixedNames = [
+    ...sceneGraph.fixedObjects.map((object) => object.name),
+    ...sceneGraph.furniture
+      .filter((item) => !item.replaceable)
+      .map((item) => item.category),
+  ];
+  const replaceable = sceneGraph.furniture
+    .filter((item) => item.replaceable)
+    .map(
+      (item) =>
+        `${item.category}${item.dominantColor && item.dominantColor !== "unknown" ? ` (${item.dominantColor})` : ""}`
+    );
+
+  const lines: string[] = [];
+  if (fixedNames.length > 0) {
+    lines.push(
+      `KEEP THESE FIXED OBJECTS EXACTLY — do not move, remove, restyle or cover them: ${[...new Set(fixedNames)].join(", ")}.`
+    );
+  }
+  if (replaceable.length > 0) {
+    lines.push(
+      `You may replace these existing pieces where a supplied product matches their role: ${[...new Set(replaceable)].join(", ")}.`
+    );
+  }
+  if (sceneGraph.emptyWalls.length > 0) {
+    lines.push(`Empty wall areas: ${sceneGraph.emptyWalls.join(", ")}.`);
+  }
+  return lines.length > 0 ? lines.join("\n") : "";
 }
 
 function formatProductLine(profile: ProductProfile, index: number): string {
@@ -160,6 +197,8 @@ export function buildIntelligentRoomPrompt(
     formatRoomSection(roomAnalysis) + formatMeasurements(input.measurements),
     "",
     buildRoomPreservationInstructions(),
+    "",
+    formatSceneGraphSection(input.sceneGraph),
     "",
     replacementScope,
     "",

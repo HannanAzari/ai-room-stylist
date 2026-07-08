@@ -16,7 +16,10 @@ import {
   type Product,
 } from "@/lib/products";
 import { getProductProfiles } from "@/lib/intelligence/product-profile";
-import { analyzeRoom } from "@/lib/intelligence/room-analysis";
+import {
+  analyzeSceneGraph,
+  sceneGraphToRoomAnalysis,
+} from "@/lib/intelligence/scene-graph";
 import { buildIntelligentRoomPrompt } from "@/lib/intelligence/prompt-builder";
 import {
   meetsQualityThreshold,
@@ -227,15 +230,17 @@ async function handleGeneration(req: Request) {
     "[studio-gemini]"
   );
 
-  // Phase 3 — room understanding (fallback-safe).
-  const roomAnalysis = await analyzeRoom(image, {
+  // Phase 3 — structured room understanding via a scene graph (fallback-safe).
+  const sceneGraph = await analyzeSceneGraph(image, {
     apiKey,
     roomTypeHint: roomType,
   });
+  const roomAnalysis = sceneGraphToRoomAnalysis(sceneGraph);
 
-  // Phase 4 — dynamic prompt from room + product intelligence.
+  // Phase 4 — dynamic prompt from scene graph + product intelligence.
   const { prompt, negativePrompt } = buildIntelligentRoomPrompt({
     roomAnalysis,
+    sceneGraph,
     profiles,
     style,
     roomType,
@@ -254,7 +259,9 @@ async function handleGeneration(req: Request) {
     aiConceptMode,
     selectedProductIds,
     productReferenceCount: productImageFiles.length,
-    roomAnalysed: roomAnalysis.analysed,
+    sceneAnalysed: sceneGraph.analysed,
+    sceneFurnitureCount: sceneGraph.furniture.length,
+    sceneFixedObjectCount: sceneGraph.fixedObjects.length,
   });
 
   // Phase 5 — generate with quality-gated auto-regeneration.
@@ -307,6 +314,7 @@ async function handleGeneration(req: Request) {
   if (isAiDebugEnabled()) {
     responseBody.aiDebug = {
       provider: best.image.provider,
+      sceneGraph,
       roomAnalysis,
       qualityScore: best.score,
       generationAttempts: attempts.length,

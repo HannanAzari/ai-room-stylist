@@ -1594,6 +1594,7 @@ export function KoalaDesignStudio() {
         category: product.category,
       })),
       provider: (aiDebug?.provider as string) ?? null,
+      sceneGraph: (aiDebug?.sceneGraph as AiEvalRecord["sceneGraph"]) ?? null,
       roomAnalysis:
         (aiDebug?.roomAnalysis as AiEvalRecord["roomAnalysis"]) ?? null,
       prompt: (aiDebug?.prompt as string) ?? null,

@@ -7,6 +7,7 @@
  */
 import type { RoomAnalysis } from "@/lib/intelligence/room-analysis";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
+import type { SceneGraph } from "@/lib/intelligence/scene-graph";
 
 export const AI_EVAL_STORAGE_KEY = "koala-ai-studio:ai-eval-log";
 const MAX_RECORDS = 10;
@@ -21,6 +22,7 @@ export type AiEvalRecord = {
   roomThumbnail: string | null;
   selectedProducts: AiEvalProductRef[];
   provider: string | null;
+  sceneGraph: SceneGraph | null;
   roomAnalysis: RoomAnalysis | null;
   prompt: string | null;
   imageHash: string | null;
