@@ -17,10 +17,15 @@ const SCORING_TIMEOUT_MS = 12_000;
 export const QUALITY_THRESHOLD = 70;
 
 export type QualityScore = {
-  perspective: number;
-  lighting: number;
-  scale: number;
+  // Walls, windows, doors, ceiling, floor and camera preserved from the photo.
+  roomPreservation: number;
+  // Placed products match the intended Koala products.
   productSimilarity: number;
+  // Whole room visible — not cropped, zoomed or reframed.
+  fullRoomVisible: number;
+  // Realistic furniture proportions and clearances.
+  furnitureScale: number;
+  // Overall photorealism (no distortion/artefacts, believable lighting).
   realism: number;
   overall: number;
 };
@@ -34,13 +39,14 @@ function clampScore(value: unknown): number {
 export function computeOverall(
   partial: Omit<QualityScore, "overall">
 ): number {
-  // Weight room fidelity (perspective) and realism most heavily.
+  // Room fidelity and full-room framing are the tuning priorities, so they
+  // carry the most weight.
   const weighted =
-    partial.perspective * 0.28 +
-    partial.realism * 0.24 +
-    partial.scale * 0.18 +
-    partial.productSimilarity * 0.18 +
-    partial.lighting * 0.12;
+    partial.roomPreservation * 0.3 +
+    partial.fullRoomVisible * 0.22 +
+    partial.realism * 0.2 +
+    partial.furnitureScale * 0.16 +
+    partial.productSimilarity * 0.12;
   return Math.round(weighted);
 }
 
@@ -80,11 +86,11 @@ const SCORING_PROMPT = `You are a strict interior-render quality auditor. The FI
 
 Rate the generated image 0-100 on each axis and return ONLY JSON:
 {
-  "perspective": number,        // how well the original camera/room geometry is preserved
-  "lighting": number,           // believable, consistent lighting
-  "scale": number,              // realistic furniture proportions & clearances
-  "productSimilarity": number,  // how well placed products match the intended products
-  "realism": number             // overall photorealism (no distortion/artefacts)
+  "roomPreservation": number,   // are the ORIGINAL walls, windows, doors, ceiling, floor and camera angle preserved? penalise any architectural change
+  "productSimilarity": number,  // do the placed products match the intended products (colour, material, shape)?
+  "fullRoomVisible": number,    // is the WHOLE room still visible? penalise cropping, zooming or reframing vs the original
+  "furnitureScale": number,     // realistic furniture proportions and clearances
+  "realism": number             // overall photorealism, believable lighting, no distortion/artefacts
 }
 Be critical; reserve 85+ for genuinely excellent results.`;
 
@@ -149,10 +155,10 @@ export async function scoreRoomImage(input: {
     if (!parsed) return null;
 
     const partial = {
-      perspective: clampScore(parsed.perspective),
-      lighting: clampScore(parsed.lighting),
-      scale: clampScore(parsed.scale),
+      roomPreservation: clampScore(parsed.roomPreservation),
       productSimilarity: clampScore(parsed.productSimilarity),
+      fullRoomVisible: clampScore(parsed.fullRoomVisible),
+      furnitureScale: clampScore(parsed.furnitureScale),
       realism: clampScore(parsed.realism),
     };
 

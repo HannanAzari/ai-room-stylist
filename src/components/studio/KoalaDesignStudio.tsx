@@ -61,6 +61,13 @@ import {
   getAnalyticsEvents,
   type PilotMetrics,
 } from "@/features/room-stylist/services/pilot-metrics";
+import {
+  fingerprintRoomImage,
+  getAiEvalRecords,
+  hashString,
+  saveAiEvalRecord,
+  type AiEvalRecord,
+} from "@/features/room-stylist/services/ai-eval-log";
 import { normalizeGeneratedConcepts } from "@/features/room-stylist/services/generated-concepts";
 import type {
   GeneratedConcept,
@@ -1032,19 +1039,118 @@ function AdminMetric({ label, value }: { label: string; value: number }) {
   );
 }
 
+function AiEvalCard({ record }: { record: AiEvalRecord }) {
+  const score = record.qualityScore;
+  return (
+    <div className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#0B0B0B] p-3">
+      <div className="flex items-start gap-3">
+        {record.roomThumbnail ? (
+          <img
+            src={record.roomThumbnail}
+            alt="Room"
+            className="h-14 w-14 shrink-0 rounded-lg object-cover"
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-[#F7F7F2]">
+            {record.roomType} · {record.style}
+          </p>
+          <p className="text-[11px] text-[#9C9C94]">
+            {new Date(record.timestamp).toLocaleString()} ·{" "}
+            {record.provider || "—"} · {record.generationAttempts} attempt
+            {record.generationAttempts === 1 ? "" : "s"}
+            {record.autoRegenerated ? " · regenerated" : ""}
+          </p>
+        </div>
+        {score ? (
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+              score.overall >= 70
+                ? "bg-[#C9A57A]/15 text-[#C9A57A]"
+                : "bg-red-400/15 text-red-300"
+            }`}
+          >
+            {score.overall}
+          </span>
+        ) : (
+          <span className="shrink-0 text-[11px] text-[#9C9C94]">no score</span>
+        )}
+      </div>
+
+      {score && (
+        <div className="mt-2 grid grid-cols-5 gap-1 text-center">
+          {[
+            { k: "Room", v: score.roomPreservation },
+            { k: "Prod", v: score.productSimilarity },
+            { k: "Full", v: score.fullRoomVisible },
+            { k: "Scale", v: score.furnitureScale },
+            { k: "Real", v: score.realism },
+          ].map((axis) => (
+            <div key={axis.k} className="rounded-md bg-white/[0.03] py-1">
+              <p className="text-[9px] uppercase tracking-wide text-[#9C9C94]">
+                {axis.k}
+              </p>
+              <p className="text-xs font-semibold text-[#F7F7F2]">{axis.v}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {record.selectedProducts.length > 0 && (
+        <p className="mt-2 line-clamp-1 text-[11px] text-[#9C9C94]">
+          Products: {record.selectedProducts.map((p) => p.name).join(", ")}
+        </p>
+      )}
+
+      {record.roomAnalysis && (
+        <p className="mt-1 text-[11px] text-[#9C9C94]">
+          Analysis {record.roomAnalysis.analysed ? "✓" : "(fallback)"} ·{" "}
+          {record.roomAnalysis.lighting}
+          {record.roomAnalysis.colourPalette.length > 0
+            ? ` · ${record.roomAnalysis.colourPalette.join(", ")}`
+            : ""}
+        </p>
+      )}
+
+      {record.failureReason && (
+        <p className="mt-1 text-[11px] text-red-300">
+          Failure: {record.failureReason}
+        </p>
+      )}
+
+      {record.prompt && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-[11px] text-[#C9A57A]">
+            Prompt preview
+          </summary>
+          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-black/40 p-2 text-[10px] leading-4 text-[#9C9C94]">
+            {record.prompt}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function AdminPanel({
   metrics,
   leadCount,
+  aiDebugEnabled,
+  aiEvalRecords,
   onRefresh,
   onExportAnalytics,
   onExportLeads,
+  onExportEvals,
   onClose,
 }: {
   metrics: PilotMetrics | null;
   leadCount: number;
+  aiDebugEnabled: boolean;
+  aiEvalRecords: AiEvalRecord[];
   onRefresh: () => void;
   onExportAnalytics: () => void;
   onExportLeads: () => void;
+  onExportEvals: () => void;
   onClose: () => void;
 }) {
   return (
@@ -1128,6 +1234,45 @@ function AdminPanel({
             Refresh
           </StudioButton>
         </div>
+
+        {aiDebugEnabled && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-[#C9A57A]">
+                  AI debug
+                </p>
+                <h3 className="mt-1 font-serif text-xl text-[#F7F7F2]">
+                  Generation evaluations
+                </h3>
+              </div>
+              <span className="text-[11px] text-[#9C9C94]">
+                latest {aiEvalRecords.length}
+              </span>
+            </div>
+
+            {aiEvalRecords.length > 0 ? (
+              <>
+                <div className="mt-3 grid gap-3">
+                  {aiEvalRecords.map((record) => (
+                    <AiEvalCard key={record.timestamp} record={record} />
+                  ))}
+                </div>
+                <StudioButton
+                  onClick={onExportEvals}
+                  className="mt-3 w-full rounded-xl"
+                >
+                  Export AI evaluations JSON
+                </StudioButton>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-[#9C9C94]">
+                No generations recorded yet. Generate a room to capture room
+                analysis, prompt and quality scores here.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1307,6 +1452,8 @@ export function KoalaDesignStudio() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminMetrics, setAdminMetrics] = useState<PilotMetrics | null>(null);
   const [adminLeadCount, setAdminLeadCount] = useState(0);
+  const [aiDebugEnabled, setAiDebugEnabled] = useState(false);
+  const [aiEvalRecords, setAiEvalRecords] = useState<AiEvalRecord[]>([]);
   const [addedRecommendationIds, setAddedRecommendationIds] = useState<
     string[]
   >([]);
@@ -1422,7 +1569,63 @@ export function KoalaDesignStudio() {
   function refreshAdminData() {
     setAdminMetrics(computePilotMetrics());
     setAdminLeadCount(getLeads().length);
+    setAiEvalRecords(getAiEvalRecords());
   }
+
+  // Record a dev-only AI evaluation entry for each generation (only when AI
+  // debug is enabled). Never sent externally.
+  async function logAiEvaluation(
+    aiDebug: Record<string, unknown> | undefined,
+    imageBase64: string | null,
+    failureReason: string | null
+  ) {
+    if (!aiDebugEnabled) return;
+
+    const fingerprint = await fingerprintRoomImage(image);
+    const record: AiEvalRecord = {
+      timestamp: new Date().toISOString(),
+      roomType,
+      style: selectedStylePrompt,
+      roomHash: fingerprint.hash,
+      roomThumbnail: fingerprint.thumbnail,
+      selectedProducts: selectedProducts.map((product) => ({
+        id: product.id,
+        name: product.name,
+        category: product.category,
+      })),
+      provider: (aiDebug?.provider as string) ?? null,
+      roomAnalysis:
+        (aiDebug?.roomAnalysis as AiEvalRecord["roomAnalysis"]) ?? null,
+      prompt: (aiDebug?.prompt as string) ?? null,
+      imageHash: imageBase64 ? hashString(imageBase64.slice(0, 512)) : null,
+      qualityScore:
+        (aiDebug?.qualityScore as AiEvalRecord["qualityScore"]) ?? null,
+      generationAttempts: (aiDebug?.generationAttempts as number) ?? 0,
+      autoRegenerated: Boolean(aiDebug?.autoRegenerated),
+      referenceViewCount: (aiDebug?.referenceViewCount as number) ?? 0,
+      failureReason,
+    };
+    saveAiEvalRecord(record);
+    setAiEvalRecords(getAiEvalRecords());
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+    fetch("/api/ai-debug/status")
+      .then((res) => (res.ok ? res.json() : { enabled: false }))
+      .then((data) => {
+        if (!cancelled) setAiDebugEnabled(Boolean(data?.enabled));
+      })
+      .catch(() => {
+        if (!cancelled) setAiDebugEnabled(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1435,6 +1638,7 @@ export function KoalaDesignStudio() {
     const timeout = window.setTimeout(() => {
       setAdminMetrics(computePilotMetrics());
       setAdminLeadCount(getLeads().length);
+      setAiEvalRecords(getAiEvalRecords());
       setAdminOpen(true);
     }, 0);
 
@@ -1698,7 +1902,10 @@ export function KoalaDesignStudio() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(typeof data.error === "string" ? data.error : "Generation failed.");
+        const reason =
+          typeof data.error === "string" ? data.error : "Generation failed.";
+        setError(reason);
+        void logAiEvaluation(undefined, null, reason);
         return;
       }
 
@@ -1710,8 +1917,15 @@ export function KoalaDesignStudio() {
 
       if (nextConcepts.length === 0) {
         setError("Generation completed but no image was returned.");
+        void logAiEvaluation(
+          data.aiDebug,
+          data.imageBase64 ?? null,
+          "no image returned"
+        );
         return;
       }
+
+      void logAiEvaluation(data.aiDebug, data.imageBase64 ?? null, null);
 
       setGeneratedConcepts(nextConcepts);
       setProducts(nextProducts);
@@ -1732,11 +1946,12 @@ export function KoalaDesignStudio() {
       });
       saveResultCache(nextConcepts, nextProducts);
     } catch (generationError) {
-      setError(
+      const reason =
         generationError instanceof Error
           ? generationError.message
-          : "Gemini generation failed. Please try again."
-      );
+          : "Gemini generation failed. Please try again.";
+      setError(reason);
+      void logAiEvaluation(undefined, null, reason);
     } finally {
       setLoading(false);
     }
@@ -2574,6 +2789,8 @@ export function KoalaDesignStudio() {
         <AdminPanel
           metrics={adminMetrics}
           leadCount={adminLeadCount}
+          aiDebugEnabled={aiDebugEnabled}
+          aiEvalRecords={aiEvalRecords}
           onRefresh={refreshAdminData}
           onExportAnalytics={() =>
             downloadJson(
@@ -2583,6 +2800,9 @@ export function KoalaDesignStudio() {
           }
           onExportLeads={() =>
             downloadJson(`koala-leads-${Date.now()}.json`, getLeads())
+          }
+          onExportEvals={() =>
+            downloadJson(`koala-ai-evals-${Date.now()}.json`, getAiEvalRecords())
           }
           onClose={() => setAdminOpen(false)}
         />

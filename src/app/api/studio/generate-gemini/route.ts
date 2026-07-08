@@ -56,6 +56,10 @@ function devLog(message: string, details?: unknown) {
   console.log(message, details);
 }
 
+function isAiDebugEnabled() {
+  return process.env.ENABLE_AI_DEBUG?.toLowerCase() === "true";
+}
+
 function getFileExtension(fileName: string) {
   const cleanFileName = fileName.split(/[?#]/)[0];
   const extensionIndex = cleanFileName.lastIndexOf(".");
@@ -236,6 +240,7 @@ async function handleGeneration(req: Request) {
     style,
     roomType,
     aiConceptMode,
+    selectedProductIds,
     measurements: roomMeasurements,
     referenceViewCount: productImageFiles.length,
   });
@@ -284,22 +289,35 @@ async function handleGeneration(req: Request) {
       ? candidate
       : bestSoFar
   );
+  const autoRegenerated = attempts.length > 1;
 
   devLog("[studio-gemini] generation result", {
     attempts: attempts.length,
     qualityScore: best.score,
   });
 
-  return NextResponse.json({
+  const responseBody: Record<string, unknown> = {
     images: [best.image],
     imageBase64: best.image.imageBase64,
     products,
-    // Observability fields — ignored by the frozen UI, useful for admin/debug.
-    roomAnalysis,
-    qualityScore: best.score,
-    generationAttempts: attempts.length,
-    negativePrompt,
-  });
+  };
+
+  // AI debug payload — only exposed when explicitly enabled, so production
+  // responses stay lean and the client only logs when debugging.
+  if (isAiDebugEnabled()) {
+    responseBody.aiDebug = {
+      provider: best.image.provider,
+      roomAnalysis,
+      qualityScore: best.score,
+      generationAttempts: attempts.length,
+      autoRegenerated,
+      prompt,
+      negativePrompt,
+      referenceViewCount: productImageFiles.length,
+    };
+  }
+
+  return NextResponse.json(responseBody);
 }
 
 async function handleRefinement(req: Request) {
