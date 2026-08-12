@@ -78,6 +78,11 @@ import {
   type AssignmentInput,
 } from "@/lib/intelligence/replacement-assignment";
 import { getProductProfiles } from "@/lib/intelligence/product-profile";
+import {
+  packageProductIds,
+  selectRoomPackage,
+  type RoomPackage,
+} from "@/lib/intelligence/room-package";
 import { getAllProducts as getAllCatalogueProducts } from "@/lib/products";
 import { RegionAssignmentList } from "./RegionAssignmentList";
 import {
@@ -1594,6 +1599,23 @@ export function KoalaDesignStudio() {
         )
     )
     .map((object) => object.displayName);
+  /**
+   * The curated Koala package for "Surprise me".
+   *
+   * Derived, not stored: it is decided from the room type and style BEFORE any
+   * image exists, and re-derives instantly if the customer changes either.
+   * Generation is only ever allowed to use these products, so the render and
+   * the shopping list describe the same set by construction.
+   */
+  const roomPackage: RoomPackage | null =
+    designMode === "surprise-me"
+      ? selectRoomPackage({
+          roomType,
+          style: getStylePrompt(style, customPrompt),
+          catalogue: allCatalogueProducts,
+          preferProductIds: selectedProductIds,
+        })
+      : null;
   const activeConcept = generatedConcepts[selectedConceptIndex] || null;
   const activeImage = activeConcept?.imageBase64 || "";
   const activeImageDataUrl = activeConcept
@@ -2111,9 +2133,16 @@ export function KoalaDesignStudio() {
       // In replace-items the products sent are exactly those the contract
       // assigns — not a loose basket for the pipeline to interpret.
       const contract = buildContract();
+      // Surprise me sends the curated package chosen before this request; it is
+      // the complete product set, so generation cannot reach past it into the
+      // wider catalogue.
+      const curatedIds =
+        designMode === "surprise-me" && roomPackage
+          ? packageProductIds(roomPackage)
+          : null;
       const contractProductIdList = contract
         ? [...new Set(contract.assignments.map((a) => a.productId))]
-        : selectedProductIds;
+        : (curatedIds ?? selectedProductIds);
 
       formData.append(
         "selectedProductIds",
@@ -2121,6 +2150,10 @@ export function KoalaDesignStudio() {
       );
       if (contract) {
         formData.append("replacementContract", JSON.stringify(contract));
+      }
+      if (curatedIds) {
+        formData.append("curatedPackage", "true");
+        formData.append("roomPackage", JSON.stringify(roomPackage));
       }
       // The pipeline's wire contract is unchanged — the intent is translated to
       // the concept-mode flag at this boundary. `designMode` is sent alongside
@@ -2871,11 +2904,41 @@ export function KoalaDesignStudio() {
             )}
           </div>
 
+          {/* The package is decided before generation and shown in full, so the
+              customer knows exactly which real products the room will use. */}
+          {roomPackage && roomPackage.items.length > 0 && (
+            <div className="v2-surface rounded-[26px] p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
+                Your Koala package
+              </p>
+              <h3 className="mt-1 font-serif text-xl text-[#F5F3EE]">
+                {roomPackage.items.length} pieces, chosen to work together
+              </h3>
+              <ul className="mt-3 divide-y divide-white/[0.07]">
+                {roomPackage.items.map((item) => (
+                  <li key={item.productId} className="py-2.5 first:pt-0 last:pb-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
+                      {item.role}
+                    </p>
+                    <p className="mt-0.5 text-sm leading-5 text-[#F5F3EE]">
+                      {item.productName}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-[11px] leading-4 text-[#7d7a73]">
+                {roomPackage.rationale} Only these products will be used — your
+                room&apos;s walls, windows, doors and ceiling stay exactly as
+                they are.
+              </p>
+            </div>
+          )}
+
           <div className="v2-surface rounded-2xl p-4">
             <p className="text-sm leading-6 text-[#9a978f]">
-              Koala will design the whole room around your photo. Pick any
-              pieces you already love below and we&apos;ll build the look around
-              them — or add nothing and leave it to us.
+              Change the room or style above to get a different package. Pick a
+              piece you already love below and we&apos;ll build the look around
+              it — or leave it to us.
             </p>
           </div>
 

@@ -301,10 +301,23 @@ async function handleGeneration(req: Request) {
   // reference image.
   const selectedProducts = getProductsByIdsInSelectionOrder(selectedProductIds);
   const orderedSelectedIds = selectedProducts.map((product) => product.id);
+
+  // "Surprise me" sends a CURATED PACKAGE that was chosen before this request
+  // was made. When one is present it is the complete and only product set —
+  // generation may not reach past it into the wider catalogue, so the render
+  // and the shopping list are guaranteed to describe the same products.
+  const curatedPackage = formData.get("curatedPackage") === "true";
   const styleProducts = getProductsForStyle(style);
-  const products = aiConceptMode
-    ? mergeProductsById(selectedProducts, styleProducts)
-    : selectedProducts;
+  const products = curatedPackage
+    ? selectedProducts
+    : aiConceptMode
+      ? mergeProductsById(selectedProducts, styleProducts)
+      : selectedProducts;
+  // With a curated package, concept mode is OFF: the package IS the design, so
+  // nothing beyond it may be invented. Leaving it on would let the prompt's
+  // "add a few tasteful accessories" fallback introduce furniture that is not
+  // in the catalogue and cannot be shopped.
+  const effectiveConceptMode = curatedPackage ? false : aiConceptMode;
   const roomMeasurements = parseRoomMeasurements(formData);
   const apiKey = getStudioGeminiApiKey();
 
@@ -346,7 +359,7 @@ async function handleGeneration(req: Request) {
         sceneGraph,
         profiles,
         selectedProductIds: orderedSelectedIds,
-        aiConceptMode,
+        aiConceptMode: effectiveConceptMode,
       });
 
   // Reference manifest — decides which references are actually transmitted,
@@ -449,7 +462,7 @@ async function handleGeneration(req: Request) {
       profiles,
       style,
       roomType,
-      aiConceptMode,
+      aiConceptMode: effectiveConceptMode,
       selectedProductIds: orderedSelectedIds,
       measurements: roomMeasurements,
       // Transmitted count for THIS pass, never the loaded count.
