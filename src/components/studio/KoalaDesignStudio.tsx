@@ -2484,19 +2484,16 @@ export function KoalaDesignStudio() {
   function renderReplaceItemsStep() {
     if (replacePhase === "confirm") return renderReplaceConfirmStep();
 
+    // The photo IS the interface on this step, so the chrome around it is kept
+    // to a single line and the selector is given the rest of the viewport.
+    // Centred so a landscape photo — which is limited by screen WIDTH, not
+    // height, and so cannot fill the viewport without cropping — sits balanced
+    // in the space rather than stranded above a large gap.
     return (
-      <section className="space-y-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
-            Replace items
-          </p>
-          <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-[#F5F3EE]">
-            Choose what to change
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-[#9a978f]">
-            Anything you don&apos;t select stays exactly as it is.
-          </p>
-        </div>
+      <section className="flex flex-1 flex-col justify-center space-y-2.5">
+        <h1 className="font-serif text-[22px] font-semibold leading-tight text-[#F5F3EE]">
+          Choose what to change
+        </h1>
 
         {previewUrl && (
           <RoomObjectSelector
@@ -2507,22 +2504,6 @@ export function KoalaDesignStudio() {
             sourceImage={sourceImageSize}
             detectionState={detectionState}
           />
-        )}
-
-        {roomSelections.length > 0 && (
-          <div className="v2-surface flex items-center justify-between gap-3 rounded-2xl p-4">
-            <span className="text-sm font-semibold text-[#F5F3EE]">
-              {roomSelections.length} item
-              {roomSelections.length === 1 ? "" : "s"} selected
-            </span>
-            <button
-              type="button"
-              onClick={() => setRoomSelections([])}
-              className="text-xs font-semibold text-[#9a978f] underline underline-offset-4"
-            >
-              Clear all
-            </button>
-          </div>
         )}
       </section>
     );
@@ -3400,7 +3381,14 @@ export function KoalaDesignStudio() {
               ? "px-5 pb-6 pt-4"
               : step === 1
                 ? "px-6 pb-4 pt-4"
-                : "px-6 pb-32 pt-4"
+                : // The object-selection step is a single non-scrolling screen,
+                  // so it keeps only enough bottom padding to clear the sticky
+                  // footer. The generous padding below is for steps that scroll.
+                  designMode === "replace-items" &&
+                    replacePhase === "select" &&
+                    step === 3
+                  ? "px-6 pb-4 pt-3"
+                  : "px-6 pb-32 pt-4"
           }`}
         >
           {/* min-h-full lets a short step (the choice screen) centre itself
