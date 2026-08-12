@@ -74,6 +74,12 @@ import type {
   Product,
 } from "@/features/room-stylist/types";
 import {
+  designModeToConceptMode,
+  isDesignMode,
+  type DesignMode,
+  type RoomSelection,
+} from "@/lib/intelligence/room-selection";
+import {
   assertStudioGeminiProvider,
   fetchStudioGemini,
   STUDIO_GEMINI_ROUTE,
@@ -306,6 +312,65 @@ function SelectChip({
       }`}
     >
       {children}
+    </button>
+  );
+}
+
+/**
+ * One of the two design intents on the choice screen.
+ *
+ * The two cards are deliberately identical in weight — neither is a default —
+ * and each shows the customer's own room so the choice reads as being about
+ * their photo rather than about a setting.
+ */
+function DesignModeCard({
+  title,
+  description,
+  accent,
+  preview,
+  selected,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  accent: string;
+  preview: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`v2-surface group flex w-full items-stretch gap-3 overflow-hidden rounded-[24px] p-3 text-left transition active:scale-[0.99] ${
+        selected
+          ? "ring-1 ring-[#C9A57A]/60"
+          : "hover:border-white/25 hover:bg-white/[0.05]"
+      }`}
+    >
+      <span className="relative h-[104px] w-[92px] shrink-0 overflow-hidden rounded-[16px] border border-white/10 bg-[#0B0B0B]">
+        {preview ? (
+          <img
+            src={preview}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-center"
+          />
+        ) : null}
+        <span className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col justify-center py-1 pr-1">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#C9A57A]">
+          {accent}
+        </span>
+        <span className="mt-1.5 block font-serif text-[22px] leading-tight text-[#F5F3EE]">
+          {title}
+        </span>
+        <span className="mt-1.5 block text-[13px] leading-5 text-[#9a978f]">
+          {description}
+        </span>
+      </span>
     </button>
   );
 }
@@ -1429,7 +1494,12 @@ export function KoalaDesignStudio() {
   const [roomPickerOpen, setRoomPickerOpen] = useState(false);
   const [stylePickerOpen, setStylePickerOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const [letAiRecommendBundle, setLetAiRecommendBundle] = useState(true);
+  // The customer's explicit intent. Null until they choose on the mode screen;
+  // it then persists through generation and into the result.
+  const [designMode, setDesignMode] = useState<DesignMode | null>(null);
+  // Regions of the room the customer wants changed. The selection UI lands in a
+  // later sprint; the model and the plumbing are real from here on.
+  const [roomSelections, setRoomSelections] = useState<RoomSelection[]>([]);
   const [generatedConcepts, setGeneratedConcepts] = useState<
     GeneratedConcept[]
   >([]);
@@ -1675,10 +1745,13 @@ export function KoalaDesignStudio() {
 
         if (typeof parsed.roomType === "string") setRoomType(parsed.roomType);
         if (typeof parsed.style === "string") setStyle(parsed.style);
+        // The intent survives into the restored result so the Shop screen
+        // always knows which journey produced the room.
+        if (isDesignMode(parsed.designMode)) setDesignMode(parsed.designMode);
 
         if (cachedConcepts.length > 0) {
           setSelectedConceptIndex(0);
-          setStep(3);
+          setStep(4);
         }
       }, 0);
 
@@ -1691,7 +1764,7 @@ export function KoalaDesignStudio() {
   // Fire room_summary_viewed once each time a result summary becomes visible.
   useEffect(() => {
     const showingSummary =
-      step === 3 && products.length > 0 && Boolean(activeImage);
+      step === 4 && products.length > 0 && Boolean(activeImage);
 
     if (showingSummary && !summaryViewedRef.current) {
       summaryViewedRef.current = true;
@@ -1742,6 +1815,7 @@ export function KoalaDesignStudio() {
         products: nextProducts,
         style: selectedStylePrompt,
         roomType,
+        designMode,
         createdAt: new Date().toISOString(),
       })
     );
@@ -1856,13 +1930,14 @@ export function KoalaDesignStudio() {
   }
 
   function canGenerateConcept() {
-    return Boolean(
-      image &&
-        previewUrl &&
-        roomType &&
-        selectedStylePrompt &&
-        (letAiRecommendBundle || selectedProductIds.length > 0)
-    );
+    if (!image || !previewUrl || !roomType || !selectedStylePrompt) return false;
+    if (!designMode) return false;
+
+    // "Surprise me" needs no picks — that is the whole point of it. "Replace
+    // items" has nothing to do until the customer names at least one product,
+    // because that flow adds nothing of its own.
+    if (designMode === "replace-items") return selectedProductIds.length > 0;
+    return true;
   }
 
   function appendRoomMeasurements(formData: FormData) {
@@ -1874,7 +1949,7 @@ export function KoalaDesignStudio() {
   }
 
   async function handleGenerate() {
-    if (!image || !roomType || !selectedStylePrompt) return;
+    if (!image || !roomType || !selectedStylePrompt || !designMode) return;
 
     const validationError = getRoomPhotoValidationError(image);
 
@@ -1901,7 +1976,14 @@ export function KoalaDesignStudio() {
       formData.append("style", selectedStylePrompt);
       formData.append("roomType", roomType);
       formData.append("selectedProductIds", JSON.stringify(selectedProductIds));
-      formData.append("aiConceptMode", String(letAiRecommendBundle));
+      // The pipeline's wire contract is unchanged — the intent is translated to
+      // the concept-mode flag at this boundary. `designMode` is sent alongside
+      // for debugging and future use; the route ignores unknown fields.
+      formData.append(
+        "aiConceptMode",
+        String(designModeToConceptMode(designMode))
+      );
+      formData.append("designMode", designMode);
       if (style === "Custom") {
         formData.append("customPrompt", customPrompt.trim());
       }
@@ -1942,7 +2024,7 @@ export function KoalaDesignStudio() {
       setGeneratedConcepts(nextConcepts);
       setProducts(nextProducts);
       setSelectedConceptIndex(0);
-      setStep(3);
+      setStep(4);
       trackGenerateCompleted({
         roomType,
         style: selectedStylePrompt,
@@ -2140,7 +2222,8 @@ export function KoalaDesignStudio() {
     setRoomPickerOpen(false);
     setStylePickerOpen(false);
     setSelectedProductIds([]);
-    setLetAiRecommendBundle(true);
+    setDesignMode(null);
+    setRoomSelections([]);
     setGeneratedConcepts([]);
     setProducts([]);
     setAddedRecommendationIds([]);
@@ -2155,6 +2238,187 @@ export function KoalaDesignStudio() {
     setSelectedRefinementProductIds([]);
     setOpenRefinementCategoryId(null);
     localStorage.removeItem(CACHE_KEY);
+  }
+
+  function renderProductBrowser(heading: string) {
+    return (
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-serif text-xl text-[#F5F3EE]">{heading}</h3>
+          {selectedProducts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedSheetOpen(true)}
+              className="rounded-full bg-[#F5F3EE] px-3 py-1.5 text-xs font-semibold text-[#0b0b0d]"
+            >
+              {selectedProducts.length} selected
+            </button>
+          )}
+        </div>
+
+        <div className="mt-4 space-y-8">
+          {productsByCategory.map((category) => {
+            const count = category.products.filter((product) =>
+              selectedProductIds.includes(product.id)
+            ).length;
+
+            return (
+              <div key={category.id}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-[#F5F3EE]">
+                    {category.label}
+                  </p>
+                  {count > 0 && (
+                    <span className="text-[11px] font-semibold text-[#C9A57A]">
+                      {count} added
+                    </span>
+                  )}
+                </div>
+                <div className="v2-noscrollbar -mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-1">
+                  {category.products.map((product) => (
+                    <div key={product.id} className="w-[150px] shrink-0">
+                      <StudioProductCard
+                        product={product}
+                        selected={selectedProductIds.includes(product.id)}
+                        onToggle={() => toggleProduct(product.id)}
+                      />
+                    </div>
+                  ))}
+                  <div aria-hidden="true" className="w-1 shrink-0" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * "Replace items" — the customer names what changes.
+   *
+   * This sprint establishes the screen and the state model. Region selection
+   * (Smart Select / Draw manually) lands next; the controls are visible but
+   * disabled so the destination is legible without pretending it works.
+   */
+  function renderReplaceItemsStep() {
+    const roomLabel =
+      roomTypes.find((r) => r.id === roomType)?.label || "Living room";
+    const styleLabel =
+      designStyles.find((s) => s.id === style)?.title || style || "Modern Luxury";
+
+    return (
+      <section className="space-y-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+            Replace items
+          </p>
+          <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-[#F5F3EE]">
+            Choose what to change
+          </h1>
+        </div>
+
+        {previewUrl && (
+          <div className="v2-hero-shadow relative w-full overflow-hidden rounded-[26px] border border-white/10 bg-[#0B0B0B]">
+            <img
+              src={previewUrl}
+              alt="Your room"
+              className="h-[46vh] w-full object-cover object-center"
+            />
+            <div className="absolute inset-x-0 bottom-0 space-y-2 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-3 pt-10">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/20 bg-black/50 px-2.5 text-[11px] font-semibold text-[#F5F3EE] opacity-60 backdrop-blur"
+                >
+                  Smart Select
+                  <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider">
+                    Soon
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/20 bg-black/50 px-2.5 text-[11px] font-semibold text-[#F5F3EE] opacity-60 backdrop-blur"
+                >
+                  Draw manually
+                  <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider">
+                    Soon
+                  </span>
+                </button>
+              </div>
+              <p className="text-center text-[11px] leading-4 text-[#d9d6cf]">
+                {roomSelections.length > 0
+                  ? `${roomSelections.length} area${roomSelections.length === 1 ? "" : "s"} selected`
+                  : "Tapping objects in your photo is coming next. For now, choose the pieces you want below."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="v2-surface rounded-2xl p-4">
+          <p className="text-sm leading-6 text-[#9a978f]">
+            Only the pieces you choose will change. Everything else in your room
+            stays exactly as it is.
+          </p>
+          <SuggestionRow
+            label="Room"
+            value={roomLabel}
+            open={roomPickerOpen}
+            onToggle={() => {
+              setRoomPickerOpen((o) => !o);
+              setStylePickerOpen(false);
+            }}
+          />
+          {roomPickerOpen && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {roomTypes.map((item) => (
+                <SelectChip
+                  key={item.id}
+                  active={roomType === item.id}
+                  onClick={() => {
+                    setRoomType(item.id);
+                    setRoomPickerOpen(false);
+                  }}
+                >
+                  {item.label}
+                </SelectChip>
+              ))}
+            </div>
+          )}
+          <SuggestionRow
+            label="Style"
+            value={styleLabel}
+            open={stylePickerOpen}
+            onToggle={() => {
+              setStylePickerOpen((o) => !o);
+              setRoomPickerOpen(false);
+            }}
+          />
+          {stylePickerOpen && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {designStyles.map((item) => (
+                <SelectChip
+                  key={item.id}
+                  active={style === item.id}
+                  onClick={() => {
+                    setStyle(item.id);
+                    if (item.id !== "Custom") setStylePickerOpen(false);
+                  }}
+                >
+                  {item.title}
+                </SelectChip>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {renderProductBrowser("Choose replacements")}
+      </section>
+    );
   }
 
   function renderStep() {
@@ -2256,7 +2520,52 @@ export function KoalaDesignStudio() {
       );
     }
 
+    // The fork. Two genuinely different jobs, presented as a real choice
+    // rather than a setting with a default.
     if (step === 2) {
+      return (
+        <section className="flex flex-1 flex-col justify-center space-y-4 py-1">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+              What would you like to do?
+            </p>
+            <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-[#F5F3EE]">
+              Two ways to design
+            </h1>
+          </div>
+
+          <DesignModeCard
+            title="Replace items"
+            description="Choose exactly what you want to change."
+            selected={designMode === "replace-items"}
+            onClick={() => {
+              setDesignMode("replace-items");
+              setStep(3);
+            }}
+            preview={previewUrl}
+            accent="Your choice"
+          />
+
+          <DesignModeCard
+            title="Surprise me"
+            description="Let Koala create a complete look for your room."
+            selected={designMode === "surprise-me"}
+            onClick={() => {
+              setDesignMode("surprise-me");
+              setStep(3);
+            }}
+            preview={previewUrl}
+            accent="Koala designs it"
+          />
+        </section>
+      );
+    }
+
+    if (step === 3 && designMode === "replace-items") {
+      return renderReplaceItemsStep();
+    }
+
+    if (step === 3) {
       const roomLabel =
         roomTypes.find((r) => r.id === roomType)?.label || "Living room";
       const styleLabel =
@@ -2268,14 +2577,14 @@ export function KoalaDesignStudio() {
         <section className="space-y-4">
           <div className="v2-surface rounded-[26px] p-5">
             <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
-              Design brief
+              Surprise me
             </p>
             <h1 className="mt-2 font-serif text-3xl font-semibold leading-tight text-[#F5F3EE]">
-              Style your room
+              Set the direction
             </h1>
             <p className="mt-2 text-sm leading-6 text-[#9a978f]">
-              We&apos;ve suggested a direction. Change anything, or just
-              continue.
+              We&apos;ve suggested a direction from your photo. Change anything,
+              or just continue.
             </p>
 
             <SuggestionRow
@@ -2339,34 +2648,13 @@ export function KoalaDesignStudio() {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setLetAiRecommendBundle((current) => !current)}
-            aria-pressed={letAiRecommendBundle}
-            className={`v2-surface flex w-full items-center justify-between gap-4 rounded-2xl p-4 text-left transition ${
-              letAiRecommendBundle ? "ring-1 ring-[#C9A57A]/40" : ""
-            }`}
-          >
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-[#F5F3EE]">
-                AI Concept
-              </span>
-              <span className="mt-1 block text-xs leading-5 text-[#9a978f]">
-                {letAiRecommendBundle
-                  ? "Your picks stay fixed — AI completes the rest of the room with matching Koala pieces."
-                  : "Only the products you choose are changed. Everything else stays as-is."}
-              </span>
-            </span>
-            <span
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-                letAiRecommendBundle
-                  ? "bg-[#C9A57A] text-[#0b0b0d]"
-                  : "border border-white/12 text-[#9a978f]"
-              }`}
-            >
-              {letAiRecommendBundle ? "On" : "Off"}
-            </span>
-          </button>
+          <div className="v2-surface rounded-2xl p-4">
+            <p className="text-sm leading-6 text-[#9a978f]">
+              Koala will design the whole room around your photo. Pick any
+              pieces you already love below and we&apos;ll build the look around
+              them — or add nothing and leave it to us.
+            </p>
+          </div>
 
           {heroDemoProducts.length > 0 && (
             <div className="v2-surface rounded-[26px] p-4">
@@ -2394,60 +2682,7 @@ export function KoalaDesignStudio() {
             </div>
           )}
 
-          <div>
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-serif text-xl text-[#F5F3EE]">
-                Browse products
-              </h3>
-              {selectedProducts.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedSheetOpen(true)}
-                  className="rounded-full bg-[#F5F3EE] px-3 py-1.5 text-xs font-semibold text-[#0b0b0d]"
-                >
-                  {selectedProducts.length} selected
-                </button>
-              )}
-            </div>
-
-            <div className="mt-4 space-y-8">
-              {productsByCategory.map((category) => {
-                const count = category.products.filter((product) =>
-                  selectedProductIds.includes(product.id)
-                ).length;
-
-                return (
-                  <div key={category.id}>
-                    <div className="flex items-baseline justify-between gap-3">
-                      <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-[#F5F3EE]">
-                        {category.label}
-                      </p>
-                      {count > 0 && (
-                        <span className="text-[11px] font-semibold text-[#C9A57A]">
-                          {count} added
-                        </span>
-                      )}
-                    </div>
-                    <div className="v2-noscrollbar -mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-1">
-                      {category.products.map((product) => (
-                        <div key={product.id} className="w-[150px] shrink-0">
-                          <StudioProductCard
-                            product={product}
-                            selected={selectedProductIds.includes(product.id)}
-                            onToggle={() => toggleProduct(product.id)}
-                          />
-                        </div>
-                      ))}
-                      <div
-                        aria-hidden="true"
-                        className="w-1 shrink-0"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {renderProductBrowser("Browse products")}
         </section>
       );
     }
@@ -2823,7 +3058,7 @@ export function KoalaDesignStudio() {
       <div className="v2-canvas mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden">
         <header
           className={`shrink-0 ${
-            step === 3
+            step === 4
               ? "px-5 pt-[calc(env(safe-area-inset-top)_+_12px)]"
               : "px-6 pt-[calc(env(safe-area-inset-top)_+_18px)]"
           }`}
@@ -2835,23 +3070,24 @@ export function KoalaDesignStudio() {
               width={150}
               height={65}
               priority
-              className={step === 3 ? "h-auto w-24" : "h-auto w-28"}
+              className={step === 4 ? "h-auto w-24" : "h-auto w-28"}
             />
             <button
               type="button"
               onClick={resetWizard}
               className="rounded-full border border-white/15 bg-white/[0.05] px-4 py-1.5 text-xs font-medium text-[#F5F3EE] shadow-sm transition hover:border-white/25 hover:bg-white/10"
             >
-              {step === 3 ? "New room" : "Reset"}
+              {step === 4 ? "New room" : "Reset"}
             </button>
           </div>
           <div
-            className={`flex items-end gap-2 ${step === 3 ? "mt-3" : "mt-5"}`}
+            className={`flex items-end gap-2 ${step === 4 ? "mt-3" : "mt-5"}`}
           >
             {[
               { n: 1, label: "Capture" },
-              { n: 2, label: "Design" },
-              { n: 3, label: "Shop" },
+              { n: 2, label: "Choose" },
+              { n: 3, label: "Design" },
+              { n: 4, label: "Shop" },
             ].map((s) => (
               <div key={s.n} className="flex-1">
                 <div
@@ -2874,14 +3110,19 @@ export function KoalaDesignStudio() {
 
         <div
           className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${
-            step === 3
+            step === 4
               ? "px-5 pb-6 pt-4"
               : step === 1
                 ? "px-6 pb-4 pt-4"
                 : "px-6 pb-32 pt-4"
           }`}
         >
-          <div key={step} className="animate-[stepIn_360ms_ease-out]">
+          {/* min-h-full lets a short step (the choice screen) centre itself
+              vertically, while taller steps still grow and scroll normally. */}
+          <div
+            key={step}
+            className="flex min-h-full flex-col animate-[stepIn_360ms_ease-out]"
+          >
             {renderStep()}
           </div>
 
@@ -2892,23 +3133,31 @@ export function KoalaDesignStudio() {
           )}
         </div>
 
-        {step !== 3 && (
+        {step !== 4 && (
           <footer
             className={`sticky bottom-0 z-40 grid shrink-0 gap-3 border-t border-white/10 bg-[#0b0b0d]/90 px-6 pb-[calc(env(safe-area-inset-bottom)_+_20px)] pt-4 backdrop-blur ${
               step === 1 ? "grid-cols-1" : "grid-cols-[auto_1fr]"
             }`}
           >
-            {step === 2 && (
+            {step > 1 && (
               <StudioButton
                 variant="ghost"
-                onClick={() => setStep(1)}
+                onClick={() => {
+                  if (step === 3) {
+                    // Leaving a flow clears its intent so the choice screen is
+                    // a genuine fork rather than a remembered setting.
+                    setDesignMode(null);
+                    setRoomSelections([]);
+                  }
+                  setStep(step - 1);
+                }}
                 disabled={loading || refining}
                 className="min-w-20 rounded-2xl"
               >
                 Back
               </StudioButton>
             )}
-            {step === 1 ? (
+            {step === 1 && (
               <StudioButton
                 onClick={() => setStep(2)}
                 disabled={!canContinue()}
@@ -2916,7 +3165,8 @@ export function KoalaDesignStudio() {
               >
                 Continue
               </StudioButton>
-            ) : (
+            )}
+            {step === 3 && (
               <StudioButton
                 onClick={handleGenerate}
                 disabled={!canGenerateConcept() || loading}

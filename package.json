@@ -13,7 +13,8 @@
     "intelligence:profiles": "tsx src/scripts/build-product-profiles.ts",
     "test:accuracy": "tsx src/scripts/test-replacement-accuracy.ts",
     "test:references": "tsx src/scripts/test-product-references.ts",
-    "test:grounding": "tsx src/scripts/test-grounding-architecture.ts"
+    "test:grounding": "tsx src/scripts/test-grounding-architecture.ts",
+    "test:design-mode": "tsx src/scripts/test-design-mode.ts"
   },
   "dependencies": {
     "next": "16.2.6",
