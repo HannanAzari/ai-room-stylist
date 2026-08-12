@@ -12,7 +12,8 @@
     "audit:products": "tsx src/scripts/audit-product-data.ts",
     "intelligence:profiles": "tsx src/scripts/build-product-profiles.ts",
     "test:accuracy": "tsx src/scripts/test-replacement-accuracy.ts",
-    "test:references": "tsx src/scripts/test-product-references.ts"
+    "test:references": "tsx src/scripts/test-product-references.ts",
+    "test:grounding": "tsx src/scripts/test-grounding-architecture.ts"
   },
   "dependencies": {
     "next": "16.2.6",

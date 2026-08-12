@@ -30,14 +30,26 @@
  * Pure module — no vision/network calls, so it is fully deterministic and
  * fallback-safe (an empty/low-confidence scene graph degrades to placements).
  */
-import type { ProductProfile } from "./product-profile";
+import type { ProductIdentity, ProductProfile } from "./product-profile";
 import type { BoundingBox, SceneFurniture, SceneGraph } from "./scene-graph";
 import {
   canonicalTargetsForProductCategory,
+  isAnchorCategory,
+  isAnchorProductCategory,
   isWallMountedProductCategory,
   productCategoryMatchScore,
   type CanonicalCategory,
 } from "./scene-taxonomy";
+
+/**
+ * Which generation pass a task belongs to.
+ *
+ * Large anchor furniture defines the room's composition, so it is generated
+ * first against the original photo; smaller secondary pieces are added in a
+ * second pass on top of that result. Asking for everything at once measurably
+ * degrades fidelity as the task count rises.
+ */
+export type GenerationStage = "anchor" | "secondary";
 
 /**
  * Detections at or below this confidence are not asserted in the prompt. Telling
@@ -51,12 +63,19 @@ export const LOW_CONFIDENCE_THRESHOLD = 0.35;
 export type ReplacementTask = {
   kind: "replace";
   taskId: number;
+  stage: GenerationStage;
   existingItemId: string;
   existingCategory: string;
   existingCanonicalCategory: CanonicalCategory;
+  /** Spatially unambiguous name, e.g. "the left sofa". */
+  existingInstanceLabel: string;
+  /** True when the room holds other objects of the same category. */
+  existingSharesCategory: boolean;
   existingColor: string;
   productId: string;
   productTitle: string;
+  /** Structured identity for grounding and verification. */
+  identity: ProductIdentity;
   /** Human-readable label, e.g. "entertainment unit". */
   productCategory: string;
   /** Catalogue category slug, e.g. "tv-units" — used for taxonomy checks. */
@@ -72,8 +91,11 @@ export type ReplacementTask = {
 export type PlacementTask = {
   kind: "place";
   taskId: number;
+  stage: GenerationStage;
   productId: string;
   productTitle: string;
+  /** Structured identity for grounding and verification. */
+  identity: ProductIdentity;
   /** Human-readable label, e.g. "entertainment unit". */
   productCategory: string;
   /** Catalogue category slug, e.g. "tv-units" — used for taxonomy checks. */
@@ -99,6 +121,10 @@ export type FurnitureDisposition = {
   itemId: string;
   rawCategory: string;
   canonicalCategory: CanonicalCategory;
+  /** Spatially unambiguous name, e.g. "the right sofa". */
+  instanceLabel: string;
+  /** True when other detected objects share this canonical category. */
+  sharesCategoryWithOthers: boolean;
   disposition: DispositionKind;
   /** Why this disposition was chosen. Always populated. */
   reason: string;
@@ -184,9 +210,15 @@ function toReplacement(
   return {
     kind: "replace",
     taskId,
+    // Stage follows the EXISTING object's role in the room: replacing a sofa is
+    // an anchor edit regardless of how the product is catalogued.
+    stage: isAnchorCategory(item.canonicalCategory) ? "anchor" : "secondary",
     existingItemId: item.id,
     existingCategory: item.category,
     existingCanonicalCategory: item.canonicalCategory,
+    existingInstanceLabel: item.instanceLabel,
+    existingSharesCategory: item.sharesCategoryWithOthers,
+    identity: profile.identity,
     existingColor:
       item.dominantColor && item.dominantColor !== "unknown"
         ? item.dominantColor
@@ -213,8 +245,10 @@ function toPlacement(
   return {
     kind: "place",
     taskId,
+    stage: isAnchorProductCategory(profile.category) ? "anchor" : "secondary",
     productId: profile.id,
     productTitle: profile.title,
+    identity: profile.identity,
     productCategory: profile.categoryLabel,
     productCategorySlug: profile.category,
     target,
@@ -310,6 +344,8 @@ export function buildReplacementPlan(
       itemId: item.id,
       rawCategory: item.category,
       canonicalCategory: item.canonicalCategory,
+      instanceLabel: item.instanceLabel,
+      sharesCategoryWithOthers: item.sharesCategoryWithOthers,
     };
     const replacement = replacementByItemId.get(item.id);
 
@@ -351,8 +387,9 @@ export function buildReplacementPlan(
     return {
       ...base,
       disposition: "preserve" as const,
-      reason:
-        "Replaceable furniture that no selected product targets — preserved exactly as photographed.",
+      reason: item.sharesCategoryWithOthers
+        ? `Replaceable furniture that no selected product targets. Another object of the same category IS being replaced, so ${item.instanceLabel} must be left untouched to avoid changing both.`
+        : "Replaceable furniture that no selected product targets — preserved exactly as photographed.",
       productId: null,
       taskId: null,
     };
@@ -382,6 +419,76 @@ export function buildReplacementPlan(
     dispositions,
     analysed: Boolean(sceneGraph?.analysed),
   };
+}
+
+/**
+ * Split a plan into per-stage sub-plans for two-pass generation.
+ *
+ * Pass 1 executes the anchor tasks against the customer's original photo; pass
+ * 2 executes the secondary tasks against pass 1's output. Each sub-plan keeps
+ * the FULL disposition and preservation context, so the second pass still knows
+ * which objects must stay untouched — and anchor products already placed are
+ * added to the preserved set so pass 2 cannot undo them.
+ *
+ * Returns a single-stage list when splitting would not help (see
+ * `shouldUseTwoStageGeneration`), so simple edits keep their one-pass cost.
+ */
+export function splitPlanByStage(
+  plan: ReplacementPlan
+): { stage: GenerationStage; plan: ReplacementPlan }[] {
+  const anchorReplacements = plan.replacements.filter((t) => t.stage === "anchor");
+  const anchorAdditions = plan.additions.filter((t) => t.stage === "anchor");
+  const secondaryReplacements = plan.replacements.filter(
+    (t) => t.stage === "secondary"
+  );
+  const secondaryAdditions = plan.additions.filter(
+    (t) => t.stage === "secondary"
+  );
+
+  const anchorPlan: ReplacementPlan = {
+    ...plan,
+    replacements: anchorReplacements,
+    additions: anchorAdditions,
+  };
+  // Everything placed in pass 1 becomes untouchable in pass 2.
+  const anchorProductTitles = [
+    ...anchorReplacements.map((t) => t.productTitle),
+    ...anchorAdditions.map((t) => t.productTitle),
+  ];
+  const secondaryPlan: ReplacementPlan = {
+    ...plan,
+    replacements: secondaryReplacements,
+    additions: secondaryAdditions,
+    preserved: [...plan.preserved, ...anchorProductTitles],
+  };
+
+  const stages: { stage: GenerationStage; plan: ReplacementPlan }[] = [];
+  if (anchorReplacements.length + anchorAdditions.length > 0) {
+    stages.push({ stage: "anchor", plan: anchorPlan });
+  }
+  if (secondaryReplacements.length + secondaryAdditions.length > 0) {
+    stages.push({ stage: "secondary", plan: secondaryPlan });
+  }
+  return stages;
+}
+
+/**
+ * Minimum total tasks before a two-pass generation is worth its extra cost and
+ * latency. Below this a single pass is both cheaper and reliable enough.
+ */
+export const TWO_STAGE_TASK_THRESHOLD = 3;
+
+/**
+ * Two passes only pay off when the plan is genuinely mixed: enough tasks to
+ * strain a single pass, AND work in both stages. A four-sofa plan gains
+ * nothing from splitting.
+ */
+export function shouldUseTwoStageGeneration(plan: ReplacementPlan): boolean {
+  const all = [...plan.replacements, ...plan.additions];
+  if (all.length < TWO_STAGE_TASK_THRESHOLD) return false;
+  const hasAnchor = all.some((task) => task.stage === "anchor");
+  const hasSecondary = all.some((task) => task.stage === "secondary");
+  return hasAnchor && hasSecondary;
 }
 
 /**

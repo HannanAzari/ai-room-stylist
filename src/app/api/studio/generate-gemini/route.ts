@@ -25,7 +25,12 @@ import {
   sceneGraphToRoomAnalysis,
 } from "@/lib/intelligence/scene-graph";
 import { buildIntelligentRoomPrompt } from "@/lib/intelligence/prompt-builder";
-import { buildReplacementPlan } from "@/lib/intelligence/replacement-planner";
+import {
+  buildReplacementPlan,
+  shouldUseTwoStageGeneration,
+  splitPlanByStage,
+  type ReplacementPlan,
+} from "@/lib/intelligence/replacement-planner";
 import { buildReferenceManifest } from "@/lib/intelligence/reference-manifest";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
@@ -36,9 +41,16 @@ import {
   type ReviewStatus,
 } from "@/lib/intelligence/quality-reviewer";
 
-// Up to 2 generation attempts; regenerate once if the first is below the
-// quality threshold. Kept small to bound latency/cost.
+// Up to 2 generation attempts per stage; regenerate once if the first fails the
+// contract. Kept small to bound latency/cost.
 const MAX_GENERATION_ATTEMPTS = 2;
+/**
+ * Hard ceiling on image generations for one request, across all stages and
+ * retries. Two stages x two attempts is the worst case, so this caps a
+ * multi-product request at twice the cost of a single-product one rather than
+ * letting it compound.
+ */
+const MAX_TOTAL_IMAGE_GENERATIONS = 4;
 
 const SUPPORTED_UPLOAD_TYPES = new Set([
   "image/jpeg",
@@ -160,6 +172,33 @@ function getErrorText(error: unknown) {
   return String(error);
 }
 
+type GenerationAttempt = {
+  image: GeneratedImageResult;
+  review: QualityReview | null;
+  reviewStatus: ReviewStatus;
+  reviewUnavailableReason: string | null;
+};
+
+/**
+ * Rank attempts by CONTRACT COMPLIANCE first, then quality score. A
+ * compliant-but-lower-scoring render is preferable to a prettier one that
+ * ignored the customer's product selection or invented a doorway.
+ */
+function pickBestAttempt(attempts: GenerationAttempt[]): GenerationAttempt {
+  return attempts.reduce((bestSoFar, candidate) => {
+    const rank = (entry: GenerationAttempt) => [
+      entry.review?.contractCompliant ? 1 : 0,
+      entry.review?.overall ?? -1,
+    ];
+    const [candidateCompliant, candidateOverall] = rank(candidate);
+    const [bestCompliant, bestOverall] = rank(bestSoFar);
+    if (candidateCompliant !== bestCompliant) {
+      return candidateCompliant > bestCompliant ? candidate : bestSoFar;
+    }
+    return candidateOverall > bestOverall ? candidate : bestSoFar;
+  });
+}
+
 function getStudioGeminiApiKey() {
   const apiKey = process.env.GEMINI_API_KEY?.trim() || "";
 
@@ -272,15 +311,6 @@ async function handleGeneration(req: Request) {
     plan: replacementPlan,
     selectedProductIds: orderedSelectedIds,
   });
-  const labelledProductImages = referenceManifest.transmitted.map((entry) => {
-    const loaded = referenceLoad.loaded.find(
-      (candidate) =>
-        candidate.productId === entry.productId &&
-        candidate.view === entry.viewType
-    );
-    return { label: entry.label, file: loaded!.file };
-  });
-
   // A selected product with no transmitted reference is a real degradation:
   // surface it rather than letting it pass unnoticed.
   const uncoveredSelected = referenceManifest.uncoveredSelectedProductIds;
@@ -293,20 +323,34 @@ async function handleGeneration(req: Request) {
     });
   }
 
-  // Phase 4 — dynamic prompt from scene graph + product intelligence + plan.
-  const { prompt, negativePrompt } = buildIntelligentRoomPrompt({
-    roomAnalysis,
-    sceneGraph,
-    replacementPlan,
-    profiles,
-    style,
-    roomType,
-    aiConceptMode,
-    selectedProductIds: orderedSelectedIds,
-    measurements: roomMeasurements,
-    // Transmitted count, never the loaded count.
-    referenceViewCount: referenceManifest.transmitted.length,
-  });
+  // Two-stage generation: large anchor furniture first (against the customer's
+  // real photo), then smaller secondary pieces layered onto that result. A
+  // single pass degrades as the task count rises, so this is used only when the
+  // plan is genuinely mixed and large enough to benefit.
+  const useTwoStage = shouldUseTwoStageGeneration(replacementPlan);
+  const stagePlans = useTwoStage
+    ? splitPlanByStage(replacementPlan)
+    : [{ stage: "anchor" as const, plan: replacementPlan }];
+
+  // Only send the references a stage actually needs, so each pass sees a small,
+  // unambiguous set of products.
+  const referencesForPlan = (stagePlan: ReplacementPlan) => {
+    const wanted = new Set([
+      ...stagePlan.replacements.map((task) => task.productId),
+      ...stagePlan.additions.map((task) => task.productId),
+    ]);
+    return referenceManifest.transmitted
+      .filter((entry) => wanted.has(entry.productId))
+      .map((entry) => {
+        const loaded = referenceLoad.loaded.find(
+          (candidate) =>
+            candidate.productId === entry.productId &&
+            candidate.view === entry.viewType
+        );
+        return loaded ? { label: entry.label, file: loaded.file } : null;
+      })
+      .filter((entry): entry is { label: string; file: File } => entry !== null);
+  };
 
   devLog("[studio-gemini] generation request", {
     imageName: image.name,
@@ -321,94 +365,195 @@ async function handleGeneration(req: Request) {
     uncoveredSelectedProducts: uncoveredSelected,
     sceneAnalysed: sceneGraph.analysed,
     sceneFurnitureCount: sceneGraph.furniture.length,
-    sceneFixedObjectCount: sceneGraph.fixedObjects.length,
+    architecture: sceneGraph.architecture,
     planReplacements: replacementPlan.replacements.length,
     planAdditions: replacementPlan.additions.length,
     planDispositions: replacementPlan.dispositions.length,
+    twoStage: useTwoStage,
+    stages: stagePlans.map((entry) => entry.stage),
   });
 
-  // Phase 5 — generate, then run the second-pass Quality Reviewer V2 against the
-  // original room + replacement plan. A critical failure (duplicated furniture,
-  // wrong placement, missing product, changed architecture) or a below-threshold
-  // overall triggers exactly one automatic regeneration.
+  // Generate → review → regenerate once on a contract failure, per stage, with
+  // a hard ceiling on total image generations so a two-stage plan cannot
+  // quadruple cost.
   const attempts: {
     image: GeneratedImageResult;
     review: QualityReview | null;
     reviewStatus: ReviewStatus;
     reviewUnavailableReason: string | null;
   }[] = [];
+  const prompts: { stage: string; prompt: string }[] = [];
+  let negativePrompt: string[] = [];
+  let generationsUsed = 0;
+  // The image each stage edits: the customer's photo first, then the previous
+  // stage's output.
+  let stageInputImage: File = image;
+  let finalAttempt: (typeof attempts)[number] | null = null;
 
-  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const generatedImage = await generateGeminiImage({
-      prompt,
-      roomImage: image,
-      productImages: [],
-      labelledProductImages,
-      apiKey,
-    });
-    const outcome = await reviewGeneratedRoom({
-      generatedBase64: generatedImage.imageBase64,
-      generatedMimeType: generatedImage.mimeType,
-      roomImage: image,
-      replacementPlan,
-      apiKey,
-    });
+  for (const [stageIndex, { stage, plan: stagePlan }] of stagePlans.entries()) {
+    const isLastStage = stageIndex === stagePlans.length - 1;
+    const isSecondPass = stageIndex > 0;
+    const stageReferences = referencesForPlan(stagePlan);
 
-    // The reviewer is fail-open by design (it must never block generation), but
-    // an unavailable review is NOT a pass and must never be silent.
-    if (outcome.status === "review-unavailable") {
-      console.warn("[studio-gemini] quality review unavailable", {
-        attempt: attempt + 1,
-        reason: outcome.reason,
+    const built = buildIntelligentRoomPrompt({
+      roomAnalysis,
+      sceneGraph,
+      replacementPlan: stagePlan,
+      profiles,
+      style,
+      roomType,
+      aiConceptMode,
+      selectedProductIds: orderedSelectedIds,
+      measurements: roomMeasurements,
+      // Transmitted count for THIS pass, never the loaded count.
+      referenceViewCount: stageReferences.length,
+      stage,
+      isSecondPass,
+    });
+    prompts.push({ stage, prompt: built.prompt });
+    negativePrompt = built.negativePrompt;
+
+    const stageAttempts: typeof attempts = [];
+
+    for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
+      if (generationsUsed >= MAX_TOTAL_IMAGE_GENERATIONS) {
+        console.warn("[studio-gemini] generation budget exhausted", {
+          stage,
+          generationsUsed,
+        });
+        break;
+      }
+
+      const generatedImage = await generateGeminiImage({
+        prompt: built.prompt,
+        roomImage: stageInputImage,
+        productImages: [],
+        labelledProductImages: stageReferences,
+        apiKey,
+      });
+      generationsUsed += 1;
+
+      // The final stage is judged against the FULL plan — the finished image
+      // must satisfy every task, not just this pass's subset. Earlier stages
+      // are judged against their own subset so retries stay targeted. The
+      // original room photo is always the comparison baseline, so architectural
+      // drift introduced by any pass is still caught.
+      const outcome = await reviewGeneratedRoom({
+        generatedBase64: generatedImage.imageBase64,
+        generatedMimeType: generatedImage.mimeType,
+        roomImage: image,
+        replacementPlan: isLastStage ? replacementPlan : stagePlan,
+        architecture: sceneGraph.architecture,
+        apiKey,
+      });
+
+      // The reviewer is fail-open by design (it must never block generation),
+      // but an unavailable review is NOT a pass and must never be silent.
+      if (outcome.status === "review-unavailable") {
+        console.warn("[studio-gemini] quality review unavailable", {
+          stage,
+          attempt: attempt + 1,
+          reason: outcome.reason,
+        });
+      }
+
+      const record = {
+        image: generatedImage,
+        review: outcome.review,
+        reviewStatus: outcome.status,
+        reviewUnavailableReason:
+          outcome.status === "review-unavailable" ? outcome.reason : null,
+      };
+      stageAttempts.push(record);
+      attempts.push(record);
+
+      // Accept as soon as the reviewer is satisfied (or could not run).
+      if (!reviewRecommendsRegeneration(outcome.review)) break;
+    }
+
+    if (stageAttempts.length === 0) break;
+
+    // Carry the best attempt of this stage into the next one.
+    const stageBest = pickBestAttempt(stageAttempts);
+    finalAttempt = stageBest;
+
+    if (!isLastStage) {
+      const buffer = base64ToImageBuffer(stageBest.image.imageBase64);
+      if (!buffer) {
+        console.warn(
+          "[studio-gemini] could not carry stage output forward; stopping after this stage"
+        );
+        break;
+      }
+      stageInputImage = new File([new Uint8Array(buffer)], "stage-output.png", {
+        type: stageBest.image.mimeType || "image/png",
       });
     }
-
-    attempts.push({
-      image: generatedImage,
-      review: outcome.review,
-      reviewStatus: outcome.status,
-      reviewUnavailableReason:
-        outcome.status === "review-unavailable" ? outcome.reason : null,
-    });
-
-    // Accept as soon as the reviewer is satisfied (or could not run).
-    if (!reviewRecommendsRegeneration(outcome.review)) break;
   }
 
-  // Rank attempts by CONTRACT COMPLIANCE first, then quality score. A
-  // compliant-but-lower-scoring render is preferable to a prettier one that
-  // ignored the customer's product selection.
-  const best = attempts.reduce((bestSoFar, candidate) => {
-    const rank = (entry: (typeof attempts)[number]) => [
-      entry.review?.contractCompliant ? 1 : 0,
-      entry.review?.overall ?? -1,
-    ];
-    const [candidateCompliant, candidateOverall] = rank(candidate);
-    const [bestCompliant, bestOverall] = rank(bestSoFar);
-    if (candidateCompliant !== bestCompliant) {
-      return candidateCompliant > bestCompliant ? candidate : bestSoFar;
-    }
-    return candidateOverall > bestOverall ? candidate : bestSoFar;
-  });
-  const autoRegenerated = attempts.length > 1;
+  if (!finalAttempt) {
+    throw new Error("Gemini image generation produced no result.");
+  }
+
+  // The result is the best attempt of the FINAL stage. It must never be an
+  // earlier stage's image: a stage-1 render is deliberately incomplete (it has
+  // the anchor furniture but none of the secondary pieces), so ranking across
+  // all stages by score could return a room missing half the customer's
+  // products.
+  const best = finalAttempt;
+  const autoRegenerated = attempts.length > stagePlans.length;
   // Legacy 5-axis score kept populated for the existing debug view.
   const qualityScore: QualityScore | null = best.review
     ? reviewToQualityScore(best.review)
     : null;
 
+  // Products used: only what the plan actually placed, minus anything the
+  // reviewer positively reported as missing. A product the customer never had
+  // rendered should not appear in "products used in this room".
+  const plannedProductIds = new Set([
+    ...replacementPlan.replacements.map((task) => task.productId),
+    ...replacementPlan.additions.map((task) => task.productId),
+  ]);
+  const confirmedMissingProductIds = new Set(
+    (best.review?.taskResults ?? [])
+      .filter((task) => !task.productPresent)
+      .map((task) => task.productId)
+  );
+  const verifiedProducts = products.filter((product) => {
+    if (!plannedProductIds.has(product.id)) return false;
+    // Only drop when the reviewer actually ran and positively said it is
+    // absent; an unavailable review must not silently shrink the room package.
+    if (best.reviewStatus === "review-unavailable") return true;
+    return !confirmedMissingProductIds.has(product.id);
+  });
+  const droppedProducts = products
+    .filter((product) => !verifiedProducts.some((kept) => kept.id === product.id))
+    .map((product) => product.id);
+
+  if (droppedProducts.length > 0) {
+    console.warn("[studio-gemini] products excluded from the room package", {
+      productIds: droppedProducts,
+      reviewStatus: best.reviewStatus,
+    });
+  }
+
   devLog("[studio-gemini] generation result", {
+    stages: stagePlans.length,
+    generationsUsed,
     attempts: attempts.length,
     reviewStatus: best.reviewStatus,
     recommendation: best.review?.recommendation ?? "n/a",
     contractCompliant: best.review?.contractCompliant ?? null,
     criticalFailures: best.review?.criticalFailures.map((f) => f.kind) ?? [],
     reviewOverall: best.review?.overall ?? null,
+    productsReturned: verifiedProducts.length,
+    productsDropped: droppedProducts,
   });
 
   const responseBody: Record<string, unknown> = {
     images: [best.image],
     imageBase64: best.image.imageBase64,
-    products,
+    products: verifiedProducts,
   };
 
   // AI debug payload — only exposed when explicitly enabled, so production
@@ -425,12 +570,29 @@ async function handleGeneration(req: Request) {
       reviewUnavailableReason: best.reviewUnavailableReason,
       contractCompliant: best.review?.contractCompliant ?? null,
       criticalFailures: best.review?.criticalFailures ?? [],
+      // Why the result was accepted or rejected, in the reviewer's own words.
+      reviewReasoning: {
+        global: best.review?.globalChecks.reasoning ?? null,
+        globalChecks: best.review?.globalChecks ?? null,
+        perTask: (best.review?.taskResults ?? []).map((task) => ({
+          taskId: task.taskId,
+          productId: task.productId,
+          reasoning: task.reasoning,
+          issues: task.issues,
+        })),
+      },
       generationAttempts: attempts.length,
+      generationsUsed,
+      twoStage: useTwoStage,
+      stages: stagePlans.map((entry) => entry.stage),
       autoRegenerated,
-      prompt,
+      // Kept as `prompt` for the existing debug view; `prompts` has every pass.
+      prompt: prompts.map((entry) => `--- ${entry.stage} ---\n${entry.prompt}`).join("\n\n"),
+      prompts,
       negativePrompt,
       referenceManifest,
       referenceSkipped: referenceLoad.skipped,
+      productsDropped: droppedProducts,
       // Number of images ACTUALLY transmitted with the request.
       referenceViewCount: referenceManifest.transmitted.length,
     };

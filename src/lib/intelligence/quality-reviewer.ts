@@ -23,8 +23,11 @@
  * returns a `review-unavailable` result. Generation is never blocked, but the
  * unavailability is reported rather than silently treated as a pass.
  */
+import { formatIdentity } from "./product-profile";
 import type { QualityScore } from "./quality-score";
 import type { ReplacementPlan } from "./replacement-planner";
+import type { SceneArchitecture } from "./scene-graph";
+import { canonicalCategoryLabel } from "./scene-taxonomy";
 
 const REVIEW_MODEL = "gemini-2.5-flash";
 const REVIEW_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${REVIEW_MODEL}:generateContent`;
@@ -55,7 +58,11 @@ export type CriticalFailureKind =
   | "recoloured-not-replaced"
   | "duplicate-product"
   | "wrong-placement"
+  | "product-identity-mismatch"
   | "architecture-changed"
+  | "architecture-hallucinated"
+  | "architecture-element-missing"
+  | "unselected-same-category-changed"
   | "camera-reframed";
 
 export type CriticalFailure = {
@@ -83,8 +90,36 @@ export type TaskReviewResult = {
   placementCorrect: boolean;
   /** Is its physical scale plausible for the room? */
   scaleCorrect: boolean;
+  /**
+   * Does the rendered object match the product's STRUCTURED IDENTITY
+   * (configuration, material, colour family, base, notable traits) — not merely
+   * the right category in roughly the right style?
+   */
+  identityMatches: boolean;
+  /** The model's short explanation for this task's verdict (debug-visible). */
+  reasoning: string;
   /** Free-text observations from the model. */
   issues: string[];
+};
+
+/**
+ * Whole-room checks that are not tied to a single task. Booleans are phrased so
+ * that TRUE always means "good", and an unparseable/missing value therefore
+ * fails safe.
+ */
+export type GlobalReviewChecks = {
+  /** No door/window/arch/opening exists that was not in the original. */
+  noNewArchitecture: boolean;
+  /** Every original door/window/arch/opening is still present. */
+  allOriginalArchitecturePresent: boolean;
+  /** Wall layout and room envelope unchanged. */
+  wallStructurePreserved: boolean;
+  /** Objects sharing a category with a planned item were left alone. */
+  unselectedSameCategoryUnchanged: boolean;
+  /** Furniture outside the plan is untouched. */
+  unrelatedFurniturePreserved: boolean;
+  /** The model's explanation of the global verdict (debug-visible). */
+  reasoning: string;
 };
 
 export type ReviewAxes = {
@@ -103,6 +138,8 @@ export type ReviewAxes = {
 export type QualityReview = ReviewAxes & {
   /** Per-task compliance assessment; empty when the plan had no tasks. */
   taskResults: TaskReviewResult[];
+  /** Whole-room checks (architecture, instance discipline). */
+  globalChecks: GlobalReviewChecks;
   /** Derived deterministically from taskResults + axes. */
   criticalFailures: CriticalFailure[];
   /** True when there are no critical failures. Separate from `overall`. */
@@ -169,6 +206,7 @@ export function computeReviewOverall(axes: ReviewAxes): number {
 export function deriveCriticalFailures(
   taskResults: TaskReviewResult[],
   axes: ReviewAxes,
+  globalChecks?: GlobalReviewChecks,
   criticalThreshold = CRITICAL_AXIS_THRESHOLD
 ): CriticalFailure[] {
   const failures: CriticalFailure[] = [];
@@ -220,9 +258,54 @@ export function deriveCriticalFailures(
         detail: `Task ${task.taskId}: the product is not in the location the plan specified.`,
       });
     }
+    if (!task.identityMatches) {
+      failures.push({
+        ...at,
+        kind: "product-identity-mismatch",
+        detail: `Task ${task.taskId}: the rendered object is the right category but does not match the product's identity (configuration, material, colour family, base or notable traits).`,
+      });
+    }
   }
 
   // Global contract violations (independent of any single task).
+  if (globalChecks) {
+    if (!globalChecks.noNewArchitecture) {
+      failures.push({
+        kind: "architecture-hallucinated",
+        taskId: null,
+        productId: null,
+        detail:
+          "A door, window, arch or opening appears that was not in the original room.",
+      });
+    }
+    if (!globalChecks.allOriginalArchitecturePresent) {
+      failures.push({
+        kind: "architecture-element-missing",
+        taskId: null,
+        productId: null,
+        detail:
+          "An original door, window, arch or opening is missing from the generated room.",
+      });
+    }
+    if (!globalChecks.wallStructurePreserved) {
+      failures.push({
+        kind: "architecture-changed",
+        taskId: null,
+        productId: null,
+        detail: "The wall structure or room envelope was altered.",
+      });
+    }
+    if (!globalChecks.unselectedSameCategoryUnchanged) {
+      failures.push({
+        kind: "unselected-same-category-changed",
+        taskId: null,
+        productId: null,
+        detail:
+          "An object sharing a category with a planned item was changed even though the plan did not name it.",
+      });
+    }
+  }
+
   if (
     axes.architecture < criticalThreshold ||
     axes.roomPreservation < criticalThreshold
@@ -243,7 +326,15 @@ export function deriveCriticalFailures(
     });
   }
 
-  return failures;
+  // De-duplicate: the same kind can be reached from both a structured check and
+  // an axis threshold.
+  const seen = new Set<string>();
+  return failures.filter((failure) => {
+    const key = `${failure.kind}|${failure.taskId ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**
@@ -284,31 +375,56 @@ export function reviewToQualityScore(review: QualityReview): QualityScore {
  * model the exact task ids and product names lets it return structured
  * per-task results instead of a general impression.
  */
-export function formatPlanForReview(plan?: ReplacementPlan): string {
+export function formatPlanForReview(
+  plan?: ReplacementPlan,
+  architecture?: SceneArchitecture
+): string {
   if (!plan) return "";
   const lines: string[] = [];
 
   for (const task of plan.replacements) {
+    const instance = task.existingSharesCategory
+      ? `${task.existingInstanceLabel} (NOT any other ${canonicalCategoryLabel(task.existingCanonicalCategory)} in the room)`
+      : `the existing ${task.existingCategory}`;
     lines.push(
-      `- Task ${task.taskId} (productId "${task.productId}"): the existing ${task.existingCategory}${
-        task.existingColor ? ` (${task.existingColor})` : ""
-      }, ${task.location}, must be REMOVED and REPLACED by the ${task.productTitle} — a ${task.productCategory}. Placement: ${task.placement}.`
+      `- Task ${task.taskId} (productId "${task.productId}"): ${instance}${
+        task.existingColor ? `, ${task.existingColor}` : ""
+      }, ${task.location}, must be REMOVED and REPLACED by the ${task.productTitle}. Placement: ${task.placement}.\n    IDENTITY — ${formatIdentity(task.identity)}.`
     );
   }
   for (const task of plan.additions) {
     lines.push(
-      `- Task ${task.taskId} (productId "${task.productId}"): the ${task.productTitle} — a ${task.productCategory} — must be PLACED at ${task.target}. It has no existing counterpart, so nothing should be removed for it.`
+      `- Task ${task.taskId} (productId "${task.productId}"): the ${task.productTitle} must be PLACED at ${task.target}. It has no existing counterpart, so nothing should be removed for it.\n    IDENTITY — ${formatIdentity(task.identity)}.`
     );
   }
 
   const preserveLines = plan.dispositions
     .filter((entry) => entry.disposition === "preserve")
-    .map(
-      (entry) =>
-        `- The existing ${entry.rawCategory} must be UNCHANGED: same position, colour, material and shape.`
-    );
+    .map((entry) => {
+      const emphasis = entry.sharesCategoryWithOthers
+        ? " Another object of this same category IS being replaced — this one must NOT change as a side effect."
+        : "";
+      return `- ${entry.instanceLabel} must be UNCHANGED: same position, colour, material and shape.${emphasis}`;
+    });
 
-  if (lines.length === 0 && preserveLines.length === 0) return "";
+  const architectureLines =
+    architecture?.counted === true
+      ? [
+          `The ORIGINAL room contains exactly ${architecture.windowCount} window(s), ${architecture.doorCount} door(s)/doorway(s) and ${architecture.openingCount} open arch(es)/pass-through(s).`,
+          architecture.features.length > 0
+            ? `Original architectural features: ${architecture.features.join("; ")}.`
+            : "",
+          "Count these in the generated image. If the counts differ in EITHER direction, the corresponding whole-room check must be false.",
+        ].filter(Boolean)
+      : [];
+
+  if (
+    lines.length === 0 &&
+    preserveLines.length === 0 &&
+    architectureLines.length === 0
+  ) {
+    return "";
+  }
 
   const sections = [
     lines.length > 0
@@ -316,6 +432,9 @@ export function formatPlanForReview(plan?: ReplacementPlan): string {
       : "",
     preserveLines.length > 0
       ? `MUST BE PRESERVED UNCHANGED:\n${preserveLines.join("\n")}`
+      : "",
+    architectureLines.length > 0
+      ? `ARCHITECTURE BASELINE:\n${architectureLines.join("\n")}`
       : "",
   ].filter(Boolean);
 
@@ -347,7 +466,7 @@ async function fileToInlineData(file: File) {
 
 const REVIEW_PROMPT = `You are a STRICT interior-render compliance reviewer. The FIRST image is the customer's ORIGINAL room. The SECOND image is an AI-generated redesign that was supposed to execute a specific replacement plan while keeping the rest of the room identical.
 
-Your job has TWO parts.
+Your job has THREE parts.
 
 PART A — per-task compliance. For EVERY task listed in the plan below, answer each question by comparing the two images. Answer true only when you can actually SEE that it holds; when uncertain, answer false and explain in "issues".
   productPresent            — is the named new product actually visible in the generated image?
@@ -355,19 +474,35 @@ PART A — per-task compliance. For EVERY task listed in the plan below, answer 
   originalRemovedOrReplaced — for a REPLACE task, is the original object genuinely gone? Answer false if the original item is still visible anywhere in the room.
   genuineReplacement        — is this a real swap rather than the ORIGINAL object merely recoloured, re-textured or restyled? Look at shape, silhouette, proportions, arm/leg design. If the object has the same form as the original and only its colour or material changed, answer FALSE.
   noDuplicate               — does the product appear exactly once (no cloned or repeated copy)?
-  placementCorrect          — is it in the location/zone the task specified?
+  placementCorrect          — is it in the location/zone the task specified? For a task naming a specific instance (e.g. "the left sofa"), answer false if a DIFFERENT instance was changed instead.
   scaleCorrect              — is its physical size plausible relative to the room and other furniture?
+  identityMatches           — compare the rendered object against the task's IDENTITY line field by field: configuration (seat count / modular layout / size), material, colour family, base/legs, shape and the listed identifying details. Answer TRUE only if it is recognisably THAT product. Answer FALSE if it is merely a similar item in the same style — for example the right category and colour but the wrong seat count, the wrong base, or missing a stated identifying detail.
+  reasoning                 — one or two sentences explaining your verdict for this task, naming what you actually saw.
   issues                    — short strings describing anything wrong with this task.
 
-PART B — global quality axes, each 0-100.
+PART B — whole-room checks. These are about the room itself, not any single product. TRUE always means "correct".
+  noNewArchitecture               — TRUE if the generated image contains NO door, doorway, window, arch, opening or pass-through that is absent from the original. Adding any of these is a serious failure: look carefully at every wall.
+  allOriginalArchitecturePresent  — TRUE if every door, window, arch and opening visible in the original is still present, in the same place and at the same size.
+  wallStructurePreserved          — TRUE if the walls, corners, ceiling line and floor line are unchanged, and no wall was added, removed, moved or turned into an opening.
+  unselectedSameCategoryUnchanged — TRUE if objects that share a category with a planned item, but were NOT named in the plan, are completely unchanged. If the plan replaced one sofa and a second sofa also changed, answer FALSE.
+  unrelatedFurniturePreserved     — TRUE if all furniture outside the plan is untouched.
+  reasoning                       — one or two sentences explaining the whole-room verdict.
+
+PART C — global quality axes, each 0-100.
 
 Return ONLY JSON with EXACTLY this shape:
 {
   "taskResults": [
     { "taskId": number, "productId": string, "productPresent": boolean, "categoryCorrect": boolean,
       "originalRemovedOrReplaced": boolean, "genuineReplacement": boolean, "noDuplicate": boolean,
-      "placementCorrect": boolean, "scaleCorrect": boolean, "issues": string[] }
+      "placementCorrect": boolean, "scaleCorrect": boolean, "identityMatches": boolean,
+      "reasoning": string, "issues": string[] }
   ],
+  "globalChecks": {
+    "noNewArchitecture": boolean, "allOriginalArchitecturePresent": boolean,
+    "wallStructurePreserved": boolean, "unselectedSameCategoryUnchanged": boolean,
+    "unrelatedFurniturePreserved": boolean, "reasoning": string
+  },
   "roomPreservation": number,      // original walls, floor and ceiling preserved
   "perspective": number,           // same camera angle / vanishing point as the original
   "lighting": number,              // same lighting direction, colour and intensity
@@ -377,9 +512,7 @@ Return ONLY JSON with EXACTLY this shape:
   "architecture": number,          // windows, doors and structure NOT moved or reshaped (100 = untouched)
   "furnitureReplacement": number,  // planned items actually replaced/placed (100 = all done, 0 = missing)
   "duplication": number,           // NO duplicated or cloned furniture (100 = none)
-  "cropping": number,              // whole room still visible (100 = no cropping/zoom/reframe)
-  "unrelatedFurniturePreserved": number, // furniture NOT in the plan is untouched (100 = untouched)
-  "noUnexplainedAdditions": number       // no large furniture appears that the plan did not request
+  "cropping": number               // whole room still visible (100 = no cropping/zoom/reframe)
 }
 
 Include one taskResults entry for EVERY task id in the plan, even if the product is missing. Be critical: reserve 85+ for genuinely excellent results.`;
@@ -402,10 +535,35 @@ function parseTaskResults(value: unknown): TaskReviewResult[] {
         noDuplicate: asBool(item.noDuplicate),
         placementCorrect: asBool(item.placementCorrect),
         scaleCorrect: asBool(item.scaleCorrect),
+        identityMatches: asBool(item.identityMatches),
+        reasoning: typeof item.reasoning === "string" ? item.reasoning.trim() : "",
         issues: asIssueList(item.issues),
       };
     })
     .filter((item): item is TaskReviewResult => item !== null);
+}
+
+/**
+ * Parse the whole-room checks. A missing block fails safe: every check becomes
+ * false, which surfaces as critical failures rather than a silent pass.
+ */
+function parseGlobalChecks(value: unknown): GlobalReviewChecks {
+  const item =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const present = Object.keys(item).length > 0;
+  return {
+    noNewArchitecture: asBool(item.noNewArchitecture),
+    allOriginalArchitecturePresent: asBool(item.allOriginalArchitecturePresent),
+    wallStructurePreserved: asBool(item.wallStructurePreserved),
+    unselectedSameCategoryUnchanged: asBool(item.unselectedSameCategoryUnchanged),
+    unrelatedFurniturePreserved: asBool(item.unrelatedFurniturePreserved),
+    reasoning:
+      typeof item.reasoning === "string" && item.reasoning.trim()
+        ? item.reasoning.trim()
+        : present
+          ? ""
+          : "The reviewer did not return the whole-room checks; treated as failing.",
+  };
 }
 
 /**
@@ -448,6 +606,9 @@ function reconcileTaskResults(
         noDuplicate: false,
         placementCorrect: false,
         scaleCorrect: false,
+        identityMatches: false,
+        reasoning:
+          "The reviewer returned no result for this task, so compliance could not be confirmed.",
         issues: ["The reviewer did not report on this task."],
       };
     }
@@ -469,6 +630,8 @@ export async function reviewGeneratedRoom(input: {
   generatedMimeType?: string;
   roomImage: File;
   replacementPlan?: ReplacementPlan;
+  /** Counted architecture of the ORIGINAL room, for hallucination detection. */
+  architecture?: SceneArchitecture;
   apiKey?: string;
 }): Promise<ReviewOutcome> {
   const apiKey = input.apiKey?.trim();
@@ -498,7 +661,10 @@ export async function reviewGeneratedRoom(input: {
         data: input.generatedBase64,
       },
     };
-    const planText = formatPlanForReview(input.replacementPlan);
+    const planText = formatPlanForReview(
+      input.replacementPlan,
+      input.architecture
+    );
     const promptText = planText
       ? `${REVIEW_PROMPT}\n\n${planText}`
       : REVIEW_PROMPT;
@@ -573,7 +739,12 @@ export async function reviewGeneratedRoom(input: {
       parseTaskResults(parsed.taskResults),
       input.replacementPlan
     );
-    const criticalFailures = deriveCriticalFailures(taskResults, axes);
+    const globalChecks = parseGlobalChecks(parsed.globalChecks);
+    const criticalFailures = deriveCriticalFailures(
+      taskResults,
+      axes,
+      globalChecks
+    );
     const overall = computeReviewOverall(axes);
     const recommendation = decideRecommendation(criticalFailures, overall);
     const status: ReviewStatus =
@@ -584,6 +755,7 @@ export async function reviewGeneratedRoom(input: {
       review: {
         ...axes,
         taskResults,
+        globalChecks,
         criticalFailures,
         contractCompliant: criticalFailures.length === 0,
         overall,

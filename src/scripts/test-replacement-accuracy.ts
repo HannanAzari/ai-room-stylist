@@ -570,6 +570,8 @@ section("K. Reviewer critical-failure detection");
     noDuplicate: true,
     placementCorrect: true,
     scaleCorrect: true,
+    identityMatches: true,
+    reasoning: "The product is present, correct and well placed.",
     issues: [],
   };
 

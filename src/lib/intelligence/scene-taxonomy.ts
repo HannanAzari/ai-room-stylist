@@ -334,6 +334,36 @@ const WALL_MOUNTED: ReadonlySet<CanonicalCategory> = new Set([
   "tv",
 ]);
 
+/**
+ * Large "anchor" furniture that defines a room's composition. These are
+ * generated in the first pass, against the untouched room photo, because
+ * getting their footprint and perspective right constrains everything else.
+ * Smaller secondary items (coffee table, rug, lamps, decor) are layered on
+ * afterwards.
+ */
+const ANCHOR_CANONICAL: ReadonlySet<CanonicalCategory> = new Set([
+  "sofa",
+  "bed",
+  "dining-table",
+  "tv-unit",
+  "dresser",
+  "sideboard",
+  "bookshelf",
+  "desk",
+  "armchair",
+]);
+
+/** Anchor products for a catalogue category (first generation pass). */
+export function isAnchorProductCategory(productCategory: string): boolean {
+  const targets = canonicalTargetsForProductCategory(productCategory);
+  return targets.length > 0 && ANCHOR_CANONICAL.has(targets[0]);
+}
+
+/** Anchor objects by canonical scene category. */
+export function isAnchorCategory(canonical: CanonicalCategory): boolean {
+  return ANCHOR_CANONICAL.has(canonical);
+}
+
 function singulariseToken(token: string): string {
   if (token.length > 3 && token.endsWith("ies")) {
     return `${token.slice(0, -3)}y`;
@@ -442,4 +472,16 @@ export function isWallMountedProductCategory(productCategory: string): boolean {
 /** Does this canonical scene category belong on a wall? */
 export function isWallMountedCanonical(canonical: CanonicalCategory): boolean {
   return WALL_MOUNTED.has(canonical);
+}
+
+/**
+ * Readable noun for a canonical category, for prompts that must describe the
+ * shared category of several differently-named objects (e.g. a "3 seater sofa"
+ * and a "two seater couch" are both, canonically, a sofa).
+ */
+export function canonicalCategoryLabel(canonical: CanonicalCategory): string {
+  if (canonical === "unknown") return "object";
+  if (canonical === "tv") return "television";
+  if (canonical === "tv-unit") return "entertainment unit";
+  return canonical.replace(/-/g, " ");
 }

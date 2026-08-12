@@ -38,6 +38,14 @@ export type SceneFurniture = {
   canonicalCategory: CanonicalCategory;
   /** False when the raw label matched no taxonomy rule. */
   categoryRecognised: boolean;
+  /**
+   * Spatially disambiguated name for this object, e.g. "the left sofa" when
+   * the room holds more than one sofa, or simply "the sofa" when it is the
+   * only one. Derived from the bounding box — see `assignInstanceLabels`.
+   */
+  instanceLabel: string;
+  /** True when more than one detected object shares this canonical category. */
+  sharesCategoryWithOthers: boolean;
   boundingBox: BoundingBox | null;
   approximateDepth: string;
   orientation: string;
@@ -53,6 +61,24 @@ export type SceneFixedObject = {
   confidence: number;
 };
 
+/**
+ * Countable architectural inventory of the room envelope.
+ *
+ * Generation must not invent a door, window, arch or opening, nor remove one
+ * that exists. Counting them up front gives the reviewer a concrete "before"
+ * figure to compare against, instead of asking it to judge architectural
+ * fidelity from impression alone.
+ */
+export type SceneArchitecture = {
+  windowCount: number;
+  doorCount: number;
+  openingCount: number;
+  /** Free-text notes on arches, pass-throughs, alcoves, structural features. */
+  features: string[];
+  /** False when the vision step did not run — counts are then not meaningful. */
+  counted: boolean;
+};
+
 export type SceneGraph = {
   roomType: string;
   camera: string;
@@ -61,6 +87,7 @@ export type SceneGraph = {
   ceiling: string;
   windows: string;
   doors: string;
+  architecture: SceneArchitecture;
   fixedObjects: SceneFixedObject[];
   furniture: SceneFurniture[];
   emptyWalls: string[];
@@ -83,6 +110,96 @@ export function isReplaceableCategory(category: string): boolean {
   return isReplaceableCanonical(canonicaliseCategory(category).canonical);
 }
 
+/**
+ * Give every detected object a spatially unambiguous name.
+ *
+ * When a room holds two sofas, "the sofa" is ambiguous — the image model is
+ * free to change whichever it likes, or both. Objects that share a canonical
+ * category are therefore distinguished by position ("the left sofa", "the right
+ * sofa"); a category with a single instance keeps its plain name.
+ *
+ * Horizontal position separates instances first because it is the most reliable
+ * distinction in a photo; depth is used only when two objects sit in
+ * effectively the same column. Deterministic: no vision call, no randomness.
+ */
+export function assignInstanceLabels(
+  furniture: SceneFurniture[]
+): SceneFurniture[] {
+  const byCategory = new Map<string, SceneFurniture[]>();
+  for (const item of furniture) {
+    const group = byCategory.get(item.canonicalCategory);
+    if (group) group.push(item);
+    else byCategory.set(item.canonicalCategory, [item]);
+  }
+
+  const labelById = new Map<string, string>();
+
+  for (const [, group] of byCategory) {
+    if (group.length === 1) {
+      const only = group[0];
+      labelById.set(
+        only.id,
+        `the ${only.category.trim() || only.canonicalCategory}`
+      );
+      continue;
+    }
+
+    // Order left→right by bounding-box centre; boxless items sort last but
+    // stay deterministic via their id.
+    const centreX = (item: SceneFurniture) =>
+      item.boundingBox
+        ? item.boundingBox.x + item.boundingBox.width / 2
+        : Number.POSITIVE_INFINITY;
+    const ordered = [...group].sort(
+      (a, b) => centreX(a) - centreX(b) || a.id.localeCompare(b.id)
+    );
+
+    const horizontalNames =
+      ordered.length === 2
+        ? ["left", "right"]
+        : ordered.length === 3
+          ? ["left", "centre", "right"]
+          : ordered.map((_, index) => `${index + 1}${ordinalSuffix(index + 1)} from the left`);
+
+    ordered.forEach((item, index) => {
+      const positional = horizontalNames[index];
+      // Each object keeps ITS OWN noun. Naming every member of the group after
+      // the first one would mislabel a two-seater couch as "the right 3 seater
+      // sofa" simply because both canonicalise to "sofa".
+      const noun = item.category.trim() || item.canonicalCategory;
+      // Disambiguate further when two share the same column.
+      const sameColumn = ordered.filter(
+        (other) =>
+          other !== item &&
+          Math.abs(centreX(other) - centreX(item)) < 0.08 &&
+          Number.isFinite(centreX(other))
+      );
+      const depth =
+        sameColumn.length > 0 && item.boundingBox
+          ? item.boundingBox.y + item.boundingBox.height / 2 > 0.5
+            ? " nearer the camera"
+            : " further from the camera"
+          : "";
+      labelById.set(item.id, `the ${positional} ${noun}${depth}`);
+    });
+  }
+
+  return furniture.map((item) => ({
+    ...item,
+    instanceLabel: labelById.get(item.id) || `the ${item.category}`,
+    sharesCategoryWithOthers:
+      (byCategory.get(item.canonicalCategory)?.length ?? 0) > 1,
+  }));
+}
+
+function ordinalSuffix(n: number): string {
+  if (n % 100 >= 11 && n % 100 <= 13) return "th";
+  if (n % 10 === 1) return "st";
+  if (n % 10 === 2) return "nd";
+  if (n % 10 === 3) return "rd";
+  return "th";
+}
+
 export function defaultSceneGraph(roomTypeHint = "living room"): SceneGraph {
   return {
     roomType: roomTypeHint || "living room",
@@ -92,6 +209,13 @@ export function defaultSceneGraph(roomTypeHint = "living room"): SceneGraph {
     ceiling: "as shown in the uploaded room",
     windows: "preserve existing windows and light direction",
     doors: "preserve existing doors and openings",
+    architecture: {
+      windowCount: 0,
+      doorCount: 0,
+      openingCount: 0,
+      features: [],
+      counted: false,
+    },
     fixedObjects: [],
     furniture: [],
     emptyWalls: [],
@@ -188,6 +312,10 @@ function parseFurniture(value: unknown): SceneFurniture[] {
         category,
         canonicalCategory: canonical,
         categoryRecognised: recognised,
+        // Placeholders; `assignInstanceLabels` fills these once the full set
+        // is known, since disambiguation depends on the other objects present.
+        instanceLabel: `the ${category}`,
+        sharesCategoryWithOthers: false,
         boundingBox: parseBoundingBox(item.boundingBox),
         approximateDepth: asString(item.approximateDepth, "unknown"),
         orientation: asString(item.orientation, "unknown"),
@@ -200,6 +328,32 @@ function parseFurniture(value: unknown): SceneFurniture[] {
     })
     .filter((item): item is SceneFurniture => item !== null)
     .slice(0, 20);
+}
+
+function asCount(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(20, Math.round(n));
+}
+
+function parseArchitecture(value: unknown): SceneArchitecture {
+  if (!value || typeof value !== "object") {
+    return {
+      windowCount: 0,
+      doorCount: 0,
+      openingCount: 0,
+      features: [],
+      counted: false,
+    };
+  }
+  const item = value as Record<string, unknown>;
+  return {
+    windowCount: asCount(item.windowCount),
+    doorCount: asCount(item.doorCount),
+    openingCount: asCount(item.openingCount),
+    features: asStringArray(item.features),
+    counted: true,
+  };
 }
 
 function parseFixedObjects(value: unknown): SceneFixedObject[] {
@@ -249,6 +403,12 @@ const SCENE_PROMPT = `You are a computer-vision system that turns an interior ph
   "camera": string,                 // camera height and orientation
   "walls": string, "floor": string, "ceiling": string,
   "windows": string, "doors": string,
+  "architecture": {
+    "windowCount": number,        // how many distinct windows are visible
+    "doorCount": number,          // how many distinct doors/doorways are visible
+    "openingCount": number,       // arches, pass-throughs and open wall gaps
+    "features": string[]          // e.g. "arched opening to hallway", "alcove left of chimney"
+  },
   "fixedObjects": [ { "name": string, "confidence": number } ],   // built-ins & non-movable items: TV, air conditioner, curtains, radiator, fireplace...
   "furniture": [
     {
@@ -271,7 +431,8 @@ const SCENE_PROMPT = `You are a computer-vision system that turns an interior ph
 }
 Rules: DO NOT GUESS. Only include objects you can actually see; if unsure, use a low confidence. Report a confidence for every furniture and fixed object.
 IMPORTANT — a television and the unit it stands on are TWO SEPARATE objects. Report the screen itself as category "tv" (replaceable: false) and the cabinet/console beneath it as category "tv unit" (replaceable: true). Never merge them into one entry.
-List each distinct physical object separately; if the room contains two sofas, report two furniture entries with different ids.`;
+List each distinct physical object separately; if the room contains two sofas, report two furniture entries with different ids and accurate, non-overlapping bounding boxes so they can be told apart by position.
+Count the architecture carefully: report every window, door/doorway and open arch you can see. These counts are used to detect whether generation later invented or removed an architectural element, so accuracy matters more than completeness — if you are unsure whether something is a door or an opening, count it once in whichever fits best.`;
 
 export async function analyzeSceneGraph(
   roomImage: File,
@@ -326,8 +487,9 @@ export async function analyzeSceneGraph(
       ceiling: asString(parsed.ceiling, fallback.ceiling),
       windows: asString(parsed.windows, fallback.windows),
       doors: asString(parsed.doors, fallback.doors),
+      architecture: parseArchitecture(parsed.architecture),
       fixedObjects: parseFixedObjects(parsed.fixedObjects),
-      furniture: parseFurniture(parsed.furniture),
+      furniture: assignInstanceLabels(parseFurniture(parsed.furniture)),
       emptyWalls: asStringArray(parsed.emptyWalls),
       emptyFloorAreas: asStringArray(parsed.emptyFloorAreas).length
         ? asStringArray(parsed.emptyFloorAreas)

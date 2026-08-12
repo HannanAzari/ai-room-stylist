@@ -12,7 +12,7 @@
  * Product ids below are real entries in `src/data/products.json`, so profiles
  * resolve exactly as they do in production.
  */
-import type { SceneGraph } from "../scene-graph";
+import { assignInstanceLabels, type SceneGraph } from "../scene-graph";
 import { canonicaliseCategory } from "../scene-taxonomy";
 
 type FurnitureSeed = {
@@ -105,7 +105,17 @@ export function buildGoldenLivingRoomSceneGraph(): SceneGraph {
       { name: "air conditioner", confidence: 0.78 },
       { name: "ceiling rose", confidence: 0.6 },
     ],
-    furniture: FURNITURE_SEEDS.map((seed) => {
+    architecture: {
+      windowCount: 1,
+      doorCount: 1,
+      openingCount: 0,
+      features: ["recessed ceiling rose", "single doorway on the right wall"],
+      counted: true,
+    },
+    // Run through the real labeller so the fixture exercises the same
+    // disambiguation logic as production (two sofas → left/right).
+    furniture: assignInstanceLabels(
+      FURNITURE_SEEDS.map((seed) => {
       const { canonical, recognised } = canonicaliseCategory(seed.category);
       // Mirrors `parseFurniture`: the taxonomy overrides the model's own flag.
       const replaceable =
@@ -123,21 +133,25 @@ export function buildGoldenLivingRoomSceneGraph(): SceneGraph {
         ].includes(canonical) &&
         (seed.modelReplaceable ?? true);
 
-      return {
-        id: seed.id,
-        category: seed.category,
-        canonicalCategory: canonical,
-        categoryRecognised: recognised,
-        boundingBox: seed.boundingBox,
-        approximateDepth: "midground",
-        orientation: "facing camera",
-        dominantColor: seed.dominantColor,
-        material: "unknown",
-        size: "medium",
-        replaceable,
-        confidence: seed.confidence,
-      };
-    }),
+        return {
+          id: seed.id,
+          category: seed.category,
+          canonicalCategory: canonical,
+          categoryRecognised: recognised,
+          // Filled in by `assignInstanceLabels` below.
+          instanceLabel: `the ${seed.category}`,
+          sharesCategoryWithOthers: false,
+          boundingBox: seed.boundingBox,
+          approximateDepth: "midground",
+          orientation: "facing camera",
+          dominantColor: seed.dominantColor,
+          material: "unknown",
+          size: "medium",
+          replaceable,
+          confidence: seed.confidence,
+        };
+      })
+    ),
     emptyWalls: [
       "the large empty wall above the sofa",
       "the narrow wall beside the doorway",

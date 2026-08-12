@@ -22,8 +22,9 @@
  */
 import type { RoomMeasurements } from "@/lib/prompts";
 import { buildScaleInstructions } from "@/lib/prompts";
-import type { ProductProfile } from "./product-profile";
-import type { ReplacementPlan } from "./replacement-planner";
+import { formatIdentity, type ProductProfile } from "./product-profile";
+import type { GenerationStage, ReplacementPlan } from "./replacement-planner";
+import { canonicalCategoryLabel } from "./scene-taxonomy";
 import type { RoomAnalysis } from "./room-analysis";
 import type { SceneGraph } from "./scene-graph";
 
@@ -42,6 +43,14 @@ export type IntelligentPromptInput = {
   sceneGraph?: SceneGraph;
   // The deterministic item→product swap plan this prompt executes.
   replacementPlan?: ReplacementPlan;
+  /**
+   * Which pass of a two-stage generation this prompt drives. On the secondary
+   * pass the supplied image is the FIRST PASS OUTPUT, not the customer's photo,
+   * so the wording changes to protect what pass 1 already placed.
+   */
+  stage?: GenerationStage;
+  /** True when this is the second pass of a two-stage generation. */
+  isSecondPass?: boolean;
 };
 
 export type IntelligentPrompt = {
@@ -53,6 +62,10 @@ const GLOBAL_NEGATIVE = [
   "cropping, zooming or reframing the room",
   "changing the camera angle or perspective",
   "altering walls, windows, doors, ceiling or floor",
+  "adding a door, doorway, window, arch, opening or pass-through that is not in the original",
+  "removing or relocating an existing door, window, arch or opening",
+  "inventing a view, corridor or adjoining room",
+  "changing an object the plan did not name, including another item of the same category",
   "moving or removing the TV, air conditioner, curtains, windows or doors",
   "overlaying new furniture on top of existing furniture",
   "duplicated, cloned or repeated furniture",
@@ -113,9 +126,18 @@ function formatReplacementTasks(plan: ReplacementPlan): {
   for (const task of plan.replacements) {
     const colour = task.existingColor ? ` (${task.existingColor})` : "";
     const where = task.location ? `, currently ${task.location}` : "";
+    // Target the specific instance. When the room holds more than one object of
+    // this category, name it spatially and say explicitly that the others stay.
+    const sharedNoun = canonicalCategoryLabel(task.existingCanonicalCategory);
+    const target = task.existingSharesCategory
+      ? `${task.existingInstanceLabel}${colour}${where} — and ONLY that one — completely`
+      : `the existing ${task.existingCategory}${colour}${where} completely`;
+    const othersWarning = task.existingSharesCategory
+      ? ` This room contains more than one ${sharedNoun}: change ONLY ${task.existingInstanceLabel}. Every other ${sharedNoun} must remain exactly as photographed.`
+      : "";
     numbered.push({
       taskId: task.taskId,
-      line: `Task ${task.taskId} — Remove the existing ${task.existingCategory}${colour} completely${where}, then replace it with the ${task.productTitle}. Place it ${task.placement}. This must be a genuine replacement: the new product's shape and silhouette must differ from the removed item wherever the reference image differs. Recolouring or restyling the original object is NOT acceptable.`,
+      line: `Task ${task.taskId} — Remove ${target}, then replace it with the ${task.productTitle}. Place it ${task.placement}.${othersWarning}\n    IDENTITY (must match the reference image for task ${task.taskId}) — ${formatIdentity(task.identity)}.\n    This must be a genuine replacement: the new product's shape and silhouette must differ from the removed item wherever the reference image differs. Recolouring or restyling the original object is NOT acceptable.`,
     });
   }
 
@@ -127,7 +149,7 @@ function formatReplacementTasks(plan: ReplacementPlan): {
       : `Place the ${task.productTitle} in ${task.target}`;
     numbered.push({
       taskId: task.taskId,
-      line: `Task ${task.taskId} — ${placement}, ${task.placement}.`,
+      line: `Task ${task.taskId} — ${placement}, ${task.placement}.\n    IDENTITY (must match the reference image for task ${task.taskId}) — ${formatIdentity(task.identity)}.`,
     });
   }
 
@@ -157,10 +179,46 @@ function formatPreservationTasks(plan: ReplacementPlan): string[] {
         // Fixed objects are already covered by the "never move" section.
         entry.reason.startsWith("Replaceable furniture")
     )
-    .map(
-      (entry) =>
-        `- Keep the existing ${entry.rawCategory} exactly as photographed — same position, same colour, same material, same shape. Do NOT restyle, recolour, resize or replace it.`
+    .map((entry) => {
+      const emphasis = entry.sharesCategoryWithOthers
+        ? ` A different ${canonicalCategoryLabel(entry.canonicalCategory)} in this room IS being replaced — do not let that change spill onto this one.`
+        : "";
+      return `- Keep ${entry.instanceLabel} exactly as photographed — same position, same colour, same material, same shape. Do NOT restyle, recolour, resize or replace it.${emphasis}`;
+    });
+}
+
+/**
+ * Hard architecture lock.
+ *
+ * Invented doors, windows, arches and openings were the most damaging remaining
+ * failure: they make the render stop being a photo of the customer's room. The
+ * counted inventory from the scene graph is stated back to the model so the
+ * constraint is concrete ("exactly 2 windows and 1 door") rather than a vague
+ * instruction to preserve architecture.
+ */
+function buildArchitectureLock(sceneGraph?: SceneGraph): string {
+  const architecture = sceneGraph?.architecture;
+  const lines = [
+    "ARCHITECTURE LOCK — the room's shell is FIXED and must be reproduced exactly:",
+    "- Do NOT add any door, doorway, window, arch, opening, pass-through or alcove that is not in the uploaded photo.",
+    "- Do NOT remove, resize, reposition or reshape any existing door, window, arch or opening.",
+    "- Do NOT add or remove walls, and do NOT change where walls meet the floor or ceiling.",
+    "- Do NOT convert a solid wall into an opening, or an opening into a solid wall.",
+    "- Do NOT invent a view, corridor or adjoining room beyond an existing window or doorway.",
+  ];
+
+  if (architecture?.counted) {
+    lines.push(
+      `- The finished image must contain EXACTLY ${architecture.windowCount} window(s), ${architecture.doorCount} door(s)/doorway(s) and ${architecture.openingCount} open arch(es)/pass-through(s) — the same as the uploaded photo, in the same positions.`
     );
+    if (architecture.features.length > 0) {
+      lines.push(
+        `- Preserve these architectural features unchanged: ${architecture.features.join("; ")}.`
+      );
+    }
+  }
+
+  return lines.join("\n");
 }
 
 function buildConceptSection(
@@ -206,8 +264,12 @@ export function buildIntelligentRoomPrompt(
 
   const negativePrompt = [...GLOBAL_NEGATIVE];
 
+  const sourceImage = input.isSecondPass
+    ? "supplied image (the result of the previous pass)"
+    : "uploaded photo";
+
   const lockSection = [
-    "LOCK THE ROOM — these must stay identical to the uploaded photo:",
+    `LOCK THE ROOM — these must stay identical to the ${sourceImage}:`,
     "- Keep the camera exactly identical — same angle, height, focal length and framing.",
     "- Keep the perspective and vanishing point identical.",
     "- Keep the lighting identical — same direction, colour and intensity.",
@@ -217,6 +279,17 @@ export function buildIntelligentRoomPrompt(
   ]
     .filter(Boolean)
     .join("\n");
+
+  // On the second pass the anchor furniture is already in place and is now as
+  // untouchable as the architecture.
+  const secondPassSection = input.isSecondPass
+    ? [
+        "THIS IS A SECOND EDITING PASS:",
+        "- The supplied image already contains the correct large furniture from the previous pass.",
+        "- Keep ALL furniture already present exactly as it is — same products, same positions, same colours, same scale.",
+        "- Add or replace ONLY the smaller items listed below. Change nothing else.",
+      ].join("\n")
+    : "";
 
   const { tasks, count } = plan
     ? formatReplacementTasks(plan)
@@ -252,6 +325,8 @@ export function buildIntelligentRoomPrompt(
     "- Never duplicate furniture.",
     "- Never crop the room.",
     "- Never zoom or reframe.",
+    "- Never add a door, window, arch or opening that is not already there.",
+    "- Never change an object of the same category as a planned item unless that exact object is named in the plan.",
     ...buildNeverMoveLines(plan?.preserved ?? []),
     "- Never invent furniture that is not in the plan.",
     "- Generate ONLY the requested replacements and placements.",
@@ -260,8 +335,10 @@ export function buildIntelligentRoomPrompt(
   // Sections are joined with blank lines; empty sections drop out entirely so
   // the prompt never contains dangling blank blocks.
   const prompt = [
-    `You are re-photographing the customer's real ${roomType} to show ${style} Koala Living furniture. The uploaded photo is the ground truth. Produce ONE photorealistic, full-room interior photograph — the whole room visible and uncropped.`,
+    `You are re-photographing the customer's real ${roomType} to show ${style} Koala Living furniture. The ${sourceImage} is the ground truth. Produce ONE photorealistic, full-room interior photograph — the whole room visible and uncropped.`,
     lockSection,
+    buildArchitectureLock(input.sceneGraph),
+    secondPassSection,
     planSection,
     preservationSection,
     referenceSection,
