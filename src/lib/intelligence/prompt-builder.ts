@@ -24,6 +24,7 @@ import type { RoomMeasurements } from "@/lib/prompts";
 import { buildScaleInstructions } from "@/lib/prompts";
 import { formatIdentity, type ProductProfile } from "./product-profile";
 import type { GenerationStage, ReplacementPlan } from "./replacement-planner";
+import type { BoundingBox } from "./scene-graph";
 import { canonicalCategoryLabel } from "./scene-taxonomy";
 import type { RoomAnalysis } from "./room-analysis";
 import type { SceneGraph } from "./scene-graph";
@@ -129,9 +130,11 @@ function formatReplacementTasks(plan: ReplacementPlan): {
     // Target the specific instance. When the room holds more than one object of
     // this category, name it spatially and say explicitly that the others stay.
     const sharedNoun = canonicalCategoryLabel(task.existingCanonicalCategory);
+    const region = formatRegion(task.boundingBox);
+    const regionClause = region ? ` [${region}]` : "";
     const target = task.existingSharesCategory
-      ? `${task.existingInstanceLabel}${colour}${where} — and ONLY that one — completely`
-      : `the existing ${task.existingCategory}${colour}${where} completely`;
+      ? `${task.existingInstanceLabel}${colour}${where}${regionClause} — and ONLY that one — completely`
+      : `the existing ${task.existingCategory}${colour}${where}${regionClause} completely`;
     const othersWarning = task.existingSharesCategory
       ? ` This room contains more than one ${sharedNoun}: change ONLY ${task.existingInstanceLabel}. Every other ${sharedNoun} must remain exactly as photographed.`
       : "";
@@ -185,6 +188,21 @@ function formatPreservationTasks(plan: ReplacementPlan): string[] {
         : "";
       return `- Keep ${entry.instanceLabel} exactly as photographed — same position, same colour, same material, same shape. Do NOT restyle, recolour, resize or replace it.${emphasis}`;
     });
+}
+
+/**
+ * Region grounding for an explicit replacement contract.
+ *
+ * There is no masking available on this provider (no image model on the API
+ * key advertises an edit/inpaint/mask method), so the region is STATED rather
+ * than applied: the object is named, located in words, and pinned to a
+ * normalised rectangle of the frame. That is the strongest grounding the
+ * provider actually supports, and it is described honestly.
+ */
+function formatRegion(box: BoundingBox | null): string {
+  if (!box) return "";
+  const pct = (n: number) => Math.round(Math.max(0, Math.min(1, n)) * 100);
+  return `region ≈ x ${pct(box.x)}–${pct(box.x + box.width)}%, y ${pct(box.y)}–${pct(box.y + box.height)}% of the frame`;
 }
 
 /**

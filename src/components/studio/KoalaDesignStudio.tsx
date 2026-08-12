@@ -74,6 +74,13 @@ import type {
   Product,
 } from "@/features/room-stylist/types";
 import {
+  buildReplacementContract,
+  type AssignmentInput,
+} from "@/lib/intelligence/replacement-assignment";
+import { getProductProfiles } from "@/lib/intelligence/product-profile";
+import { getAllProducts as getAllCatalogueProducts } from "@/lib/products";
+import { RegionAssignmentList } from "./RegionAssignmentList";
+import {
   designModeToConceptMode,
   isDesignMode,
   removeSelection,
@@ -1517,6 +1524,10 @@ export function KoalaDesignStudio() {
   const [replacePhase, setReplacePhase] = useState<"select" | "confirm">(
     "select"
   );
+  // Explicit region → product assignments. Empty until the customer chooses.
+  const [regionAssignments, setRegionAssignments] = useState<AssignmentInput[]>(
+    []
+  );
   const [generatedConcepts, setGeneratedConcepts] = useState<
     GeneratedConcept[]
   >([]);
@@ -1557,6 +1568,32 @@ export function KoalaDesignStudio() {
     2600
   );
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
+  // Full catalogue, so each region can offer only its own category.
+  const allCatalogueProducts = getAllCatalogueProducts();
+  // How many objects of each canonical category the room holds — drives the
+  // explicit "this one / all of them" question.
+  const sameCategoryCounts = detectedObjects.reduce<Record<string, number>>(
+    (counts, object) => {
+      counts[object.canonicalCategory] =
+        (counts[object.canonicalCategory] || 0) + 1;
+      return counts;
+    },
+    {}
+  );
+  // Objects the customer did NOT assign a product to, named so the confirm
+  // screen can promise they stay untouched.
+  const protectedSummary = detectedObjects
+    .filter(
+      (object) =>
+        !roomSelections.some(
+          (selection) =>
+            selection.sceneItemId === object.sceneItemId &&
+            regionAssignments.some(
+              (assignment) => assignment.selectionId === selection.selectionId
+            )
+        )
+    )
+    .map((object) => object.displayName);
   const activeConcept = generatedConcepts[selectedConceptIndex] || null;
   const activeImage = activeConcept?.imageBase64 || "";
   const activeImageDataUrl = activeConcept
@@ -1899,6 +1936,7 @@ export function KoalaDesignStudio() {
       setPreviewUrl(objectUrl);
       // A new photo invalidates everything selected against the old one.
       setRoomSelections([]);
+      setRegionAssignments([]);
       setDetectedObjects([]);
       setDetectionState("idle");
       // Record the photo's true pixel size so selections stay resolution
@@ -2008,10 +2046,31 @@ export function KoalaDesignStudio() {
     if (!designMode) return false;
 
     // "Surprise me" needs no picks — that is the whole point of it. "Replace
-    // items" has nothing to do until the customer names at least one product,
-    // because that flow adds nothing of its own.
-    if (designMode === "replace-items") return selectedProductIds.length > 0;
+    // items" needs at least one region with an actual product assigned to it,
+    // because that flow only ever executes explicit assignments.
+    if (designMode === "replace-items") return regionAssignments.length > 0;
     return true;
+  }
+
+  /**
+   * Build the explicit replacement contract from the customer's regions and
+   * product choices. Returns null when there is nothing explicit to send.
+   */
+  function buildContract() {
+    if (designMode !== "replace-items" || regionAssignments.length === 0) {
+      return null;
+    }
+    return buildReplacementContract({
+      selections: roomSelections,
+      assignments: regionAssignments,
+      profiles: getProductProfiles(allCatalogueProducts),
+      allDetected: detectedObjects.map((object) => ({
+        sceneItemId: object.sceneItemId,
+        canonicalCategory: object.canonicalCategory,
+        displayName: object.displayName,
+      })),
+      sourceImage: sourceImageSize,
+    });
   }
 
   function appendRoomMeasurements(formData: FormData) {
@@ -2049,7 +2108,20 @@ export function KoalaDesignStudio() {
       formData.append("image", image);
       formData.append("style", selectedStylePrompt);
       formData.append("roomType", roomType);
-      formData.append("selectedProductIds", JSON.stringify(selectedProductIds));
+      // In replace-items the products sent are exactly those the contract
+      // assigns — not a loose basket for the pipeline to interpret.
+      const contract = buildContract();
+      const contractProductIdList = contract
+        ? [...new Set(contract.assignments.map((a) => a.productId))]
+        : selectedProductIds;
+
+      formData.append(
+        "selectedProductIds",
+        JSON.stringify(contractProductIdList)
+      );
+      if (contract) {
+        formData.append("replacementContract", JSON.stringify(contract));
+      }
       // The pipeline's wire contract is unchanged — the intent is translated to
       // the concept-mode flag at this boundary. `designMode` is sent alongside
       // for debugging and future use; the route ignores unknown fields.
@@ -2298,6 +2370,7 @@ export function KoalaDesignStudio() {
     setSelectedProductIds([]);
     setDesignMode(null);
     setRoomSelections([]);
+    setRegionAssignments([]);
     setGeneratedConcepts([]);
     setProducts([]);
     setAddedRecommendationIds([]);
@@ -2534,7 +2607,35 @@ export function KoalaDesignStudio() {
           )}
         </div>
 
-        {renderProductBrowser("Choose replacements")}
+        <div>
+          <h3 className="font-serif text-xl text-[#F5F3EE]">
+            Choose a Koala product for each
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-[#9a978f]">
+            Only products that fit each object&apos;s category are offered.
+          </p>
+          <div className="mt-3">
+            <RegionAssignmentList
+              selections={roomSelections}
+              assignments={regionAssignments}
+              onAssignmentsChange={setRegionAssignments}
+              catalogue={allCatalogueProducts}
+              sameCategoryCounts={sameCategoryCounts}
+            />
+          </div>
+        </div>
+
+        {protectedSummary.length > 0 && (
+          <div className="v2-surface rounded-2xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
+              Protected — will not change
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+              {protectedSummary.join(", ")}, plus the walls, floor, ceiling,
+              windows and doors.
+            </p>
+          </div>
+        )}
       </section>
     );
   }
@@ -3280,6 +3381,7 @@ export function KoalaDesignStudio() {
                     // a genuine fork rather than a remembered setting.
                     setDesignMode(null);
                     setRoomSelections([]);
+                    setRegionAssignments([]);
                     setReplacePhase("select");
                   }
                   setStep(step - 1);

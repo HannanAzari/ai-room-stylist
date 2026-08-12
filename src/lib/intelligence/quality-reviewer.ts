@@ -386,10 +386,14 @@ export function formatPlanForReview(
     const instance = task.existingSharesCategory
       ? `${task.existingInstanceLabel} (NOT any other ${canonicalCategoryLabel(task.existingCanonicalCategory)} in the room)`
       : `the existing ${task.existingCategory}`;
+    const box = task.boundingBox;
+    const region = box
+      ? ` Target region ≈ x ${Math.round(box.x * 100)}–${Math.round((box.x + box.width) * 100)}%, y ${Math.round(box.y * 100)}–${Math.round((box.y + box.height) * 100)}% of the frame.`
+      : "";
     lines.push(
       `- Task ${task.taskId} (productId "${task.productId}"): ${instance}${
         task.existingColor ? `, ${task.existingColor}` : ""
-      }, ${task.location}, must be REMOVED and REPLACED by the ${task.productTitle}. Placement: ${task.placement}.\n    IDENTITY — ${formatIdentity(task.identity)}.`
+      }, ${task.location}, must be REMOVED and REPLACED by the ${task.productTitle}.${region} Placement: ${task.placement}.\n    IDENTITY — ${formatIdentity(task.identity)}.`
     );
   }
   for (const task of plan.additions) {
@@ -474,7 +478,7 @@ PART A — per-task compliance. For EVERY task listed in the plan below, answer 
   originalRemovedOrReplaced — for a REPLACE task, is the original object genuinely gone? Answer false if the original item is still visible anywhere in the room.
   genuineReplacement        — is this a real swap rather than the ORIGINAL object merely recoloured, re-textured or restyled? Look at shape, silhouette, proportions, arm/leg design. If the object has the same form as the original and only its colour or material changed, answer FALSE.
   noDuplicate               — does the product appear exactly once (no cloned or repeated copy)?
-  placementCorrect          — is it in the location/zone the task specified? For a task naming a specific instance (e.g. "the left sofa"), answer false if a DIFFERENT instance was changed instead.
+  placementCorrect          — is it in the TARGET REGION the task specified? Each task states the region as a percentage of the frame. Answer false if the product appears somewhere else, or if a DIFFERENT instance was changed instead of the one named.
   scaleCorrect              — is its physical size plausible relative to the room and other furniture?
   identityMatches           — compare the rendered object against the task's IDENTITY line field by field: configuration (seat count / modular layout / size), material, colour family, base/legs, shape and the listed identifying details. Answer TRUE only if it is recognisably THAT product. Answer FALSE if it is merely a similar item in the same style — for example the right category and colour but the wrong seat count, the wrong base, or missing a stated identifying detail.
   reasoning                 — one or two sentences explaining your verdict for this task, naming what you actually saw.

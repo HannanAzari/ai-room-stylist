@@ -32,6 +32,10 @@ import {
   type ReplacementPlan,
 } from "@/lib/intelligence/replacement-planner";
 import { buildReferenceManifest } from "@/lib/intelligence/reference-manifest";
+import {
+  contractToReplacementPlan,
+  type ReplacementContract,
+} from "@/lib/intelligence/replacement-assignment";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
   reviewGeneratedRoom,
@@ -103,6 +107,36 @@ function parseSelectedProductIds(rawProductIds: FormDataEntryValue | null) {
         (productId): productId is string => typeof productId === "string"
       )
     : [];
+}
+
+/**
+ * Parse the explicit replacement contract, if the client sent one.
+ *
+ * Malformed or empty contracts return null rather than throwing: the request
+ * then falls back to the inferring planner instead of failing outright. A
+ * contract with no assignments is treated as absent — there is nothing explicit
+ * to honour.
+ */
+function parseReplacementContract(
+  raw: FormDataEntryValue | null
+): ReplacementContract | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<ReplacementContract>;
+    if (!parsed || !Array.isArray(parsed.assignments)) return null;
+    if (parsed.assignments.length === 0) return null;
+
+    return {
+      assignments: parsed.assignments,
+      protectedItems: Array.isArray(parsed.protectedItems)
+        ? parsed.protectedItems
+        : [],
+      sourceImage: parsed.sourceImage ?? { width: 0, height: 0 },
+    };
+  } catch {
+    return null;
+  }
 }
 
 function parseOptionalPositiveNumber(value: FormDataEntryValue | null) {
@@ -284,6 +318,13 @@ async function handleGeneration(req: Request) {
     "[studio-gemini]"
   );
 
+  // An explicit replacement contract, when the customer built one, states
+  // exactly which region becomes which product. Scene analysis is then only
+  // needed for architecture and preservation context — not to work out intent.
+  const replacementContract = parseReplacementContract(
+    formData.get("replacementContract")
+  );
+
   // Phase 3 — structured room understanding via a scene graph (fallback-safe).
   const sceneGraph = await analyzeSceneGraph(image, {
     apiKey,
@@ -295,12 +336,18 @@ async function handleGeneration(req: Request) {
   // every selected product (replace an existing item or place it in a zone),
   // never touching fixed objects. Built before the prompt so generation knows
   // precisely what changes. Fully deterministic and fallback-safe.
-  const replacementPlan = buildReplacementPlan({
-    sceneGraph,
-    profiles,
-    selectedProductIds: orderedSelectedIds,
-    aiConceptMode,
-  });
+  // With an explicit contract the plan is a direct TRANSLATION of what the
+  // customer authorised — no category matching, no inference about which object
+  // a product belongs to. Without one (Surprise me), the planner infers as
+  // before.
+  const replacementPlan = replacementContract
+    ? contractToReplacementPlan(replacementContract, profiles)
+    : buildReplacementPlan({
+        sceneGraph,
+        profiles,
+        selectedProductIds: orderedSelectedIds,
+        aiConceptMode,
+      });
 
   // Reference manifest — decides which references are actually transmitted,
   // with a label binding each image to its plan task. The prompt and the
@@ -514,17 +561,27 @@ async function handleGeneration(req: Request) {
     ...replacementPlan.replacements.map((task) => task.productId),
     ...replacementPlan.additions.map((task) => task.productId),
   ]);
-  const confirmedMissingProductIds = new Set(
+  // A product only counts as "used in this room" if the reviewer's evidence
+  // says it is actually there AS THAT PRODUCT. Being present is not enough:
+  // the wrong category, a different-looking item, or the original merely
+  // recoloured all mean the customer would be shown something they cannot see.
+  const failedComplianceProductIds = new Set(
     (best.review?.taskResults ?? [])
-      .filter((task) => !task.productPresent)
+      .filter(
+        (task) =>
+          !task.productPresent ||
+          !task.categoryCorrect ||
+          !task.identityMatches ||
+          !task.genuineReplacement
+      )
       .map((task) => task.productId)
   );
   const verifiedProducts = products.filter((product) => {
     if (!plannedProductIds.has(product.id)) return false;
-    // Only drop when the reviewer actually ran and positively said it is
-    // absent; an unavailable review must not silently shrink the room package.
+    // Only drop on POSITIVE negative evidence; an unavailable review must not
+    // silently shrink the room package.
     if (best.reviewStatus === "review-unavailable") return true;
-    return !confirmedMissingProductIds.has(product.id);
+    return !failedComplianceProductIds.has(product.id);
   });
   const droppedProducts = products
     .filter((product) => !verifiedProducts.some((kept) => kept.id === product.id))

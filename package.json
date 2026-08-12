@@ -15,7 +15,8 @@
     "test:references": "tsx src/scripts/test-product-references.ts",
     "test:grounding": "tsx src/scripts/test-grounding-architecture.ts",
     "test:design-mode": "tsx src/scripts/test-design-mode.ts",
-    "test:object-selection": "tsx src/scripts/test-object-selection.ts"
+    "test:object-selection": "tsx src/scripts/test-object-selection.ts",
+    "test:region-assignment": "tsx src/scripts/test-region-assignment.ts"
   },
   "dependencies": {
     "next": "16.2.6",
