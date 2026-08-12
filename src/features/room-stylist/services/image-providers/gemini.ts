@@ -13,6 +13,9 @@ const GEMINI_IMAGE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/
  * products silently lose their reference again.
  */
 const MAX_GEMINI_PRODUCT_IMAGES = 2;
+/** Extra attempts for transient provider failures (5xx / 429). */
+const MAX_TRANSIENT_RETRIES = 2;
+const TRANSIENT_RETRY_BASE_MS = 800;
 
 type GeminiInlineData = {
   data?: string;
@@ -116,30 +119,55 @@ Gemini image editing priorities:
 - Make supplied product references visually clear, recognisable, and naturally placed.
 - Follow the AI concept mode instructions exactly; do not make unrelated changes when that mode is OFF.
 `;
-  const response = await fetch(GEMINI_IMAGE_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: geminiPrompt }, ...imageParts],
-        },
-      ],
-      generationConfig: {
-        responseModalities: ["IMAGE"],
+  const body = JSON.stringify({
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: geminiPrompt }, ...imageParts],
       },
-    }),
+    ],
+    generationConfig: {
+      responseModalities: ["IMAGE"],
+    },
   });
-  const data = (await response.json().catch(() => ({}))) as GeminiGenerateResponse;
 
-  if (!response.ok) {
+  /**
+   * Retry transient server errors.
+   *
+   * This endpoint returns intermittent 500 "Internal error encountered" for
+   * requests that succeed on a retry with byte-identical input — observed
+   * directly while testing multi-product rooms. Without this, one unlucky call
+   * fails an entire generation the customer has already waited a minute for.
+   * Only 5xx and 429 are retried; a 4xx is our own mistake and repeating it
+   * would just waste time and money.
+   */
+  let response: Response | null = null;
+  let data: GeminiGenerateResponse = {};
+
+  for (let attempt = 0; attempt < MAX_TRANSIENT_RETRIES + 1; attempt += 1) {
+    response = await fetch(GEMINI_IMAGE_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body,
+    });
+    data = (await response.json().catch(() => ({}))) as GeminiGenerateResponse;
+
+    const isTransient = response.status >= 500 || response.status === 429;
+    if (response.ok || !isTransient || attempt === MAX_TRANSIENT_RETRIES) break;
+
+    // Brief backoff; the provider usually recovers immediately.
+    await new Promise((resolve) =>
+      setTimeout(resolve, TRANSIENT_RETRY_BASE_MS * (attempt + 1))
+    );
+  }
+
+  if (!response || !response.ok) {
     throw new Error(
       data.error?.message ||
-        `Gemini image generation failed with status ${response.status}.`
+        `Gemini image generation failed with status ${response?.status}.`
     );
   }
 

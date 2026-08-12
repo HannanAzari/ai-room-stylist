@@ -14,7 +14,6 @@ import {
 import {
   formatMoney,
   getCategoryLabel,
-  getHeroDemoProducts,
   getPackagePricing,
   getProductsFromIds,
   getProductUrl,
@@ -85,11 +84,6 @@ import {
 } from "@/lib/intelligence/replacement-group";
 import type { CanonicalCategory } from "@/lib/intelligence/scene-taxonomy";
 import { getProductProfiles } from "@/lib/intelligence/product-profile";
-import {
-  packageProductIds,
-  selectRoomPackage,
-  type RoomPackage,
-} from "@/lib/intelligence/room-package";
 import { getAllProducts as getAllCatalogueProducts } from "@/lib/products";
 import { CategoryProductShelves } from "./CategoryProductShelves";
 import {
@@ -111,12 +105,13 @@ import {
 const CACHE_KEY = "ai-room-stylist:studio:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with Koala Design Studio.";
+// Customer-facing progress only. Never prompts, product ids or model internals.
 const loadingMessages = [
   "Understanding your room",
-  "Finding complementary Koala pieces",
-  "Balancing colour palette",
+  "Choosing your Koala pieces",
+  "Balancing colour and materials",
   "Refining layout and lighting",
-  "Creating your new space",
+  "Creating your Koala look",
 ];
 const refineChips = [
   "Make it brighter",
@@ -206,8 +201,6 @@ function triggerHaptic() {
   if (typeof navigator.vibrate === "function") navigator.vibrate(8);
 }
 
-// Curated demo products with verified real price + product URL.
-const heroDemoProducts = getHeroDemoProducts();
 
 // AI-suggested defaults so the customer can proceed without choosing.
 const DEFAULT_ROOM_TYPE = "living room";
@@ -1644,23 +1637,6 @@ export function KoalaDesignStudio() {
         )
     )
     .map((object) => object.displayName);
-  /**
-   * The curated Koala package for "Surprise me".
-   *
-   * Derived, not stored: it is decided from the room type and style BEFORE any
-   * image exists, and re-derives instantly if the customer changes either.
-   * Generation is only ever allowed to use these products, so the render and
-   * the shopping list describe the same set by construction.
-   */
-  const roomPackage: RoomPackage | null =
-    designMode === "surprise-me"
-      ? selectRoomPackage({
-          roomType,
-          style: getStylePrompt(style, customPrompt),
-          catalogue: allCatalogueProducts,
-          preferProductIds: selectedProductIds,
-        })
-      : null;
   const activeConcept = generatedConcepts[selectedConceptIndex] || null;
   const activeImage = activeConcept?.imageBase64 || "";
   const activeImageDataUrl = activeConcept
@@ -2030,13 +2006,6 @@ export function KoalaDesignStudio() {
     }
   }
 
-  function toggleProduct(productId: string) {
-    setSelectedProductIds((current) =>
-      current.includes(productId)
-        ? current.filter((id) => id !== productId)
-        : [...current, productId]
-    );
-  }
 
   function toggleRefinementProduct(productId: string) {
     setSelectedRefinementProductIds((current) =>
@@ -2191,8 +2160,16 @@ export function KoalaDesignStudio() {
     });
   }
 
-  async function handleGenerate() {
-    if (!image || !roomType || !selectedStylePrompt || !designMode) return;
+  /**
+   * Generate the room.
+   *
+   * `modeOverride` exists because Surprise me starts generation in the same tap
+   * that chooses the mode, and a `setState` has not landed by then — reading
+   * `designMode` here would see the previous value.
+   */
+  async function handleGenerate(modeOverride?: DesignMode) {
+    const mode = modeOverride ?? designMode;
+    if (!image || !roomType || !selectedStylePrompt || !mode) return;
 
     const validationError = getRoomPhotoValidationError(image);
 
@@ -2220,17 +2197,16 @@ export function KoalaDesignStudio() {
       formData.append("roomType", roomType);
       // In replace-items the products sent are exactly those the contract
       // assigns — not a loose basket for the pipeline to interpret.
-      const contract = buildContract();
+      const contract = mode === "replace-items" ? buildContract() : null;
       // Surprise me sends the curated package chosen before this request; it is
       // the complete product set, so generation cannot reach past it into the
       // wider catalogue.
-      const curatedIds =
-        designMode === "surprise-me" && roomPackage
-          ? packageProductIds(roomPackage)
-          : null;
+      // Surprise me lets the server choose the package from the analysed room;
+      // the client sends no product set at all.
+      const surpriseMe = mode === "surprise-me";
       const contractProductIdList = contract
         ? [...new Set(contract.assignments.map((a) => a.productId))]
-        : (curatedIds ?? selectedProductIds);
+        : selectedProductIds;
 
       formData.append(
         "selectedProductIds",
@@ -2250,18 +2226,14 @@ export function KoalaDesignStudio() {
         )
       );
 
-      if (curatedIds) {
-        formData.append("curatedPackage", "true");
-        formData.append("roomPackage", JSON.stringify(roomPackage));
+      if (surpriseMe) {
+        formData.append("surpriseMe", "true");
       }
       // The pipeline's wire contract is unchanged — the intent is translated to
       // the concept-mode flag at this boundary. `designMode` is sent alongside
       // for debugging and future use; the route ignores unknown fields.
-      formData.append(
-        "aiConceptMode",
-        String(designModeToConceptMode(designMode))
-      );
-      formData.append("designMode", designMode);
+      formData.append("aiConceptMode", String(designModeToConceptMode(mode)));
+      formData.append("designMode", mode);
       if (style === "Custom") {
         formData.append("customPrompt", customPrompt.trim());
       }
@@ -2517,60 +2489,6 @@ export function KoalaDesignStudio() {
     setSelectedRefinementProductIds([]);
     setOpenRefinementCategoryId(null);
     localStorage.removeItem(CACHE_KEY);
-  }
-
-  function renderProductBrowser(heading: string) {
-    return (
-      <div>
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-serif text-xl text-[#F5F3EE]">{heading}</h3>
-          {selectedProducts.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelectedSheetOpen(true)}
-              className="rounded-full bg-[#F5F3EE] px-3 py-1.5 text-xs font-semibold text-[#0b0b0d]"
-            >
-              {selectedProducts.length} selected
-            </button>
-          )}
-        </div>
-
-        <div className="mt-4 space-y-8">
-          {productsByCategory.map((category) => {
-            const count = category.products.filter((product) =>
-              selectedProductIds.includes(product.id)
-            ).length;
-
-            return (
-              <div key={category.id}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-[#F5F3EE]">
-                    {category.label}
-                  </p>
-                  {count > 0 && (
-                    <span className="text-[11px] font-semibold text-[#C9A57A]">
-                      {count} added
-                    </span>
-                  )}
-                </div>
-                <div className="v2-noscrollbar -mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-1">
-                  {category.products.map((product) => (
-                    <div key={product.id} className="w-[150px] shrink-0">
-                      <StudioProductCard
-                        product={product}
-                        selected={selectedProductIds.includes(product.id)}
-                        onToggle={() => toggleProduct(product.id)}
-                      />
-                    </div>
-                  ))}
-                  <div aria-hidden="true" className="w-1 shrink-0" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
   }
 
   /**
@@ -2886,8 +2804,12 @@ export function KoalaDesignStudio() {
             description="Let Koala create a complete look for your room."
             selected={designMode === "surprise-me"}
             onClick={() => {
+              // Surprise me is one tap. The room is analysed and a coherent
+              // Koala package chosen server-side, then generation starts
+              // immediately — no confirmation screen, because being asked to
+              // approve a package is the opposite of being surprised.
               setDesignMode("surprise-me");
-              setStep(3);
+              void handleGenerate("surprise-me");
             }}
             preview={previewUrl}
             accent="Koala designs it"
@@ -2900,157 +2822,9 @@ export function KoalaDesignStudio() {
       return renderReplaceItemsStep();
     }
 
-    if (step === 3) {
-      const roomLabel =
-        roomTypes.find((r) => r.id === roomType)?.label || "Living room";
-      const styleLabel =
-        designStyles.find((s) => s.id === style)?.title ||
-        style ||
-        "Modern Luxury";
-
-      return (
-        <section className="space-y-4">
-          <div className="v2-surface rounded-[26px] p-5">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
-              Surprise me
-            </p>
-            <h1 className="mt-2 font-serif text-3xl font-semibold leading-tight text-[#F5F3EE]">
-              Set the direction
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-[#9a978f]">
-              We&apos;ve suggested a direction from your photo. Change anything,
-              or just continue.
-            </p>
-
-            <SuggestionRow
-              label="Room"
-              value={roomLabel}
-              open={roomPickerOpen}
-              onToggle={() => {
-                setRoomPickerOpen((o) => !o);
-                setStylePickerOpen(false);
-              }}
-            />
-            {roomPickerOpen && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {roomTypes.map((item) => (
-                  <SelectChip
-                    key={item.id}
-                    active={roomType === item.id}
-                    onClick={() => {
-                      setRoomType(item.id);
-                      setRoomPickerOpen(false);
-                    }}
-                  >
-                    {item.label}
-                  </SelectChip>
-                ))}
-              </div>
-            )}
-
-            <SuggestionRow
-              label="Style"
-              value={styleLabel}
-              open={stylePickerOpen}
-              onToggle={() => {
-                setStylePickerOpen((o) => !o);
-                setRoomPickerOpen(false);
-              }}
-            />
-            {stylePickerOpen && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {designStyles.map((item) => (
-                  <SelectChip
-                    key={item.id}
-                    active={style === item.id}
-                    onClick={() => {
-                      setStyle(item.id);
-                      if (item.id !== "Custom") setStylePickerOpen(false);
-                    }}
-                  >
-                    {item.title}
-                  </SelectChip>
-                ))}
-              </div>
-            )}
-            {style === "Custom" && (
-              <textarea
-                value={customPrompt}
-                onChange={(event) => setCustomPrompt(event.target.value)}
-                placeholder="Describe the mood, colours, materials or layout you want..."
-                className="mt-3 min-h-20 w-full rounded-xl border border-white/10 bg-[#0B0B0B] p-3 text-sm text-[#F5F3EE] outline-none focus:border-[#C9A57A]"
-              />
-            )}
-          </div>
-
-          {/* The package is decided before generation and shown in full, so the
-              customer knows exactly which real products the room will use. */}
-          {roomPackage && roomPackage.items.length > 0 && (
-            <div className="v2-surface rounded-[26px] p-4">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
-                Your Koala package
-              </p>
-              <h3 className="mt-1 font-serif text-xl text-[#F5F3EE]">
-                {roomPackage.items.length} pieces, chosen to work together
-              </h3>
-              <ul className="mt-3 divide-y divide-white/[0.07]">
-                {roomPackage.items.map((item) => (
-                  <li key={item.productId} className="py-2.5 first:pt-0 last:pb-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
-                      {item.role}
-                    </p>
-                    <p className="mt-0.5 text-sm leading-5 text-[#F5F3EE]">
-                      {item.productName}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-[11px] leading-4 text-[#7d7a73]">
-                {roomPackage.rationale} Only these products will be used — your
-                room&apos;s walls, windows, doors and ceiling stay exactly as
-                they are.
-              </p>
-            </div>
-          )}
-
-          <div className="v2-surface rounded-2xl p-4">
-            <p className="text-sm leading-6 text-[#9a978f]">
-              Change the room or style above to get a different package. Pick a
-              piece you already love below and we&apos;ll build the look around
-              it — or leave it to us.
-            </p>
-          </div>
-
-          {heroDemoProducts.length > 0 && (
-            <div className="v2-surface rounded-[26px] p-4">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9A57A]">
-                    Featured collection
-                  </p>
-                  <h3 className="mt-1 font-serif text-xl text-[#F5F3EE]">
-                    Best sellers
-                  </h3>
-                </div>
-              </div>
-              <div className="v2-noscrollbar -mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-1">
-                {heroDemoProducts.map((product) => (
-                  <div key={product.id} className="w-[46%] shrink-0">
-                    <StudioProductCard
-                      product={product}
-                      selected={selectedProductIds.includes(product.id)}
-                      onToggle={() => toggleProduct(product.id)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {renderProductBrowser("Browse products")}
-        </section>
-      );
-    }
+    // Step 3 belongs to Replace items. Surprise me never lands here: it goes
+    // straight from the choice screen into generation and on to the result.
+    if (step === 3) return null;
 
     if (!activeImage) {
       return (
@@ -3183,7 +2957,7 @@ export function KoalaDesignStudio() {
             {
               label: "Regenerate",
               icon: <RegenerateIcon />,
-              onClick: handleGenerate,
+              onClick: () => void handleGenerate(),
             },
             { label: "Save", icon: <SaveIcon />, onClick: downloadImage },
             { label: "Share", icon: <ShareIcon />, onClick: shareImage },
@@ -3567,7 +3341,7 @@ export function KoalaDesignStudio() {
             {step === 3 &&
               !(designMode === "replace-items" && replacePhase === "select") && (
                 <StudioButton
-                  onClick={handleGenerate}
+                  onClick={() => void handleGenerate()}
                   disabled={!canGenerateConcept() || loading}
                   className="min-h-14 rounded-2xl text-base"
                 >

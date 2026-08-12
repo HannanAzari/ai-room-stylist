@@ -14,11 +14,16 @@ import {
   type RoomMeasurements,
 } from "@/lib/prompts";
 import {
+  getAllProducts,
   getProductsByIds,
   getProductsByIdsInSelectionOrder,
   getProductsForStyle,
   type Product,
 } from "@/lib/products";
+import {
+  packageProductIds,
+  selectRoomPackage,
+} from "@/lib/intelligence/room-package";
 import { getProductProfiles } from "@/lib/intelligence/product-profile";
 import {
   analyzeSceneGraph,
@@ -295,18 +300,54 @@ async function handleGeneration(req: Request) {
     );
   }
 
+  const roomMeasurements = parseRoomMeasurements(formData);
+  const apiKey = getStudioGeminiApiKey();
+
+  // An explicit replacement contract, when the customer built one, states
+  // exactly which region becomes which product.
+  const replacementContract = parseReplacementContract(
+    formData.get("replacementContract")
+  );
+
+  // Room understanding runs FIRST, because "Surprise me" needs to know what
+  // kind of room this is before it can choose a package for it. Fallback-safe.
+  const sceneGraph = await analyzeSceneGraph(image, {
+    apiKey,
+    roomTypeHint: roomType,
+  });
+
+  /**
+   * "Surprise me" — the customer asked for a designed room, not a form. The
+   * package is chosen HERE, from the room the scene graph just described, so
+   * the request needs no round trip and no confirmation screen. It is still
+   * structured data, and it is still the complete and only product set:
+   * generation may not reach past it into the wider catalogue.
+   */
+  const surpriseMe = formData.get("surpriseMe") === "true";
+  const autoPackage = surpriseMe
+    ? selectRoomPackage({
+        roomType: sceneGraph.roomType || roomType,
+        style,
+        catalogue: getAllProducts(),
+        // Anything the customer had already shown interest in anchors the room.
+        preferProductIds: selectedProductIds,
+      })
+    : null;
+
   // Customer selection order is preserved end-to-end: profiles, the replacement
   // plan and reference-image priority all follow the order the customer picked,
   // so if a budget forces prioritisation the earliest choices keep their
   // reference image.
-  const selectedProducts = getProductsByIdsInSelectionOrder(selectedProductIds);
+  const selectedProducts = autoPackage
+    ? getProductsByIdsInSelectionOrder(packageProductIds(autoPackage))
+    : getProductsByIdsInSelectionOrder(selectedProductIds);
   const orderedSelectedIds = selectedProducts.map((product) => product.id);
 
-  // "Surprise me" sends a CURATED PACKAGE that was chosen before this request
-  // was made. When one is present it is the complete and only product set —
-  // generation may not reach past it into the wider catalogue, so the render
-  // and the shopping list are guaranteed to describe the same products.
-  const curatedPackage = formData.get("curatedPackage") === "true";
+  // A curated package — chosen here for Surprise me, or sent by the client — is
+  // the complete product set, so the render and the shopping list are
+  // guaranteed to describe the same products.
+  const curatedPackage =
+    Boolean(autoPackage) || formData.get("curatedPackage") === "true";
   const styleProducts = getProductsForStyle(style);
   const products = curatedPackage
     ? selectedProducts
@@ -318,8 +359,6 @@ async function handleGeneration(req: Request) {
   // "add a few tasteful accessories" fallback introduce furniture that is not
   // in the catalogue and cannot be shopped.
   const effectiveConceptMode = curatedPackage ? false : aiConceptMode;
-  const roomMeasurements = parseRoomMeasurements(formData);
-  const apiKey = getStudioGeminiApiKey();
 
   // Phase 1 — product intelligence profiles.
   const profiles = getProductProfiles(products);
@@ -330,19 +369,6 @@ async function handleGeneration(req: Request) {
     products,
     "[studio-gemini]"
   );
-
-  // An explicit replacement contract, when the customer built one, states
-  // exactly which region becomes which product. Scene analysis is then only
-  // needed for architecture and preservation context — not to work out intent.
-  const replacementContract = parseReplacementContract(
-    formData.get("replacementContract")
-  );
-
-  // Phase 3 — structured room understanding via a scene graph (fallback-safe).
-  const sceneGraph = await analyzeSceneGraph(image, {
-    apiKey,
-    roomTypeHint: roomType,
-  });
   const roomAnalysis = sceneGraphToRoomAnalysis(sceneGraph);
 
   // Sprint 2 — deterministic replacement plan: exactly one destination for
@@ -431,6 +457,8 @@ async function handleGeneration(req: Request) {
     planDispositions: replacementPlan.dispositions.length,
     twoStage: useTwoStage,
     stages: stagePlans.map((entry) => entry.stage),
+    surpriseMe,
+    autoPackageItems: autoPackage?.items.length ?? 0,
   });
 
   // Generate → review → regenerate once on a contract failure, per stage, with
@@ -662,6 +690,9 @@ async function handleGeneration(req: Request) {
       negativePrompt,
       referenceManifest,
       referenceSkipped: referenceLoad.skipped,
+      // The package Surprise me chose behind the scenes, so a failed room can
+      // still be diagnosed against what was actually intended.
+      autoPackage,
       productsDropped: droppedProducts,
       // Number of images ACTUALLY transmitted with the request.
       referenceViewCount: referenceManifest.transmitted.length,

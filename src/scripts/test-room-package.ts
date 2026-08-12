@@ -349,6 +349,64 @@ section("7. Products used equal the validated package");
     productsUsed([]).every((id) => ids.includes(id)));
 }
 
+// --- 8. One-tap Surprise Me ------------------------------------------------
+section("8. Surprise Me needs no confirmation step");
+{
+  // The package is a pure function of the analysed room, so it can be chosen
+  // server-side mid-request — there is nothing to ask the customer first.
+  const scene = buildGoldenLivingRoomSceneGraph();
+  const chosen = selectRoomPackage({
+    roomType: scene.roomType,
+    style: "Modern Luxury",
+    catalogue,
+  });
+
+  check("a package can be chosen from the analysed room alone",
+    chosen.items.length > 0, `${chosen.items.length} items`);
+  check("it uses the room type the scene graph reported",
+    chosen.roomType === scene.roomType, chosen.roomType);
+  check("choosing needs no customer input beyond the photo",
+    JSON.stringify(packageProductIds(chosen)) ===
+      JSON.stringify(
+        packageProductIds(
+          selectRoomPackage({
+            roomType: scene.roomType,
+            style: "Modern Luxury",
+            catalogue,
+          })
+        )
+      ),
+    "must be reproducible without any confirmation state");
+
+  check("it is a meaningful room, not a single item",
+    chosen.items.length >= 4 && chosen.items.length <= MAX_PACKAGE_SIZE,
+    `${chosen.items.length}`);
+  check("every item is a real catalogue product",
+    chosen.items.every((i) => catalogue.some((p) => p.id === i.productId)));
+  check("no accessory padding — one product per category",
+    new Set(chosen.items.map((i) => i.category)).size === chosen.items.length);
+  check("invariants hold for the auto-chosen package",
+    checkPackageInvariants(chosen, catalogue).length === 0,
+    checkPackageInvariants(chosen, catalogue).join("; "));
+
+  // Products used must correspond to the package chosen behind the scenes.
+  const ids = packageProductIds(chosen);
+  check("products used are exactly the package",
+    ids.every((id) => catalogue.some((p) => p.id === id)) &&
+      new Set(ids).size === ids.length);
+
+  // An unanalysed room still yields a usable package rather than nothing.
+  const fallback = selectRoomPackage({
+    roomType: "",
+    style: "",
+    catalogue,
+  });
+  check("an unknown room type still produces a package",
+    fallback.items.length > 0, `${fallback.items.length}`);
+  check("...and it defaults to a living room composition",
+    fallback.items.some((i) => i.category === "sofas"));
+}
+
 console.log(`\n${"=".repeat(60)}`);
 console.log(`Passed: ${passed}   Failed: ${failed}`);
 if (failed > 0) {

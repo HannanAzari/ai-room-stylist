@@ -35,15 +35,18 @@ import type { ReplacementPlan } from "./replacement-planner";
  * Chosen against the ACTUAL request implementation in
  * `services/image-providers/gemini.ts`, which inlines every image as base64 in
  * a single `generateContent` call:
- *  - The studio caps the product set at 6 (`mergeProductsById`), so 6 primary
- *    views is full coverage for every reachable selection.
+ *  - Probing the live model, requests carrying the room photo plus 6 references
+ *    (7 images) failed consistently, while 5 and fewer succeeded. The provider
+ *    also returns intermittent 500s at smaller sizes, so this is a prudent
+ *    ceiling rather than a proven hard limit — the provider call retries on
+ *    5xx separately.
  *  - Inline request payloads must stay well under the API's 20MB request limit.
  *    Catalogue images average ~109KB and peak at ~786KB, so 6 images is ~0.7MB
  *    typical and ~4.7MB worst case, leaving ample headroom alongside the room
  *    photo. `MAX_TOTAL_REFERENCE_BYTES` enforces this independently of count.
  * This is a deliberate, bounded budget rather than an unlimited fan-out.
  */
-export const MAX_TRANSMITTED_REFERENCES = 6;
+export const MAX_TRANSMITTED_REFERENCES = 5;
 
 /** Byte ceiling for all product references combined (room photo excluded). */
 export const MAX_TOTAL_REFERENCE_BYTES = 12 * 1024 * 1024;
