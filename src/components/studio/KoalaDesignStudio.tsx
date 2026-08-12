@@ -76,9 +76,13 @@ import type {
 import {
   designModeToConceptMode,
   isDesignMode,
+  removeSelection,
   type DesignMode,
   type RoomSelection,
+  type SelectableObject,
+  type SourceImageSize,
 } from "@/lib/intelligence/room-selection";
+import { RoomObjectSelector } from "./RoomObjectSelector";
 import {
   assertStudioGeminiProvider,
   fetchStudioGemini,
@@ -1500,6 +1504,19 @@ export function KoalaDesignStudio() {
   // Regions of the room the customer wants changed. The selection UI lands in a
   // later sprint; the model and the plumbing are real from here on.
   const [roomSelections, setRoomSelections] = useState<RoomSelection[]>([]);
+  // Objects Smart Select found in the room photo. Empty until detection runs.
+  const [detectedObjects, setDetectedObjects] = useState<SelectableObject[]>([]);
+  const [detectionState, setDetectionState] = useState<
+    "idle" | "loading" | "ready" | "unavailable"
+  >("idle");
+  const [sourceImageSize, setSourceImageSize] = useState<SourceImageSize>({
+    width: 0,
+    height: 0,
+  });
+  // Replace-items has two stages within step 3: pick the objects, then confirm.
+  const [replacePhase, setReplacePhase] = useState<"select" | "confirm">(
+    "select"
+  );
   const [generatedConcepts, setGeneratedConcepts] = useState<
     GeneratedConcept[]
   >([]);
@@ -1821,6 +1838,52 @@ export function KoalaDesignStudio() {
     );
   }
 
+  /** True pixel dimensions of a photo, for resolution-independent selections. */
+  function measureImageSize(url: string): Promise<SourceImageSize> {
+    return new Promise((resolve) => {
+      const probe = new window.Image();
+      probe.onload = () =>
+        resolve({ width: probe.naturalWidth, height: probe.naturalHeight });
+      probe.onerror = () => resolve({ width: 0, height: 0 });
+      probe.src = url;
+    });
+  }
+
+  /**
+   * Run Smart Select against the uploaded photo.
+   *
+   * Fallback-safe: any failure leaves detection "unavailable" and the customer
+   * draws manually instead. Detection never blocks the flow.
+   */
+  async function detectRoomObjects() {
+    if (!image) return;
+
+    setDetectionState("loading");
+    try {
+      const formData = new FormData();
+      formData.append("image", image);
+      formData.append("roomType", roomType);
+
+      const response = await fetch("/api/studio/detect-objects", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !Array.isArray(data.objects)) {
+        setDetectedObjects([]);
+        setDetectionState("unavailable");
+        return;
+      }
+
+      setDetectedObjects(data.objects as SelectableObject[]);
+      setDetectionState(data.analysed ? "ready" : "unavailable");
+    } catch {
+      setDetectedObjects([]);
+      setDetectionState("unavailable");
+    }
+  }
+
   async function handleImageChange(file: File | null) {
     setError("");
 
@@ -1831,11 +1894,22 @@ export function KoalaDesignStudio() {
 
       if (previewUrl) URL.revokeObjectURL(previewUrl);
 
+      const objectUrl = URL.createObjectURL(normalizedFile);
       setImage(normalizedFile);
-      setPreviewUrl(URL.createObjectURL(normalizedFile));
+      setPreviewUrl(objectUrl);
+      // A new photo invalidates everything selected against the old one.
+      setRoomSelections([]);
+      setDetectedObjects([]);
+      setDetectionState("idle");
+      // Record the photo's true pixel size so selections stay resolution
+      // independent — they are stored normalised against these dimensions.
+      void measureImageSize(objectUrl).then(setSourceImageSize);
     } catch (normalizationError) {
       setImage(null);
       setPreviewUrl("");
+      setRoomSelections([]);
+      setDetectedObjects([]);
+      setDetectionState("idle");
       setError(
         normalizationError instanceof Error
           ? normalizationError.message
@@ -2295,17 +2369,14 @@ export function KoalaDesignStudio() {
   }
 
   /**
-   * "Replace items" — the customer names what changes.
+   * "Replace items" — the customer names exactly which objects may change.
    *
-   * This sprint establishes the screen and the state model. Region selection
-   * (Smart Select / Draw manually) lands next; the controls are visible but
-   * disabled so the destination is legible without pretending it works.
+   * Two phases inside this step: pick the objects, then confirm them. Nothing
+   * is authorised implicitly — an object is only changeable once the customer
+   * has selected that specific instance.
    */
   function renderReplaceItemsStep() {
-    const roomLabel =
-      roomTypes.find((r) => r.id === roomType)?.label || "Living room";
-    const styleLabel =
-      designStyles.find((s) => s.id === style)?.title || style || "Modern Luxury";
+    if (replacePhase === "confirm") return renderReplaceConfirmStep();
 
     return (
       <section className="space-y-4">
@@ -2316,53 +2387,100 @@ export function KoalaDesignStudio() {
           <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-[#F5F3EE]">
             Choose what to change
           </h1>
+          <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+            Anything you don&apos;t select stays exactly as it is.
+          </p>
         </div>
 
         {previewUrl && (
-          <div className="v2-hero-shadow relative w-full overflow-hidden rounded-[26px] border border-white/10 bg-[#0B0B0B]">
-            <img
-              src={previewUrl}
-              alt="Your room"
-              className="h-[46vh] w-full object-cover object-center"
-            />
-            <div className="absolute inset-x-0 bottom-0 space-y-2 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-3 pt-10">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/20 bg-black/50 px-2.5 text-[11px] font-semibold text-[#F5F3EE] opacity-60 backdrop-blur"
-                >
-                  Smart Select
-                  <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider">
-                    Soon
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/20 bg-black/50 px-2.5 text-[11px] font-semibold text-[#F5F3EE] opacity-60 backdrop-blur"
-                >
-                  Draw manually
-                  <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider">
-                    Soon
-                  </span>
-                </button>
-              </div>
-              <p className="text-center text-[11px] leading-4 text-[#d9d6cf]">
-                {roomSelections.length > 0
-                  ? `${roomSelections.length} area${roomSelections.length === 1 ? "" : "s"} selected`
-                  : "Tapping objects in your photo is coming next. For now, choose the pieces you want below."}
-              </p>
-            </div>
+          <RoomObjectSelector
+            imageUrl={previewUrl}
+            objects={detectedObjects}
+            selections={roomSelections}
+            onSelectionsChange={setRoomSelections}
+            sourceImage={sourceImageSize}
+            detectionState={detectionState}
+          />
+        )}
+
+        {roomSelections.length > 0 && (
+          <div className="v2-surface flex items-center justify-between gap-3 rounded-2xl p-4">
+            <span className="text-sm font-semibold text-[#F5F3EE]">
+              {roomSelections.length} item
+              {roomSelections.length === 1 ? "" : "s"} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setRoomSelections([])}
+              className="text-xs font-semibold text-[#9a978f] underline underline-offset-4"
+            >
+              Clear all
+            </button>
           </div>
         )}
+      </section>
+    );
+  }
+
+  /**
+   * Confirmation — the customer sees precisely what they authorised before any
+   * product is chosen. Same-category objects keep separate identities here
+   * ("Sofa 1", "Sofa 2") so it is unambiguous which one was picked.
+   */
+  function renderReplaceConfirmStep() {
+    const roomLabel =
+      roomTypes.find((r) => r.id === roomType)?.label || "Living room";
+    const styleLabel =
+      designStyles.find((s) => s.id === style)?.title || style || "Modern Luxury";
+
+    return (
+      <section className="space-y-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+            Confirm selection
+          </p>
+          <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-[#F5F3EE]">
+            {roomSelections.length} item
+            {roomSelections.length === 1 ? "" : "s"} selected
+          </h1>
+        </div>
+
+        <div className="v2-surface rounded-[26px] p-4">
+          <ul className="divide-y divide-white/[0.07]">
+            {roomSelections.map((selection) => (
+              <li
+                key={selection.selectionId}
+                className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-[#F5F3EE]">
+                    {selection.displayName}
+                  </span>
+                  {selection.originalObjectDescription && (
+                    <span className="mt-0.5 block truncate text-xs text-[#9a978f]">
+                      {selection.originalObjectDescription}
+                    </span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setRoomSelections(
+                      removeSelection(roomSelections, selection.selectionId)
+                    )
+                  }
+                  className="shrink-0 rounded-full border border-white/12 px-3 py-1.5 text-xs font-semibold text-[#9a978f] transition hover:border-white/25 hover:text-[#F5F3EE]"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <div className="v2-surface rounded-2xl p-4">
           <p className="text-sm leading-6 text-[#9a978f]">
-            Only the pieces you choose will change. Everything else in your room
-            stays exactly as it is.
+            Everything else in your room is protected and will not be changed.
           </p>
           <SuggestionRow
             label="Room"
@@ -2540,7 +2658,11 @@ export function KoalaDesignStudio() {
             selected={designMode === "replace-items"}
             onClick={() => {
               setDesignMode("replace-items");
+              setReplacePhase("select");
               setStep(3);
+              // Kick off detection as the screen opens so the customer is not
+              // left waiting on a blank overlay.
+              if (detectionState === "idle") void detectRoomObjects();
             }}
             preview={previewUrl}
             accent="Your choice"
@@ -3143,11 +3265,22 @@ export function KoalaDesignStudio() {
               <StudioButton
                 variant="ghost"
                 onClick={() => {
+                  // Inside replace-items, Back steps between its two phases
+                  // before it leaves the flow.
+                  if (
+                    step === 3 &&
+                    designMode === "replace-items" &&
+                    replacePhase === "confirm"
+                  ) {
+                    setReplacePhase("select");
+                    return;
+                  }
                   if (step === 3) {
                     // Leaving a flow clears its intent so the choice screen is
                     // a genuine fork rather than a remembered setting.
                     setDesignMode(null);
                     setRoomSelections([]);
+                    setReplacePhase("select");
                   }
                   setStep(step - 1);
                 }}
@@ -3166,15 +3299,30 @@ export function KoalaDesignStudio() {
                 Continue
               </StudioButton>
             )}
-            {step === 3 && (
-              <StudioButton
-                onClick={handleGenerate}
-                disabled={!canGenerateConcept() || loading}
-                className="min-h-14 rounded-2xl text-base"
-              >
-                {loading ? "Generating..." : "Generate my room"}
-              </StudioButton>
-            )}
+            {/* Selection phase: confirm what may change before choosing products. */}
+            {step === 3 &&
+              designMode === "replace-items" &&
+              replacePhase === "select" && (
+                <StudioButton
+                  onClick={() => setReplacePhase("confirm")}
+                  disabled={roomSelections.length === 0}
+                  className="min-h-14 rounded-2xl text-base"
+                >
+                  {roomSelections.length === 0
+                    ? "Select an item to continue"
+                    : `Continue with ${roomSelections.length}`}
+                </StudioButton>
+              )}
+            {step === 3 &&
+              !(designMode === "replace-items" && replacePhase === "select") && (
+                <StudioButton
+                  onClick={handleGenerate}
+                  disabled={!canGenerateConcept() || loading}
+                  className="min-h-14 rounded-2xl text-base"
+                >
+                  {loading ? "Generating..." : "Generate my room"}
+                </StudioButton>
+              )}
           </footer>
         )}
       </div>

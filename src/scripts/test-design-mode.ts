@@ -8,8 +8,8 @@
  * (`aiConceptMode`), plus the region model the selection UI will populate.
  */
 import {
+  assignSelectionCategory,
   createManualSelection,
-  createSmartSelection,
   designModeToConceptMode,
   hasUsableArea,
   isDesignMode,
@@ -105,17 +105,26 @@ section("Generation gating by mode");
 section("Room selection model");
 {
   resetSelectionIds();
+  const SOURCE = { width: 1400, height: 1050 };
 
   const manual = createManualSelection({
     boundingBox: { x: 0.1, y: 0.2, width: 0.3, height: 0.25 },
+    sourceImage: SOURCE,
   });
 
-  check("a manual selection has an id", manual.id.length > 0);
-  check("a manual selection records its method", manual.method === "manual");
+  check("a manual selection has an id", manual.selectionId.length > 0);
+  check(
+    "a manual selection records its method",
+    manual.selectionMethod === "manual"
+  );
+  check(
+    "a manual selection is tied to no scene object",
+    manual.sceneItemId === null,
+    "a drawn region is not a detected object"
+  );
   check(
     "a manual selection has NO fabricated confidence",
-    manual.confidence === undefined,
-    `got ${manual.confidence}`
+    manual.confidence === undefined
   );
   check(
     "confidence is genuinely absent, not zero",
@@ -123,67 +132,31 @@ section("Room selection model");
     "the key itself must be absent"
   );
   check(
-    "an unlabelled manual region still has a usable label",
-    manual.label.length > 0
+    "an unnamed manual region still has a usable name",
+    manual.displayName.length > 0
   );
   check(
     "an unknown category defaults honestly",
     manual.canonicalCategory === "unknown"
   );
-
-  const smart = createSmartSelection({
-    boundingBox: { x: 0.4, y: 0.5, width: 0.2, height: 0.2 },
-    label: "the left sofa",
-    canonicalCategory: "sofa",
-    confidence: 0.87,
-    instanceId: "sofa-main",
-  });
-
-  check("a smart selection records its method", smart.method === "smart");
-  check("a smart selection keeps a real confidence", smart.confidence === 0.87);
-  check("a smart selection links to its instance", smart.instanceId === "sofa-main");
-  check("a smart selection carries its category", smart.canonicalCategory === "sofa");
-
-  const smartNoConfidence = createSmartSelection({
-    boundingBox: { x: 0, y: 0, width: 0.5, height: 0.5 },
-    label: "the rug",
-    canonicalCategory: "rug",
-  });
   check(
-    "a smart selection with no model confidence omits the field",
-    !("confidence" in smartNoConfidence)
+    "a manual selection records the source image size",
+    manual.sourceImage.width === 1400 && manual.sourceImage.height === 1050
   );
 
-  const nonFinite = createSmartSelection({
-    boundingBox: { x: 0, y: 0, width: 0.5, height: 0.5 },
-    label: "the rug",
-    canonicalCategory: "rug",
-    confidence: Number.NaN,
-  });
+  const named = assignSelectionCategory(manual, "sofa");
+  check("a drawn region can be assigned a type", named.canonicalCategory === "sofa");
+  check("assigning a type names it", named.displayName === "Sofa");
   check(
-    "a non-finite confidence is discarded rather than stored",
-    !("confidence" in nonFinite)
+    "assigning a type does not invent confidence",
+    !("confidence" in named)
   );
 
-  const clamped = createSmartSelection({
-    boundingBox: { x: 0, y: 0, width: 0.5, height: 0.5 },
-    label: "the rug",
-    canonicalCategory: "rug",
-    confidence: 1.8,
-  });
-  check("an out-of-range confidence is clamped", clamped.confidence === 1);
-
-  check("ids are unique across selections", manual.id !== smart.id);
-  check(
-    "ids identify their method",
-    manual.id.startsWith("manual") && smart.id.startsWith("smart")
-  );
-
-  check("a real region is usable", hasUsableArea(smart));
+  check("a real region is usable", hasUsableArea(manual));
   check(
     "a degenerate region is not usable",
     !hasUsableArea({
-      ...smart,
+      ...manual,
       boundingBox: { x: 0.5, y: 0.5, width: 0, height: 0 },
     })
   );
