@@ -3,7 +3,10 @@ import {
   generateGeminiImage,
 } from "@/features/room-stylist/services/image-providers/gemini";
 import type { GeneratedImageResult } from "@/features/room-stylist/services/image-providers/types";
-import { loadProductReferenceImageFiles } from "@/lib/product-image-references";
+import {
+  loadProductReferenceImageFiles,
+  loadProductReferenceImages,
+} from "@/lib/product-image-references";
 import {
   buildRoomPreservationInstructions,
   buildScaleInstructions,
@@ -12,6 +15,7 @@ import {
 } from "@/lib/prompts";
 import {
   getProductsByIds,
+  getProductsByIdsInSelectionOrder,
   getProductsForStyle,
   type Product,
 } from "@/lib/products";
@@ -22,12 +26,14 @@ import {
 } from "@/lib/intelligence/scene-graph";
 import { buildIntelligentRoomPrompt } from "@/lib/intelligence/prompt-builder";
 import { buildReplacementPlan } from "@/lib/intelligence/replacement-planner";
+import { buildReferenceManifest } from "@/lib/intelligence/reference-manifest";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
   reviewGeneratedRoom,
   reviewRecommendsRegeneration,
   reviewToQualityScore,
   type QualityReview,
+  type ReviewStatus,
 } from "@/lib/intelligence/quality-reviewer";
 
 // Up to 2 generation attempts; regenerate once if the first is below the
@@ -216,7 +222,12 @@ async function handleGeneration(req: Request) {
     );
   }
 
-  const selectedProducts = getProductsByIds(selectedProductIds);
+  // Customer selection order is preserved end-to-end: profiles, the replacement
+  // plan and reference-image priority all follow the order the customer picked,
+  // so if a budget forces prioritisation the earliest choices keep their
+  // reference image.
+  const selectedProducts = getProductsByIdsInSelectionOrder(selectedProductIds);
+  const orderedSelectedIds = selectedProducts.map((product) => product.id);
   const styleProducts = getProductsForStyle(style);
   const products = aiConceptMode
     ? mergeProductsById(selectedProducts, styleProducts)
@@ -227,8 +238,9 @@ async function handleGeneration(req: Request) {
   // Phase 1 — product intelligence profiles.
   const profiles = getProductProfiles(products);
 
-  // Phase 2 — multiple product reference views.
-  const productImageFiles = await loadProductReferenceImageFiles(
+  // Phase 2 — product reference views, grouped per product and reporting what
+  // could not be loaded (and why) instead of dropping it silently.
+  const referenceLoad = await loadProductReferenceImages(
     products,
     "[studio-gemini]"
   );
@@ -247,9 +259,39 @@ async function handleGeneration(req: Request) {
   const replacementPlan = buildReplacementPlan({
     sceneGraph,
     profiles,
-    selectedProductIds,
+    selectedProductIds: orderedSelectedIds,
     aiConceptMode,
   });
+
+  // Reference manifest — decides which references are actually transmitted,
+  // with a label binding each image to its plan task. The prompt and the
+  // payload are both derived from this one structure so they cannot disagree
+  // about how many references exist or which product each depicts.
+  const referenceManifest = buildReferenceManifest({
+    loaded: referenceLoad.loaded,
+    plan: replacementPlan,
+    selectedProductIds: orderedSelectedIds,
+  });
+  const labelledProductImages = referenceManifest.transmitted.map((entry) => {
+    const loaded = referenceLoad.loaded.find(
+      (candidate) =>
+        candidate.productId === entry.productId &&
+        candidate.view === entry.viewType
+    );
+    return { label: entry.label, file: loaded!.file };
+  });
+
+  // A selected product with no transmitted reference is a real degradation:
+  // surface it rather than letting it pass unnoticed.
+  const uncoveredSelected = referenceManifest.uncoveredSelectedProductIds;
+  if (uncoveredSelected.length > 0) {
+    console.warn("[studio-gemini] selected products without a reference image", {
+      productIds: uncoveredSelected,
+      skipped: referenceLoad.skipped.filter((entry) =>
+        uncoveredSelected.includes(entry.productId)
+      ),
+    });
+  }
 
   // Phase 4 — dynamic prompt from scene graph + product intelligence + plan.
   const { prompt, negativePrompt } = buildIntelligentRoomPrompt({
@@ -260,9 +302,10 @@ async function handleGeneration(req: Request) {
     style,
     roomType,
     aiConceptMode,
-    selectedProductIds,
+    selectedProductIds: orderedSelectedIds,
     measurements: roomMeasurements,
-    referenceViewCount: productImageFiles.length,
+    // Transmitted count, never the loaded count.
+    referenceViewCount: referenceManifest.transmitted.length,
   });
 
   devLog("[studio-gemini] generation request", {
@@ -272,13 +315,16 @@ async function handleGeneration(req: Request) {
     roomType,
     style,
     aiConceptMode,
-    selectedProductIds,
-    productReferenceCount: productImageFiles.length,
+    selectedProductIds: orderedSelectedIds,
+    referencesTransmitted: referenceManifest.transmitted.length,
+    referencesSkipped: referenceLoad.skipped.length,
+    uncoveredSelectedProducts: uncoveredSelected,
     sceneAnalysed: sceneGraph.analysed,
     sceneFurnitureCount: sceneGraph.furniture.length,
     sceneFixedObjectCount: sceneGraph.fixedObjects.length,
     planReplacements: replacementPlan.replacements.length,
     planAdditions: replacementPlan.additions.length,
+    planDispositions: replacementPlan.dispositions.length,
   });
 
   // Phase 5 — generate, then run the second-pass Quality Reviewer V2 against the
@@ -288,16 +334,19 @@ async function handleGeneration(req: Request) {
   const attempts: {
     image: GeneratedImageResult;
     review: QualityReview | null;
+    reviewStatus: ReviewStatus;
+    reviewUnavailableReason: string | null;
   }[] = [];
 
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const generatedImage = await generateGeminiImage({
       prompt,
       roomImage: image,
-      productImages: productImageFiles,
+      productImages: [],
+      labelledProductImages,
       apiKey,
     });
-    const review = await reviewGeneratedRoom({
+    const outcome = await reviewGeneratedRoom({
       generatedBase64: generatedImage.imageBase64,
       generatedMimeType: generatedImage.mimeType,
       roomImage: image,
@@ -305,17 +354,42 @@ async function handleGeneration(req: Request) {
       apiKey,
     });
 
-    attempts.push({ image: generatedImage, review });
+    // The reviewer is fail-open by design (it must never block generation), but
+    // an unavailable review is NOT a pass and must never be silent.
+    if (outcome.status === "review-unavailable") {
+      console.warn("[studio-gemini] quality review unavailable", {
+        attempt: attempt + 1,
+        reason: outcome.reason,
+      });
+    }
 
-    // Accept as soon as the reviewer is satisfied (or unavailable).
-    if (!reviewRecommendsRegeneration(review)) break;
+    attempts.push({
+      image: generatedImage,
+      review: outcome.review,
+      reviewStatus: outcome.status,
+      reviewUnavailableReason:
+        outcome.status === "review-unavailable" ? outcome.reason : null,
+    });
+
+    // Accept as soon as the reviewer is satisfied (or could not run).
+    if (!reviewRecommendsRegeneration(outcome.review)) break;
   }
 
-  const best = attempts.reduce((bestSoFar, candidate) =>
-    (candidate.review?.overall ?? -1) > (bestSoFar.review?.overall ?? -1)
-      ? candidate
-      : bestSoFar
-  );
+  // Rank attempts by CONTRACT COMPLIANCE first, then quality score. A
+  // compliant-but-lower-scoring render is preferable to a prettier one that
+  // ignored the customer's product selection.
+  const best = attempts.reduce((bestSoFar, candidate) => {
+    const rank = (entry: (typeof attempts)[number]) => [
+      entry.review?.contractCompliant ? 1 : 0,
+      entry.review?.overall ?? -1,
+    ];
+    const [candidateCompliant, candidateOverall] = rank(candidate);
+    const [bestCompliant, bestOverall] = rank(bestSoFar);
+    if (candidateCompliant !== bestCompliant) {
+      return candidateCompliant > bestCompliant ? candidate : bestSoFar;
+    }
+    return candidateOverall > bestOverall ? candidate : bestSoFar;
+  });
   const autoRegenerated = attempts.length > 1;
   // Legacy 5-axis score kept populated for the existing debug view.
   const qualityScore: QualityScore | null = best.review
@@ -324,7 +398,10 @@ async function handleGeneration(req: Request) {
 
   devLog("[studio-gemini] generation result", {
     attempts: attempts.length,
+    reviewStatus: best.reviewStatus,
     recommendation: best.review?.recommendation ?? "n/a",
+    contractCompliant: best.review?.contractCompliant ?? null,
+    criticalFailures: best.review?.criticalFailures.map((f) => f.kind) ?? [],
     reviewOverall: best.review?.overall ?? null,
   });
 
@@ -344,11 +421,18 @@ async function handleGeneration(req: Request) {
       replacementPlan,
       qualityScore,
       qualityReview: best.review,
+      reviewStatus: best.reviewStatus,
+      reviewUnavailableReason: best.reviewUnavailableReason,
+      contractCompliant: best.review?.contractCompliant ?? null,
+      criticalFailures: best.review?.criticalFailures ?? [],
       generationAttempts: attempts.length,
       autoRegenerated,
       prompt,
       negativePrompt,
-      referenceViewCount: productImageFiles.length,
+      referenceManifest,
+      referenceSkipped: referenceLoad.skipped,
+      // Number of images ACTUALLY transmitted with the request.
+      referenceViewCount: referenceManifest.transmitted.length,
     };
   }
 

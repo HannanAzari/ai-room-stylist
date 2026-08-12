@@ -1605,6 +1605,13 @@ export function KoalaDesignStudio() {
         (aiDebug?.qualityScore as AiEvalRecord["qualityScore"]) ?? null,
       qualityReview:
         (aiDebug?.qualityReview as AiEvalRecord["qualityReview"]) ?? null,
+      reviewStatus:
+        (aiDebug?.reviewStatus as AiEvalRecord["reviewStatus"]) ?? null,
+      reviewUnavailableReason:
+        (aiDebug?.reviewUnavailableReason as string) ?? null,
+      referenceManifest:
+        (aiDebug?.referenceManifest as AiEvalRecord["referenceManifest"]) ??
+        null,
       generationAttempts: (aiDebug?.generationAttempts as number) ?? 0,
       autoRegenerated: Boolean(aiDebug?.autoRegenerated),
       referenceViewCount: (aiDebug?.referenceViewCount as number) ?? 0,

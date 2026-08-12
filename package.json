@@ -10,7 +10,9 @@
     "scrape:products": "tsx src/scripts/scrape-products.ts",
     "build:products": "tsx src/scripts/build-products-json.ts",
     "audit:products": "tsx src/scripts/audit-product-data.ts",
-    "intelligence:profiles": "tsx src/scripts/build-product-profiles.ts"
+    "intelligence:profiles": "tsx src/scripts/build-product-profiles.ts",
+    "test:accuracy": "tsx src/scripts/test-replacement-accuracy.ts",
+    "test:references": "tsx src/scripts/test-product-references.ts"
   },
   "dependencies": {
     "next": "16.2.6",

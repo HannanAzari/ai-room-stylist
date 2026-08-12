@@ -13,6 +13,11 @@ import {
   defaultRoomAnalysis,
   type RoomAnalysis,
 } from "./room-analysis";
+import {
+  canonicaliseCategory,
+  isReplaceableCanonical,
+  type CanonicalCategory,
+} from "./scene-taxonomy";
 
 const SCENE_MODEL = "gemini-2.5-flash";
 const SCENE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${SCENE_MODEL}:generateContent`;
@@ -27,7 +32,12 @@ export type BoundingBox = {
 
 export type SceneFurniture = {
   id: string;
+  /** The raw, free-text label the vision model returned (kept for debugging). */
   category: string;
+  /** Deterministically derived planner-facing category. */
+  canonicalCategory: CanonicalCategory;
+  /** False when the raw label matched no taxonomy rule. */
+  categoryRecognised: boolean;
   boundingBox: BoundingBox | null;
   approximateDepth: string;
   orientation: string;
@@ -60,36 +70,17 @@ export type SceneGraph = {
   analysed: boolean;
 };
 
-// Categories that must never be replaced/removed by generation.
-const NON_REPLACEABLE = [
-  "tv",
-  "television",
-  "air conditioner",
-  "air-conditioner",
-  "aircon",
-  "ac unit",
-  "curtain",
-  "blind",
-  "drape",
-  "window",
-  "door",
-  "radiator",
-  "fireplace",
-  "ceiling fan",
-  "built-in",
-  "built in",
-  "skirting",
-  "power outlet",
-  "light switch",
-  "smoke alarm",
-  "vent",
-  "column",
-  "beam",
-];
-
+/**
+ * May an object with this raw vision label be replaced by generation?
+ *
+ * Delegates to the canonical taxonomy. The previous implementation tested raw
+ * substrings, so "tv unit" matched the protected token "tv" and entertainment
+ * units became permanently non-replaceable. Canonicalisation resolves "tv unit"
+ * to the `tv-unit` furniture category first, so only an actual television is
+ * protected.
+ */
 export function isReplaceableCategory(category: string): boolean {
-  const c = (category || "").toLowerCase();
-  return !NON_REPLACEABLE.some((fixed) => c.includes(fixed));
+  return isReplaceableCanonical(canonicaliseCategory(category).canonical);
 }
 
 export function defaultSceneGraph(roomTypeHint = "living room"): SceneGraph {
@@ -185,13 +176,18 @@ function parseFurniture(value: unknown): SceneFurniture[] {
       const item = raw as Record<string, unknown>;
       const category = asString(item.category);
       if (!category) return null;
+      // Canonicalise once, here, so every downstream consumer reasons about the
+      // enum rather than re-parsing free text.
+      const { canonical, recognised } = canonicaliseCategory(category);
       // Enforce the fixed-object rule regardless of what the model returned.
       const modelReplaceable =
         typeof item.replaceable === "boolean" ? item.replaceable : true;
-      const replaceable = isReplaceableCategory(category) && modelReplaceable;
+      const replaceable = isReplaceableCanonical(canonical) && modelReplaceable;
       return {
         id: asString(item.id, `obj-${index + 1}`),
         category,
+        canonicalCategory: canonical,
+        categoryRecognised: recognised,
         boundingBox: parseBoundingBox(item.boundingBox),
         approximateDepth: asString(item.approximateDepth, "unknown"),
         orientation: asString(item.orientation, "unknown"),
@@ -257,7 +253,7 @@ const SCENE_PROMPT = `You are a computer-vision system that turns an interior ph
   "furniture": [
     {
       "id": string,
-      "category": string,           // e.g. "sofa", "rug", "coffee table", "chair", "floor lamp"
+      "category": string,           // prefer one of: sofa, armchair, chair, coffee table, dining table, desk, bed, bedside table, dresser, sideboard, bookshelf, tv unit, rug, mirror, artwork, floor lamp, table lamp, ceiling light, plant, tv, window, door, curtains, air conditioner, fireplace, radiator, ceiling fan, built-in
       "boundingBox": { "x": number, "y": number, "width": number, "height": number },  // normalised 0-1
       "approximateDepth": string,   // "foreground" | "midground" | "background"
       "orientation": string,        // e.g. "facing camera", "facing left"
@@ -273,7 +269,9 @@ const SCENE_PROMPT = `You are a computer-vision system that turns an interior ph
   "lighting": string,
   "palette": string[]               // dominant colours
 }
-Rules: DO NOT GUESS. Only include objects you can actually see; if unsure, use a low confidence. Report a confidence for every furniture and fixed object.`;
+Rules: DO NOT GUESS. Only include objects you can actually see; if unsure, use a low confidence. Report a confidence for every furniture and fixed object.
+IMPORTANT — a television and the unit it stands on are TWO SEPARATE objects. Report the screen itself as category "tv" (replaceable: false) and the cabinet/console beneath it as category "tv unit" (replaceable: true). Never merge them into one entry.
+List each distinct physical object separately; if the room contains two sofas, report two furniture entries with different ids.`;
 
 export async function analyzeSceneGraph(
   roomImage: File,

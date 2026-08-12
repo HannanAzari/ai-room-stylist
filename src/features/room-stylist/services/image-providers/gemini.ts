@@ -1,10 +1,17 @@
 import type {
   GeneratedImageResult,
   ImageProviderInput,
+  LabelledProductImage,
 } from "./types";
 
 const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
 const GEMINI_IMAGE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
+/**
+ * Cap applied ONLY to unlabelled `productImages` from the legacy routes. The
+ * studio path passes `labelledProductImages`, whose budget is decided by the
+ * reference manifest — this constant must never truncate those, or selected
+ * products silently lose their reference again.
+ */
 const MAX_GEMINI_PRODUCT_IMAGES = 2;
 
 type GeminiInlineData = {
@@ -55,6 +62,7 @@ export async function generateGeminiImage({
   prompt,
   roomImage,
   productImages,
+  labelledProductImages,
   apiKey: suppliedApiKey,
 }: ImageProviderInput): Promise<GeneratedImageResult> {
   const configuration = getGeminiImageConfiguration();
@@ -67,16 +75,40 @@ export async function generateGeminiImage({
     throw new Error("Gemini image provider is not configured.");
   }
 
-  // Gemini 2.5 Flash Image performs best with up to three input images.
-  const imageParts = await Promise.all(
-    [roomImage, ...productImages.slice(0, MAX_GEMINI_PRODUCT_IMAGES)].map(
-      fileToInlineData
-    )
-  );
+  // The studio path supplies labelled references from the reference manifest,
+  // which has already applied the count/byte budget — so they are sent in full
+  // rather than re-truncated here. Legacy routes still pass plain files, which
+  // keep the historical cap.
+  const references: LabelledProductImage[] =
+    labelledProductImages && labelledProductImages.length > 0
+      ? labelledProductImages
+      : productImages
+          .slice(0, MAX_GEMINI_PRODUCT_IMAGES)
+          .map((file) => ({ label: "", file }));
+
+  // Each product image is preceded by its own text part naming the product and
+  // its plan task, so the model is never left guessing which image is which.
+  const roomPart = await fileToInlineData(roomImage);
+  const referenceParts: Array<
+    { text: string } | { inline_data: { mime_type: string; data: string } }
+  > = [];
+  for (const reference of references) {
+    if (reference.label) referenceParts.push({ text: reference.label });
+    referenceParts.push(await fileToInlineData(reference.file));
+  }
+
+  const imageParts = [
+    {
+      text: "ROOM REFERENCE — the customer's real room. Preserve this camera, framing, lighting and architecture exactly.",
+    },
+    roomPart,
+    ...referenceParts,
+  ];
   const geminiPrompt = `${prompt}
 
 Gemini image editing priorities:
-- Treat the first supplied image as the fixed room and camera reference.
+- The image that follows the "ROOM REFERENCE" line is the fixed room and camera reference.
+- Every later image is preceded by a line naming its product and its task number. Use each product image ONLY for the task named in the line directly above it; never swap a product between tasks.
 - Preserve the full visible room, camera angle, walls, ceiling, floor, windows, TV location, and room proportions.
 - Do not crop closer, zoom in, or change the camera perspective.
 - Keep the whole room visible in the finished image.

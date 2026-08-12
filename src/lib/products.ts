@@ -48,8 +48,40 @@ export function getProductsForStyle(style: string): Product[] {
   );
 }
 
+/**
+ * Catalogue-ordered lookup. Kept for existing callers that do not care about
+ * ordering; prefer `getProductsByIdsInSelectionOrder` for anything that feeds
+ * the generation pipeline.
+ */
 export function getProductsByIds(ids: string[]): Product[] {
   return (products as Product[]).filter((p) => ids.includes(p.id));
+}
+
+/**
+ * Look products up in the order the CUSTOMER selected them, not catalogue
+ * order. The generation pipeline uses selection order end-to-end (profiles →
+ * replacement plan → reference-image allocation) so that when a budget forces
+ * prioritisation, the products the customer picked first are the ones that keep
+ * their reference image.
+ *
+ * Unknown ids are skipped (same as `getProductsByIds`); duplicates in `ids`
+ * yield a single entry so a product can never be planned or referenced twice.
+ */
+export function getProductsByIdsInSelectionOrder(ids: string[]): Product[] {
+  const catalogue = products as Product[];
+  const byId = new Map(catalogue.map((product) => [product.id, product]));
+  const seen = new Set<string>();
+  const ordered: Product[] = [];
+
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    const product = byId.get(id);
+    if (!product) continue;
+    seen.add(id);
+    ordered.push(product);
+  }
+
+  return ordered;
 }
 
 export function getPrimaryProductImageUrl(product: Product): string | null {

@@ -7,7 +7,11 @@
  */
 import type { RoomAnalysis } from "@/lib/intelligence/room-analysis";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
-import type { QualityReview } from "@/lib/intelligence/quality-reviewer";
+import type {
+  QualityReview,
+  ReviewStatus,
+} from "@/lib/intelligence/quality-reviewer";
+import type { ReferenceManifest } from "@/lib/intelligence/reference-manifest";
 import type { ReplacementPlan } from "@/lib/intelligence/replacement-planner";
 import type { SceneGraph } from "@/lib/intelligence/scene-graph";
 
@@ -31,8 +35,14 @@ export type AiEvalRecord = {
   imageHash: string | null;
   qualityScore: QualityScore | null;
   qualityReview: QualityReview | null;
+  /** Whether the quality gate actually ran; "review-unavailable" is not a pass. */
+  reviewStatus: ReviewStatus | null;
+  reviewUnavailableReason: string | null;
+  /** What was actually transmitted to the image model, and what was not. */
+  referenceManifest: ReferenceManifest | null;
   generationAttempts: number;
   autoRegenerated: boolean;
+  /** Count of references ACTUALLY transmitted (not merely loaded). */
   referenceViewCount: number;
   failureReason: string | null;
 };

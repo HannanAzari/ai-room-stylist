@@ -108,29 +108,59 @@ function formatReplacementTasks(plan: ReplacementPlan): {
   tasks: string[];
   count: number;
 } {
-  const tasks: string[] = [];
-  let n = 0;
+  const numbered: { taskId: number; line: string }[] = [];
 
   for (const task of plan.replacements) {
-    n += 1;
     const colour = task.existingColor ? ` (${task.existingColor})` : "";
     const where = task.location ? `, currently ${task.location}` : "";
-    tasks.push(
-      `Task ${n} — Remove the existing ${task.existingCategory}${colour} completely${where}, then replace it with the ${task.productTitle}. ${task.placement}.`
-    );
+    numbered.push({
+      taskId: task.taskId,
+      line: `Task ${task.taskId} — Remove the existing ${task.existingCategory}${colour} completely${where}, then replace it with the ${task.productTitle}. Place it ${task.placement}. This must be a genuine replacement: the new product's shape and silhouette must differ from the removed item wherever the reference image differs. Recolouring or restyling the original object is NOT acceptable.`,
+    });
   }
 
   // Only customer-selected products with no counterpart are part of the core
   // plan; complementary items are handled by the concept-mode section.
   for (const task of plan.additions.filter((a) => a.source === "selected")) {
-    n += 1;
     const placement = task.onWall
       ? `Place the ${task.productTitle} centred on ${task.target}`
       : `Place the ${task.productTitle} in ${task.target}`;
-    tasks.push(`Task ${n} — ${placement}. ${task.placement}.`);
+    numbered.push({
+      taskId: task.taskId,
+      line: `Task ${task.taskId} — ${placement}, ${task.placement}.`,
+    });
   }
 
-  return { tasks, count: n };
+  // Render in task-number order — the prompt tells the model to execute them
+  // "in order", so the listing must actually be ordered. Task numbering comes
+  // from the plan, so the prompt, the reference-image labels and the reviewer
+  // all refer to the same task by the same number.
+  numbered.sort((a, b) => a.taskId - b.taskId);
+
+  return { tasks: numbered.map((entry) => entry.line), count: numbered.length };
+}
+
+/**
+ * Explicit "leave this alone" instructions for furniture that COULD have been
+ * replaced but that no selected product targets.
+ *
+ * This closes the bug where such an item appeared in neither the replacement
+ * list nor the preserved list: the prompt said nothing about it, and the image
+ * model resolved that silence by recolouring it instead of leaving it be.
+ */
+function formatPreservationTasks(plan: ReplacementPlan): string[] {
+  return plan.dispositions
+    .filter(
+      (entry) =>
+        entry.disposition === "preserve" &&
+        entry.canonicalCategory !== "unknown" &&
+        // Fixed objects are already covered by the "never move" section.
+        entry.reason.startsWith("Replaceable furniture")
+    )
+    .map(
+      (entry) =>
+        `- Keep the existing ${entry.rawCategory} exactly as photographed — same position, same colour, same material, same shape. Do NOT restyle, recolour, resize or replace it.`
+    );
 }
 
 function buildConceptSection(
@@ -154,7 +184,7 @@ function buildConceptSection(
       ? complementary
           .map(
             (task) =>
-              `  - ${task.productTitle} (${task.productCategory}) — ${task.onWall ? `on ${task.target}` : `in ${task.target}`}`
+              `  - Task ${task.taskId}: ${task.productTitle} (${task.productCategory}) — ${task.onWall ? `on ${task.target}` : `in ${task.target}`}`
           )
           .join("\n")
       : "  - a few subtle Koala-style accessories (cushions, throws, small decor) only where the room clearly needs them";
@@ -200,9 +230,21 @@ export function buildIntelligentRoomPrompt(
         ].join("\n")
       : "No product changes were requested — keep the room exactly as it appears in the uploaded photo, changing nothing.";
 
+  // `referenceViewCount` MUST be the number of images actually transmitted (the
+  // reference manifest's transmitted count), never the number loaded from disk.
+  // Claiming more references than were sent taught the model to expect images
+  // that never arrived.
   const referenceSection = input.referenceViewCount
-    ? `PRODUCT REFERENCES — you are given ${input.referenceViewCount} product reference image(s). Treat them as the EXACT appearance of the named products: reproduce their shape, colour, material, finish and proportions faithfully. Do not reinterpret or restyle them.`
+    ? `PRODUCT REFERENCES — you are given ${input.referenceViewCount} product reference image(s). Each one is introduced by a text line naming its task and product. Treat the image as the EXACT appearance of that product: reproduce its shape, colour, material, finish and proportions faithfully. Do not reinterpret or restyle it, and do not swap products between tasks.`
     : "";
+
+  const preservationTasks = plan ? formatPreservationTasks(plan) : [];
+  const preservationSection =
+    preservationTasks.length > 0
+      ? ["PRESERVE EXACTLY — existing furniture that is NOT being replaced:", ...preservationTasks].join(
+          "\n"
+        )
+      : "";
 
   const neverSection = [
     "DO NOT:",
@@ -215,29 +257,26 @@ export function buildIntelligentRoomPrompt(
     "- Generate ONLY the requested replacements and placements.",
   ].join("\n");
 
+  // Sections are joined with blank lines; empty sections drop out entirely so
+  // the prompt never contains dangling blank blocks.
   const prompt = [
     `You are re-photographing the customer's real ${roomType} to show ${style} Koala Living furniture. The uploaded photo is the ground truth. Produce ONE photorealistic, full-room interior photograph — the whole room visible and uncropped.`,
-    "",
     lockSection,
-    "",
     planSection,
-    "",
+    preservationSection,
     referenceSection,
-    "",
     buildConceptSection(aiConceptMode, plan),
-    "",
     neverSection,
-    "",
-    "PLACEMENT & SCALE:",
-    buildScaleInstructions(roomType),
-    "- Seat replacement furniture exactly where the removed item stood; anchor rugs under furniture; centre coffee tables; hang wall art centred at believable height.",
-    "",
+    [
+      "PLACEMENT & SCALE:",
+      buildScaleInstructions(roomType),
+      "- Seat replacement furniture exactly where the removed item stood; anchor rugs under furniture; centre coffee tables; hang wall art centred at believable height.",
+    ].join("\n"),
     `AVOID: ${negativePrompt.join("; ")}.`,
-    "",
     "Output: a single photorealistic, full-room interior photograph — whole room visible, uncropped, with the camera, perspective, lighting and architecture unchanged from the uploaded photo.",
   ]
-    .filter((line) => line !== null && line !== undefined)
-    .join("\n");
+    .filter((section) => typeof section === "string" && section.trim() !== "")
+    .join("\n\n");
 
   return { prompt, negativePrompt };
 }

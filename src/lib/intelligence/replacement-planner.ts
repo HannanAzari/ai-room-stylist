@@ -1,5 +1,5 @@
 /**
- * Replacement Planner (Sprint 2).
+ * Replacement Planner (Sprint 2, hardened by the Replacement Accuracy sprint).
  *
  * Turns the structured Scene Graph + the customer's selected Koala products into
  * an explicit, DETERMINISTIC replacement plan BEFORE any prompt is built. For
@@ -8,33 +8,59 @@
  *   - PLACE the product into a named empty zone when nothing in the room plays
  *     its role.
  *
- * This makes generation deterministic about *what changes*, which is the single
- * biggest lever against hallucinated / duplicated / removed furniture.
- *
- * Guarantees (mirrors the sprint's rules):
+ * Guarantees (enforced, and covered by the planner invariant tests):
  *  - Every selected product has EXACTLY ONE destination (replace or place).
+ *  - Every DETECTED furniture item receives EXACTLY ONE disposition. There is no
+ *    silent planner state: an item is REPLACE, PRESERVE, REMOVE or IGNORE, and
+ *    IGNORE always carries a documented safe reason. Previously an item that was
+ *    replaceable but matched no product appeared in neither `replacements` nor
+ *    `preserved`, so the prompt said nothing about it at all — the image model
+ *    then tended to recolour it instead of leaving it alone.
  *  - No existing furniture item is targeted twice (never duplicate furniture).
  *  - Fixed architecture and fixed objects (TV, AC, curtains, doors, windows,
- *    ceiling, walls, floor, built-ins) are NEVER replaced — only furniture the
- *    scene graph flagged `replaceable` is eligible.
- *  - When several existing items match a product, the highest-confidence one is
- *    chosen.
+ *    built-ins) are NEVER replaced — replaceability comes from the canonical
+ *    taxonomy, not raw substring matching.
+ *  - Products only ever match scene items whose CANONICAL category their own
+ *    category is declared to target, so cross-category swaps are structurally
+ *    impossible.
+ *  - Task numbering is assigned here, once, and reused verbatim by the prompt
+ *    builder, the reference manifest and the reviewer, so the three can never
+ *    disagree about which task is which.
  *
  * Pure module — no vision/network calls, so it is fully deterministic and
  * fallback-safe (an empty/low-confidence scene graph degrades to placements).
  */
 import type { ProductProfile } from "./product-profile";
 import type { BoundingBox, SceneFurniture, SceneGraph } from "./scene-graph";
+import {
+  canonicalTargetsForProductCategory,
+  isWallMountedProductCategory,
+  productCategoryMatchScore,
+  type CanonicalCategory,
+} from "./scene-taxonomy";
+
+/**
+ * Detections at or below this confidence are not asserted in the prompt. Telling
+ * the image model to "preserve" something the vision model is unsure exists can
+ * make it hallucinate that object into the render, so low-confidence unmatched
+ * detections are explicitly IGNOREd instead.
+ */
+export const LOW_CONFIDENCE_THRESHOLD = 0.35;
 
 /** Replace a specific existing item with a selected product. */
 export type ReplacementTask = {
   kind: "replace";
+  taskId: number;
   existingItemId: string;
   existingCategory: string;
+  existingCanonicalCategory: CanonicalCategory;
   existingColor: string;
   productId: string;
   productTitle: string;
+  /** Human-readable label, e.g. "entertainment unit". */
   productCategory: string;
+  /** Catalogue category slug, e.g. "tv-units" — used for taxonomy checks. */
+  productCategorySlug: string;
   placement: string;
   location: string;
   boundingBox: BoundingBox | null;
@@ -45,9 +71,13 @@ export type ReplacementTask = {
 /** Place a product into an empty zone (no existing counterpart to replace). */
 export type PlacementTask = {
   kind: "place";
+  taskId: number;
   productId: string;
   productTitle: string;
+  /** Human-readable label, e.g. "entertainment unit". */
   productCategory: string;
+  /** Catalogue category slug, e.g. "tv-units" — used for taxonomy checks. */
+  productCategorySlug: string;
   target: string;
   placement: string;
   // "selected" — a customer-selected product with no existing counterpart to
@@ -58,11 +88,34 @@ export type PlacementTask = {
   onWall: boolean;
 };
 
+/** What generation must do with a detected room object. */
+export type DispositionKind = "replace" | "preserve" | "remove" | "ignore";
+
+/**
+ * The explicit fate of one detected furniture item. Every detected item gets
+ * exactly one of these — that is the planner's core invariant.
+ */
+export type FurnitureDisposition = {
+  itemId: string;
+  rawCategory: string;
+  canonicalCategory: CanonicalCategory;
+  disposition: DispositionKind;
+  /** Why this disposition was chosen. Always populated. */
+  reason: string;
+  /** Set only for `replace`. */
+  productId: string | null;
+  /** Set only for `replace`; matches the prompt's task numbering. */
+  taskId: number | null;
+};
+
 export type ReplacementPlan = {
   replacements: ReplacementTask[];
   additions: PlacementTask[];
   // Fixed objects + non-replaceable furniture that must be preserved untouched.
+  // Retained for prompt/reviewer compatibility; `dispositions` is authoritative.
   preserved: string[];
+  /** Exactly one entry per detected furniture item. */
+  dispositions: FurnitureDisposition[];
   analysed: boolean;
 };
 
@@ -72,52 +125,6 @@ export type ReplacementPlanInput = {
   selectedProductIds?: string[];
   aiConceptMode?: boolean;
 };
-
-// Extra category synonyms so a scene-graph category string (free-form, e.g.
-// "floor lamp") still matches a product's slug/label (e.g. "lighting"/"light").
-const CATEGORY_SYNONYMS: Record<string, string[]> = {
-  sofas: ["sofa", "couch", "settee", "loveseat", "sectional", "lounge"],
-  "coffee-tables": [
-    "coffee table",
-    "centre table",
-    "center table",
-    "cocktail table",
-  ],
-  "dining-tables": ["dining table", "dining"],
-  chairs: ["chair", "armchair", "accent chair", "stool", "seat"],
-  lighting: ["lamp", "light", "pendant", "chandelier", "sconce"],
-  rugs: ["rug", "carpet", "mat"],
-  "tv-units": [
-    "tv unit",
-    "media unit",
-    "entertainment unit",
-    "console",
-    "sideboard",
-  ],
-  beds: ["bed"],
-  "bed-sides": ["bedside", "nightstand", "bedside table"],
-  decor: ["art", "painting", "artwork", "mirror", "vase", "plant", "decor"],
-};
-
-// Products whose natural home is a wall/empty-wall zone rather than the floor.
-const WALL_CATEGORIES = new Set(["decor"]);
-
-function normalise(value: string): string {
-  return (value || "").toLowerCase().trim();
-}
-
-/** Does a scene-graph furniture category correspond to this product? */
-function categoryMatches(
-  sceneCategory: string,
-  profile: ProductProfile
-): boolean {
-  const sc = normalise(sceneCategory);
-  if (!sc) return false;
-  const label = normalise(profile.categoryLabel);
-  if (label && (sc.includes(label) || label.includes(sc))) return true;
-  const synonyms = CATEGORY_SYNONYMS[profile.category] || [];
-  return synonyms.some((syn) => sc.includes(syn));
-}
 
 /** Human-readable position of a bounding box, for prompt grounding. */
 export function describeLocation(box: BoundingBox | null): string {
@@ -129,27 +136,57 @@ export function describeLocation(box: BoundingBox | null): string {
   return `${vertical} ${horizontal} of the room`;
 }
 
-function pickTargetZone(
-  profile: ProductProfile,
-  sceneGraph: SceneGraph | undefined
-): string {
-  const wallZones = sceneGraph?.emptyWalls ?? [];
-  const floorZones = sceneGraph?.emptyFloorAreas ?? [];
-  if (WALL_CATEGORIES.has(profile.category)) {
-    return wallZones[0] || "the largest empty wall";
+/**
+ * Deterministic, non-repeating placement-zone allocator.
+ *
+ * Additions used to all read `emptyWalls[0]` / `emptyFloorAreas[0]`, so two
+ * unmatched products were told to occupy the identical spot. This hands out
+ * each detected zone at most once, preferring category-appropriate zones, and
+ * only falls back to the product's own category placement rule (which is far
+ * more specific than "the main open floor area") once the pool is exhausted.
+ */
+class ZoneAllocator {
+  private readonly wallZones: string[];
+  private readonly floorZones: string[];
+  private wallIndex = 0;
+  private floorIndex = 0;
+
+  constructor(sceneGraph?: SceneGraph) {
+    this.wallZones = [...(sceneGraph?.emptyWalls ?? [])];
+    this.floorZones = [...(sceneGraph?.emptyFloorAreas ?? [])];
   }
-  return floorZones[0] || "the main open floor area";
+
+  allocate(profile: ProductProfile): string {
+    const onWall = isWallMountedProductCategory(profile.category);
+    const pool = onWall ? this.wallZones : this.floorZones;
+    const index = onWall ? this.wallIndex : this.floorIndex;
+
+    if (index < pool.length) {
+      if (onWall) this.wallIndex += 1;
+      else this.floorIndex += 1;
+      return pool[index];
+    }
+
+    // Pool exhausted — use the product category's own placement rule, which is
+    // specific ("centred in front of the sofa...") rather than a vague zone.
+    const rule = profile.replacementRules[0];
+    if (rule?.placement) return rule.placement;
+    return onWall ? "the largest empty wall" : "the main open floor area";
+  }
 }
 
 function toReplacement(
   profile: ProductProfile,
-  item: SceneFurniture
+  item: SceneFurniture,
+  taskId: number
 ): ReplacementTask {
   const rule = profile.replacementRules[0];
   return {
     kind: "replace",
+    taskId,
     existingItemId: item.id,
     existingCategory: item.category,
+    existingCanonicalCategory: item.canonicalCategory,
     existingColor:
       item.dominantColor && item.dominantColor !== "unknown"
         ? item.dominantColor
@@ -157,6 +194,7 @@ function toReplacement(
     productId: profile.id,
     productTitle: profile.title,
     productCategory: profile.categoryLabel,
+    productCategorySlug: profile.category,
     placement: rule?.placement || "in its natural location for this room",
     location: describeLocation(item.boundingBox),
     boundingBox: item.boundingBox,
@@ -167,19 +205,22 @@ function toReplacement(
 
 function toPlacement(
   profile: ProductProfile,
-  sceneGraph: SceneGraph | undefined,
-  source: "selected" | "complementary"
+  target: string,
+  source: "selected" | "complementary",
+  taskId: number
 ): PlacementTask {
   const rule = profile.replacementRules[0];
   return {
     kind: "place",
+    taskId,
     productId: profile.id,
     productTitle: profile.title,
     productCategory: profile.categoryLabel,
-    target: pickTargetZone(profile, sceneGraph),
+    productCategorySlug: profile.category,
+    target,
     placement: rule?.placement || "in its natural location for this room",
     source,
-    onWall: WALL_CATEGORIES.has(profile.category),
+    onWall: isWallMountedProductCategory(profile.category),
   };
 }
 
@@ -195,60 +236,137 @@ export function buildReplacementPlan(
 
   // Partition exactly like the prompt builder: user-selected products drive
   // replacements; complementary (concept-mode) products are always additions.
+  // Selection order is preserved by ordering from `selectedProductIds` rather
+  // than from the (catalogue-ordered) profiles array.
+  const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
   const selectedProfiles = selectedIds.size
-    ? profiles.filter((p) => selectedIds.has(p.id))
+    ? (input.selectedProductIds || [])
+        .map((id) => profilesById.get(id))
+        .filter((profile): profile is ProductProfile => Boolean(profile))
     : profiles;
+  const selectedProfileIds = new Set(selectedProfiles.map((p) => p.id));
   const complementaryProfiles = selectedIds.size
-    ? profiles.filter((p) => !selectedIds.has(p.id))
+    ? profiles.filter((profile) => !selectedProfileIds.has(profile.id))
     : [];
 
+  const allFurniture = sceneGraph?.furniture ?? [];
   // Only furniture the scene graph flagged replaceable is ever eligible. Fixed
   // objects and non-replaceable furniture are excluded here, so architecture
   // and TV/AC/curtains/etc. can never end up in a replacement task.
-  const eligibleItems = (sceneGraph?.furniture ?? []).filter(
-    (item) => item.replaceable
-  );
+  const eligibleItems = allFurniture.filter((item) => item.replaceable);
   const usedItemIds = new Set<string>();
 
   const replacements: ReplacementTask[] = [];
   const additions: PlacementTask[] = [];
+  const zones = new ZoneAllocator(sceneGraph);
+  let nextTaskId = 1;
 
-  // Deterministic greedy assignment in selection order: each product takes the
-  // highest-confidence unused matching item; if none is free it is placed.
+  // Deterministic greedy assignment in CUSTOMER SELECTION order: each product
+  // takes the best-matching, highest-confidence unused item; if none is free it
+  // is placed into an allocated zone.
   for (const profile of selectedProfiles) {
     const candidates = eligibleItems
-      .filter(
-        (item) =>
-          !usedItemIds.has(item.id) && categoryMatches(item.category, profile)
-      )
-      // Highest confidence first; break ties by id for full determinism.
+      .filter((item) => !usedItemIds.has(item.id))
+      .map((item) => ({
+        item,
+        score: productCategoryMatchScore(profile.category, item.canonicalCategory),
+      }))
+      // Score 0 means this product category may never replace this canonical
+      // category — the structural guard against cross-category swaps.
+      .filter((entry) => entry.score > 0)
       .sort(
-        (a, b) => b.confidence - a.confidence || a.id.localeCompare(b.id)
+        (a, b) =>
+          b.score - a.score ||
+          b.item.confidence - a.item.confidence ||
+          a.item.id.localeCompare(b.item.id)
       );
 
-    const match = candidates[0];
+    const match = candidates[0]?.item;
     if (match) {
       usedItemIds.add(match.id);
-      replacements.push(toReplacement(profile, match));
+      replacements.push(toReplacement(profile, match, nextTaskId));
     } else {
-      additions.push(toPlacement(profile, sceneGraph, "selected"));
+      additions.push(
+        toPlacement(profile, zones.allocate(profile), "selected", nextTaskId)
+      );
     }
+    nextTaskId += 1;
   }
 
   // Complementary products (only present in concept mode) are pure additions.
   for (const profile of complementaryProfiles) {
-    additions.push(toPlacement(profile, sceneGraph, "complementary"));
+    additions.push(
+      toPlacement(profile, zones.allocate(profile), "complementary", nextTaskId)
+    );
+    nextTaskId += 1;
   }
 
-  // Fixed objects + non-replaceable furniture, deduped case-insensitively so
-  // e.g. a "TV" fixed object and a "tv" furniture category collapse to one.
+  // ---- Dispositions: every detected furniture item, exactly once -----------
+  const replacementByItemId = new Map(
+    replacements.map((task) => [task.existingItemId, task])
+  );
+  const dispositions: FurnitureDisposition[] = allFurniture.map((item) => {
+    const base = {
+      itemId: item.id,
+      rawCategory: item.category,
+      canonicalCategory: item.canonicalCategory,
+    };
+    const replacement = replacementByItemId.get(item.id);
+
+    if (replacement) {
+      return {
+        ...base,
+        disposition: "replace" as const,
+        reason: `Replaced by the customer-selected ${replacement.productTitle} (task ${replacement.taskId}).`,
+        productId: replacement.productId,
+        taskId: replacement.taskId,
+      };
+    }
+
+    if (!item.replaceable) {
+      return {
+        ...base,
+        disposition: "preserve" as const,
+        reason:
+          item.canonicalCategory === "unknown"
+            ? "Unrecognised object category — preserved unchanged rather than risking an unintended edit."
+            : "Fixed object or architecture — must never be altered.",
+        productId: null,
+        taskId: null,
+      };
+    }
+
+    if (item.confidence <= LOW_CONFIDENCE_THRESHOLD) {
+      return {
+        ...base,
+        disposition: "ignore" as const,
+        reason: `Detection confidence ${Math.round(item.confidence * 100)}% is at or below the ${Math.round(
+          LOW_CONFIDENCE_THRESHOLD * 100
+        )}% threshold — not asserted in the prompt, because instructing the model to preserve an object that may not exist can cause it to invent one.`,
+        productId: null,
+        taskId: null,
+      };
+    }
+
+    return {
+      ...base,
+      disposition: "preserve" as const,
+      reason:
+        "Replaceable furniture that no selected product targets — preserved exactly as photographed.",
+      productId: null,
+      taskId: null,
+    };
+  });
+
+  // `preserved` (legacy, string-based) now derives from the authoritative
+  // dispositions plus fixed objects, so the two can never disagree.
   const preservedSeen = new Set<string>();
   const preserved: string[] = [];
   for (const name of [
     ...(sceneGraph?.fixedObjects ?? []).map((object) => object.name),
-    ...(sceneGraph?.furniture ?? [])
-      .filter((item) => !item.replaceable)
-      .map((item) => item.category),
+    ...dispositions
+      .filter((entry) => entry.disposition === "preserve")
+      .map((entry) => entry.rawCategory),
   ]) {
     const trimmed = name.trim();
     const key = trimmed.toLowerCase();
@@ -261,8 +379,104 @@ export function buildReplacementPlan(
     replacements,
     additions,
     preserved,
+    dispositions,
     analysed: Boolean(sceneGraph?.analysed),
   };
+}
+
+/**
+ * Planner invariant check. Returns a list of violations (empty when the plan is
+ * valid). Exported so tests — and any future runtime assertion — can prove the
+ * guarantees rather than trusting them.
+ */
+export function checkPlanInvariants(
+  plan: ReplacementPlan,
+  input: { sceneGraph?: SceneGraph; selectedProductIds?: string[] }
+): string[] {
+  const violations: string[] = [];
+  const furniture = input.sceneGraph?.furniture ?? [];
+
+  // 1. Every detected item has exactly one disposition.
+  const dispositionCounts = new Map<string, number>();
+  for (const entry of plan.dispositions) {
+    dispositionCounts.set(
+      entry.itemId,
+      (dispositionCounts.get(entry.itemId) || 0) + 1
+    );
+  }
+  for (const item of furniture) {
+    const count = dispositionCounts.get(item.id) || 0;
+    if (count !== 1) {
+      violations.push(
+        `furniture "${item.id}" has ${count} dispositions (expected exactly 1)`
+      );
+    }
+  }
+  for (const entry of plan.dispositions) {
+    if (!furniture.some((item) => item.id === entry.itemId)) {
+      violations.push(
+        `disposition references unknown furniture id "${entry.itemId}"`
+      );
+    }
+  }
+
+  // 2. No fixed object is ever replaced.
+  for (const task of plan.replacements) {
+    const item = furniture.find((f) => f.id === task.existingItemId);
+    if (item && !item.replaceable) {
+      violations.push(
+        `replacement targets non-replaceable item "${item.id}" (${item.canonicalCategory})`
+      );
+    }
+  }
+
+  // 3. No existing item is targeted twice.
+  const targeted = plan.replacements.map((task) => task.existingItemId);
+  if (new Set(targeted).size !== targeted.length) {
+    violations.push("an existing item is targeted by more than one replacement");
+  }
+
+  // 4. Every selected product has exactly one destination.
+  for (const productId of input.selectedProductIds || []) {
+    const destinations =
+      plan.replacements.filter((task) => task.productId === productId).length +
+      plan.additions.filter((task) => task.productId === productId).length;
+    if (destinations !== 1) {
+      violations.push(
+        `selected product "${productId}" has ${destinations} destinations (expected exactly 1)`
+      );
+    }
+  }
+
+  // 5. Category integrity: a product may only replace a canonical category its
+  //    own catalogue category declares as a target. This is the guard that
+  //    makes "a TV unit replaced a sofa" impossible.
+  for (const task of plan.replacements) {
+    const item = furniture.find((f) => f.id === task.existingItemId);
+    if (!item) continue;
+    const score = productCategoryMatchScore(
+      task.productCategorySlug,
+      item.canonicalCategory
+    );
+    if (score <= 0) {
+      violations.push(
+        `product "${task.productId}" (${task.productCategorySlug}) may not replace a "${item.canonicalCategory}" item; allowed targets: [${canonicalTargetsForProductCategory(
+          task.productCategorySlug
+        ).join(", ") || "none"}]`
+      );
+    }
+  }
+
+  // 6. Task ids are unique across the whole plan.
+  const taskIds = [
+    ...plan.replacements.map((task) => task.taskId),
+    ...plan.additions.map((task) => task.taskId),
+  ];
+  if (new Set(taskIds).size !== taskIds.length) {
+    violations.push("duplicate task ids in the plan");
+  }
+
+  return violations;
 }
 
 /**
@@ -271,10 +485,8 @@ export function buildReplacementPlan(
  */
 export function formatReplacementPlan(plan: ReplacementPlan): string {
   const lines: string[] = [];
-  let taskNumber = 0;
 
   for (const task of plan.replacements) {
-    taskNumber += 1;
     const existing = [
       task.existingCategory,
       task.existingColor ? `(${task.existingColor})` : null,
@@ -283,18 +495,17 @@ export function formatReplacementPlan(plan: ReplacementPlan): string {
       .filter(Boolean)
       .join(" ");
     lines.push(
-      `Task ${taskNumber} — REPLACE the existing ${existing} with the ${task.productTitle} (${task.productCategory}). ${task.placement}. Match confidence: ${task.confidence}.`
+      `Task ${task.taskId} — REPLACE the existing ${existing} with the ${task.productTitle} (${task.productCategory}). ${task.placement}. Match confidence: ${task.confidence}.`
     );
   }
 
   for (const task of plan.additions) {
-    taskNumber += 1;
     lines.push(
-      `Task ${taskNumber} — PLACE the ${task.productTitle} (${task.productCategory}) at ${task.target}. ${task.placement}.`
+      `Task ${task.taskId} — PLACE the ${task.productTitle} (${task.productCategory}) at ${task.target}. ${task.placement}.`
     );
   }
 
-  if (taskNumber === 0) return "";
+  if (lines.length === 0) return "";
 
   const header =
     "REPLACEMENT PLAN — perform EXACTLY these changes and nothing else. Do not duplicate furniture; do not touch anything not listed here:";
