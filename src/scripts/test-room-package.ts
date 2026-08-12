@@ -279,8 +279,8 @@ section("5. Generation is confined to the package");
   check("the prompt forbids inventing furniture",
     prompt.includes("Never invent furniture that is not in the plan"));
   check("concept mode is off, so nothing extra may be added",
-    prompt.includes("CONCEPT MODE — OFF") &&
-      prompt.includes("Do NOT add any other furniture"));
+    prompt.includes("THIS IS A REPLACEMENT, NOT A REDESIGN") &&
+      /Do NOT add ANY object that is not in those tasks/.test(prompt));
   check("every package product is named in the prompt",
     pkg.items.every((i) => prompt.includes(i.productName)),
     pkg.items.filter((i) => !prompt.includes(i.productName)).map((i) => i.productName).join(", "));

@@ -244,11 +244,34 @@ function buildConceptSection(
   plan?: ReplacementPlan
 ): string {
   if (!aiConceptMode) {
+    // REPLACE MODE. The customer named the pieces they want changed; anything
+    // else appearing is a defect, not a bonus. Renders were coming back with an
+    // extra side table nobody asked for, so the allowlist is stated explicitly
+    // and the ban is repeated in the model's own vocabulary.
+    const allowed = plan
+      ? [
+          ...new Set(
+            [
+              ...plan.replacements.map((task) => task.productCategory),
+              ...plan.additions
+                .filter((task) => task.source === "selected")
+                .map((task) => task.productCategory),
+            ].filter(Boolean)
+          ),
+        ]
+      : [];
+
     return [
-      "CONCEPT MODE — OFF:",
-      "- Execute ONLY the replacement plan above.",
-      "- Do NOT add any other furniture, decor, lighting or accessories.",
-      "- Leave every unlisted item and all empty space exactly as in the uploaded photo.",
+      "SCOPE — THIS IS A REPLACEMENT, NOT A REDESIGN:",
+      allowed.length > 0
+        ? `- The ONLY things that may change are: ${allowed.join(", ")}.`
+        : "- Nothing in this room may change.",
+      "- Execute ONLY the numbered tasks above.",
+      "- Do NOT add ANY object that is not in those tasks — no side tables, no plants, no lamps, no mirrors, no artwork, no rugs, no cushions, no shelving, no decor of any kind.",
+      "- Do NOT add an object just because the room looks like it needs one. An empty corner stays empty.",
+      "- Do NOT tidy, restyle, relight or improve anything outside those tasks.",
+      "- Every other object, and all empty space, must appear EXACTLY as in the uploaded photo.",
+      "- If you are unsure whether something may change, leave it alone.",
     ].join("\n");
   }
 

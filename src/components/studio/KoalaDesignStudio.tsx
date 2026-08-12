@@ -86,10 +86,14 @@ import type { CanonicalCategory } from "@/lib/intelligence/scene-taxonomy";
 import { getProductProfiles } from "@/lib/intelligence/product-profile";
 import { getAllProducts as getAllCatalogueProducts } from "@/lib/products";
 import { CategoryProductShelves } from "./CategoryProductShelves";
+import { ReplaceCategoryPicker } from "./ReplaceCategoryPicker";
 import {
   designModeToConceptMode,
+  displayCategoryName,
+  groupDetectedByCategory,
   isDesignMode,
-  removeSelection,
+  objectsForSelectedCategories,
+  selectionFromDetectedObject,
   type DesignMode,
   type RoomSelection,
   type SelectableObject,
@@ -120,76 +124,6 @@ const refineChips = [
   "Larger sofa",
   "More minimal",
   "Warmer palette",
-];
-const roomTypes = [
-  {
-    id: "living room",
-    label: "Living room",
-    visual:
-      "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.16), transparent 30%), radial-gradient(circle at 82% 88%, rgba(255,255,255,0.06), transparent 36%), linear-gradient(135deg, #050505 0%, #111111 58%, #181818 100%)",
-  },
-  {
-    id: "dining room",
-    label: "Dining room",
-    visual:
-      "radial-gradient(circle at 78% 20%, rgba(255,255,255,0.14), transparent 30%), radial-gradient(circle at 20% 84%, rgba(255,255,255,0.05), transparent 34%), linear-gradient(135deg, #050505 0%, #111111 54%, #181818 100%)",
-  },
-  {
-    id: "bedroom",
-    label: "Bedroom",
-    visual:
-      "radial-gradient(circle at 32% 24%, rgba(255,255,255,0.13), transparent 34%), radial-gradient(circle at 74% 80%, rgba(255,255,255,0.05), transparent 34%), linear-gradient(135deg, #111111 0%, #050505 58%, #181818 100%)",
-  },
-  {
-    id: "office",
-    label: "Office",
-    visual:
-      "radial-gradient(circle at 72% 24%, rgba(255,255,255,0.12), transparent 30%), radial-gradient(circle at 18% 78%, rgba(255,255,255,0.05), transparent 34%), linear-gradient(135deg, #050505 0%, #111111 56%, #181818 100%)",
-  },
-];
-const designStyles = [
-  {
-    id: "Modern Luxury",
-    title: "Modern Luxury",
-    description: "Polished contrast, sculptural silhouettes and warm metallic detail.",
-    visual:
-      "radial-gradient(circle at 76% 18%, rgba(255,255,255,0.16), transparent 26%), radial-gradient(circle at 22% 88%, rgba(255,255,255,0.05), transparent 34%), linear-gradient(135deg, #050505 0%, #111111 48%, #181818 100%)",
-  },
-  {
-    id: "Contemporary",
-    title: "Contemporary",
-    description: "Clean furniture lines with soft texture and gallery-like balance.",
-    visual:
-      "radial-gradient(circle at 74% 24%, rgba(255,255,255,0.11), transparent 28%), linear-gradient(135deg, #050505 0%, #111111 56%, #181818 100%)",
-  },
-  {
-    id: "Minimal",
-    title: "Minimal",
-    description: "Reduced palette, open floor flow and calm visual rhythm.",
-    visual:
-      "radial-gradient(circle at 20% 18%, rgba(255,255,255,0.18), transparent 26%), linear-gradient(135deg, #181818 0%, #111111 52%, #050505 100%)",
-  },
-  {
-    id: "Organic Modern",
-    title: "Organic Modern",
-    description: "Natural materials, curved forms and relaxed layered warmth.",
-    visual:
-      "radial-gradient(circle at 28% 22%, rgba(255,255,255,0.12), transparent 28%), radial-gradient(circle at 86% 86%, rgba(156,156,148,0.12), transparent 34%), linear-gradient(135deg, #050505 0%, #111111 52%, #181818 100%)",
-  },
-  {
-    id: "Warm Neutral",
-    title: "Warm Neutral",
-    description: "Soft taupe, timber tones and inviting full-room comfort.",
-    visual:
-      "radial-gradient(circle at 70% 18%, rgba(255,255,255,0.14), transparent 28%), linear-gradient(135deg, #050505 0%, #111111 50%, #181818 100%)",
-  },
-  {
-    id: "Custom",
-    title: "Custom",
-    description: "Describe the exact mood, colours and layout direction.",
-    visual:
-      "radial-gradient(circle at 78% 22%, rgba(255,255,255,0.12), transparent 30%), radial-gradient(circle at 16% 82%, rgba(255,255,255,0.05), transparent 34%), linear-gradient(135deg, #050505 0%, #111111 56%, #181818 100%)",
-  },
 ];
 function getStylePrompt(style: string, customPrompt: string) {
   return style === "Custom" ? customPrompt.trim() : style.toLowerCase();
@@ -274,63 +208,7 @@ function conceptToFile(concept: GeneratedConcept, index: number) {
   );
 }
 
-function SuggestionRow({
-  label,
-  value,
-  open,
-  onToggle,
-}: {
-  label: string;
-  value: string;
-  open: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="v2-surface-flat mt-3 flex items-center justify-between gap-3 rounded-2xl px-4 py-3">
-      <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[#9a978f]">
-          {label}
-        </p>
-        <p className="mt-0.5 truncate font-serif text-lg text-[#F5F3EE]">
-          {value}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="shrink-0 rounded-full border border-white/12 px-3.5 py-1.5 text-xs font-medium text-[#F5F3EE] transition hover:bg-white/5"
-      >
-        {open ? "Done" : "Change"}
-      </button>
-    </div>
-  );
-}
 
-function SelectChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
-        active
-          ? "border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
-          : "border-white/10 bg-white/[0.03] text-[#9a978f] hover:border-white/25"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 /**
  * One of the two design intents on the choice screen.
@@ -1507,8 +1385,6 @@ export function KoalaDesignStudio() {
   const [roomType, setRoomType] = useState(DEFAULT_ROOM_TYPE);
   const [style, setStyle] = useState(DEFAULT_STYLE);
   const [customPrompt, setCustomPrompt] = useState("");
-  const [roomPickerOpen, setRoomPickerOpen] = useState(false);
-  const [stylePickerOpen, setStylePickerOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   // The customer's explicit intent. Null until they choose on the mode screen;
   // it then persists through generation and into the result.
@@ -1526,9 +1402,16 @@ export function KoalaDesignStudio() {
     height: 0,
   });
   // Replace-items has two stages within step 3: pick the objects, then confirm.
-  const [replacePhase, setReplacePhase] = useState<"select" | "confirm">(
-    "select"
-  );
+  const [replacePhase, setReplacePhase] = useState<
+    "categories" | "products" | "precision"
+  >("categories");
+  /** Furniture TYPES the customer chose to replace. */
+  const [selectedCategories, setSelectedCategories] = useState<
+    CanonicalCategory[]
+  >([]);
+  /** Set only while the advanced picker is narrowing one type. */
+  const [precisionCategory, setPrecisionCategory] =
+    useState<CanonicalCategory | null>(null);
   /**
    * One chosen Koala product per canonical category, keyed by category.
    *
@@ -1600,12 +1483,45 @@ export function KoalaDesignStudio() {
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
   // Full catalogue, so each region can offer only its own category.
   const allCatalogueProducts = getAllCatalogueProducts();
+  /** Furniture types found in the room, grouped away from their instances. */
+  const detectedCategories = groupDetectedByCategory(detectedObjects);
+
   /**
-   * One entry per category the customer selected, with how many objects of it
-   * they picked. This is what the product shelves are built from.
+   * The objects a category choice resolves to.
+   *
+   * Choosing "Sofas" means every sofa — that is what the words mean. The
+   * advanced picker can narrow a type to specific pieces, and those overrides
+   * win where they exist.
    */
-  const selectedCategories = [
-    ...roomSelections.reduce((counts, selection) => {
+  const precisionOverrides = roomSelections.reduce<Record<string, string[]>>(
+    (map, selection) => {
+      if (!selection.sceneItemId) return map;
+      const list = map[selection.canonicalCategory] ?? [];
+      list.push(selection.sceneItemId);
+      map[selection.canonicalCategory] = list;
+      return map;
+    },
+    {}
+  );
+  const effectiveObjects = objectsForSelectedCategories(
+    selectedCategories,
+    detectedObjects,
+    precisionOverrides
+  );
+  /** Hand-drawn areas are their own targets and bypass category grouping. */
+  const manualSelections = roomSelections.filter(
+    (selection) => selection.selectionMethod === "manual"
+  );
+  const effectiveSelections: RoomSelection[] = [
+    ...effectiveObjects.map((object) =>
+      selectionFromDetectedObject(object, sourceImageSize)
+    ),
+    ...manualSelections,
+  ];
+
+  /** One shelf per chosen type, carrying how many pieces it covers. */
+  const shelfCategories = [
+    ...effectiveSelections.reduce((counts, selection) => {
       counts.set(
         selection.canonicalCategory,
         (counts.get(selection.canonicalCategory) || 0) + 1
@@ -1619,7 +1535,7 @@ export function KoalaDesignStudio() {
 
   /** Replacement groups: one chosen product applied across its objects. */
   const replacementGroups = buildReplacementGroups({
-    targetsByCategory: roomSelections.reduce((map, selection, index) => {
+    targetsByCategory: effectiveSelections.reduce((map, selection, index) => {
       const list = map.get(selection.canonicalCategory) ?? [];
       list.push(selectionToTarget(selection, index));
       map.set(selection.canonicalCategory, list);
@@ -1642,7 +1558,7 @@ export function KoalaDesignStudio() {
   const protectedSummary = detectedObjects
     .filter(
       (object) =>
-        !roomSelections.some(
+        !effectiveSelections.some(
           (selection) =>
             selection.sceneItemId === object.sceneItemId &&
             Boolean(chosenProductByCategory[selection.canonicalCategory])
@@ -2129,6 +2045,23 @@ export function KoalaDesignStudio() {
     return true;
   }
 
+  /** Add or remove a furniture type from the replace list. */
+  function toggleCategory(category: CanonicalCategory) {
+    setSelectedCategories((current) =>
+      current.includes(category)
+        ? current.filter((entry) => entry !== category)
+        : [...current, category]
+    );
+    // Dropping a type also drops any product chosen for it, so a stale choice
+    // cannot survive into the plan.
+    setChosenProductByCategory((current) => {
+      if (!selectedCategories.includes(category)) return current;
+      const next = { ...current };
+      delete next[category];
+      return next;
+    });
+  }
+
   /** Choose (or clear) the single product for a category. */
   function chooseProductForCategory(
     category: CanonicalCategory,
@@ -2157,7 +2090,7 @@ export function KoalaDesignStudio() {
           : group.targets;
       const entries: AssignmentInput[] = [];
       for (const target of acting) {
-        const selection = roomSelections.find(
+        const selection = effectiveSelections.find(
           (candidate, index) =>
             selectionToTarget(candidate, index).targetId === target.targetId
         );
@@ -2174,7 +2107,7 @@ export function KoalaDesignStudio() {
     });
 
     return buildReplacementContract({
-      selections: roomSelections,
+      selections: effectiveSelections,
       assignments,
       profiles: getProductProfiles(allCatalogueProducts),
       allDetected: detectedObjects.map((object) => ({
@@ -2507,8 +2440,6 @@ export function KoalaDesignStudio() {
     setRoomType(DEFAULT_ROOM_TYPE);
     setStyle(DEFAULT_STYLE);
     setCustomPrompt("");
-    setRoomPickerOpen(false);
-    setStylePickerOpen(false);
     setSelectedProductIds([]);
     setDesignMode(null);
     setRoomSelections([]);
@@ -2530,30 +2461,145 @@ export function KoalaDesignStudio() {
   }
 
   /**
-   * "Replace items" — the customer names exactly which objects may change.
+   * "Replace items" — the customer picks furniture TYPES.
    *
-   * Two phases inside this step: pick the objects, then confirm them. Nothing
-   * is authorised implicitly — an object is only changeable once the customer
-   * has selected that specific instance.
+   * Three phases: choose what to replace, choose the new pieces, and an
+   * advanced picker that only appears if someone explicitly asks to single out
+   * one piece. The room analysis stays invisible: no boxes, no dots, no labels
+   * over the photo, no "Sofa 1 / Sofa 2" in the ordinary journey.
    */
   function renderReplaceItemsStep() {
-    if (replacePhase === "confirm") return renderReplaceConfirmStep();
+    if (replacePhase === "products") return renderReplaceProductsStep();
+    if (replacePhase === "precision") return renderPrecisionStep();
 
-    // The photo IS the interface on this step, so the chrome around it is kept
-    // to a single line and the selector is given the rest of the viewport.
-    // Centred so a landscape photo — which is limited by screen WIDTH, not
-    // height, and so cannot fill the viewport without cropping — sits balanced
-    // in the space rather than stranded above a large gap.
+    const analysing = detectionState === "loading" || detectionState === "idle";
+    const nothingFound =
+      detectionState !== "loading" &&
+      detectionState !== "idle" &&
+      detectedCategories.length === 0;
+
+    return (
+      <section className="space-y-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+            Replace items
+          </p>
+          <h1 className="mt-2 font-serif text-[26px] font-semibold leading-tight text-[#F5F3EE]">
+            What would you like to replace?
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+            {analysing
+              ? "Just a moment — we're looking at your room."
+              : nothingFound
+                ? "We couldn't pick out any furniture. You can mark an area yourself instead."
+                : "We found these pieces in your room. Anything you don't choose stays as it is."}
+          </p>
+        </div>
+
+        {/* Context, not an interface: the photo carries no markings. */}
+        {previewUrl && (
+          <div className="v2-hero-shadow relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#0B0B0B]">
+                      <img
+              src={previewUrl}
+              alt="Your room"
+              className="h-[22vh] w-full object-cover object-center"
+            />
+            {analysing && (
+              <div className="absolute inset-0 grid place-items-center bg-black/45 backdrop-blur-[2px]">
+                <p className="text-xs font-semibold text-[#F5F3EE]">
+                  Looking at your room…
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!analysing && detectedCategories.length > 0 && (
+          <ReplaceCategoryPicker
+            categories={detectedCategories}
+            selected={selectedCategories}
+            onToggle={toggleCategory}
+            onRefine={(category) => {
+              setPrecisionCategory(category);
+              setReplacePhase("precision");
+            }}
+          />
+        )}
+
+        {!analysing && (
+          <button
+            type="button"
+            onClick={() => {
+              setPrecisionCategory(null);
+              setReplacePhase("precision");
+            }}
+            className="w-full text-center text-xs font-semibold text-[#9a978f] underline underline-offset-4 transition hover:text-[#C9A57A]"
+          >
+            Something missing? Mark an area yourself
+          </button>
+        )}
+      </section>
+    );
+  }
+
+  /** "Choose your new pieces" — one visual shelf per chosen type. */
+  function renderReplaceProductsStep() {
+    return (
+      <section className="space-y-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+            Replace items
+          </p>
+          <h1 className="mt-2 font-serif text-[26px] font-semibold leading-tight text-[#F5F3EE]">
+            Choose your new pieces
+          </h1>
+        </div>
+
+        <CategoryProductShelves
+          categories={shelfCategories}
+          catalogue={allCatalogueProducts}
+          chosenByCategory={chosenProductByCategory}
+          onChoose={chooseProductForCategory}
+        />
+
+        {protectedSummary.length > 0 && (
+          <div className="v2-surface rounded-2xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
+              Staying as it is
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+              {protectedSummary.join(", ")}, plus your walls, floor, ceiling,
+              windows and doors.
+            </p>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  /**
+   * Advanced picker — deliberately off the main path. Reached only by asking
+   * for a specific piece, or by marking an area by hand.
+   */
+  function renderPrecisionStep() {
     return (
       <section className="flex flex-1 flex-col justify-center space-y-2.5">
         <h1 className="font-serif text-[22px] font-semibold leading-tight text-[#F5F3EE]">
-          Choose what to change
+          {precisionCategory
+            ? `Which ${displayCategoryName(precisionCategory).toLowerCase()}?`
+            : "Mark the area to replace"}
         </h1>
 
         {previewUrl && (
           <RoomObjectSelector
             imageUrl={previewUrl}
-            objects={detectedObjects}
+            objects={
+              precisionCategory
+                ? detectedObjects.filter(
+                    (object) => object.canonicalCategory === precisionCategory
+                  )
+                : detectedObjects
+            }
             selections={roomSelections}
             onSelectionsChange={setRoomSelections}
             sourceImage={sourceImageSize}
@@ -2564,149 +2610,7 @@ export function KoalaDesignStudio() {
     );
   }
 
-  /**
-   * Confirmation — the customer sees precisely what they authorised before any
-   * product is chosen. Same-category objects keep separate identities here
-   * ("Sofa 1", "Sofa 2") so it is unambiguous which one was picked.
-   */
-  function renderReplaceConfirmStep() {
-    const roomLabel =
-      roomTypes.find((r) => r.id === roomType)?.label || "Living room";
-    const styleLabel =
-      designStyles.find((s) => s.id === style)?.title || style || "Modern Luxury";
 
-    return (
-      <section className="space-y-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
-            Confirm selection
-          </p>
-          <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-[#F5F3EE]">
-            {roomSelections.length} item
-            {roomSelections.length === 1 ? "" : "s"} selected
-          </h1>
-        </div>
-
-        <div className="v2-surface rounded-[26px] p-4">
-          <ul className="divide-y divide-white/[0.07]">
-            {roomSelections.map((selection) => (
-              <li
-                key={selection.selectionId}
-                className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-              >
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-[#F5F3EE]">
-                    {selection.displayName}
-                  </span>
-                  {selection.originalObjectDescription && (
-                    <span className="mt-0.5 block truncate text-xs text-[#9a978f]">
-                      {selection.originalObjectDescription}
-                    </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setRoomSelections(
-                      removeSelection(roomSelections, selection.selectionId)
-                    )
-                  }
-                  className="shrink-0 rounded-full border border-white/12 px-3 py-1.5 text-xs font-semibold text-[#9a978f] transition hover:border-white/25 hover:text-[#F5F3EE]"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="v2-surface rounded-2xl p-4">
-          <p className="text-sm leading-6 text-[#9a978f]">
-            Everything else in your room is protected and will not be changed.
-          </p>
-          <SuggestionRow
-            label="Room"
-            value={roomLabel}
-            open={roomPickerOpen}
-            onToggle={() => {
-              setRoomPickerOpen((o) => !o);
-              setStylePickerOpen(false);
-            }}
-          />
-          {roomPickerOpen && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {roomTypes.map((item) => (
-                <SelectChip
-                  key={item.id}
-                  active={roomType === item.id}
-                  onClick={() => {
-                    setRoomType(item.id);
-                    setRoomPickerOpen(false);
-                  }}
-                >
-                  {item.label}
-                </SelectChip>
-              ))}
-            </div>
-          )}
-          <SuggestionRow
-            label="Style"
-            value={styleLabel}
-            open={stylePickerOpen}
-            onToggle={() => {
-              setStylePickerOpen((o) => !o);
-              setRoomPickerOpen(false);
-            }}
-          />
-          {stylePickerOpen && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {designStyles.map((item) => (
-                <SelectChip
-                  key={item.id}
-                  active={style === item.id}
-                  onClick={() => {
-                    setStyle(item.id);
-                    if (item.id !== "Custom") setStylePickerOpen(false);
-                  }}
-                >
-                  {item.title}
-                </SelectChip>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h3 className="font-serif text-xl text-[#F5F3EE]">
-            Pick your Koala pieces
-          </h3>
-          <p className="mt-1 text-xs leading-5 text-[#9a978f]">
-            One choice per type. We&apos;ll fit it to your room.
-          </p>
-          <div className="mt-4">
-            <CategoryProductShelves
-              categories={selectedCategories}
-              catalogue={allCatalogueProducts}
-              chosenByCategory={chosenProductByCategory}
-              onChoose={chooseProductForCategory}
-            />
-          </div>
-        </div>
-
-        {protectedSummary.length > 0 && (
-          <div className="v2-surface rounded-2xl p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
-              Protected — will not change
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[#9a978f]">
-              {protectedSummary.join(", ")}, plus the walls, floor, ceiling,
-              windows and doors.
-            </p>
-          </div>
-        )}
-      </section>
-    );
-  }
 
   function renderStep() {
     if (step === 1) {
@@ -2827,7 +2731,7 @@ export function KoalaDesignStudio() {
             selected={designMode === "replace-items"}
             onClick={() => {
               setDesignMode("replace-items");
-              setReplacePhase("select");
+              setReplacePhase("categories");
               setStep(3);
               // Kick off detection as the screen opens so the customer is not
               // left waiting on a blank overlay.
@@ -3299,7 +3203,7 @@ export function KoalaDesignStudio() {
                   // so it keeps only enough bottom padding to clear the sticky
                   // footer. The generous padding below is for steps that scroll.
                   designMode === "replace-items" &&
-                    replacePhase === "select" &&
+                    replacePhase === "precision" &&
                     step === 3
                   ? "px-6 pb-4 pt-3"
                   : "px-6 pb-32 pt-4"
@@ -3333,13 +3237,19 @@ export function KoalaDesignStudio() {
                 onClick={() => {
                   // Inside replace-items, Back steps between its two phases
                   // before it leaves the flow.
-                  if (
-                    step === 3 &&
-                    designMode === "replace-items" &&
-                    replacePhase === "confirm"
-                  ) {
-                    setReplacePhase("select");
-                    return;
+                  if (step === 3 && designMode === "replace-items") {
+                    if (replacePhase === "products") {
+                      setReplacePhase("categories");
+                      return;
+                    }
+                    if (replacePhase === "precision") {
+                      // Leaving the advanced picker discards its narrowing so
+                      // the type-level choice is what applies again.
+                      setRoomSelections([]);
+                      setPrecisionCategory(null);
+                      setReplacePhase("categories");
+                      return;
+                    }
                   }
                   if (step === 3) {
                     // Leaving a flow clears its intent so the choice screen is
@@ -3347,7 +3257,9 @@ export function KoalaDesignStudio() {
                     setDesignMode(null);
                     setRoomSelections([]);
                     setChosenProductByCategory({});
-                    setReplacePhase("select");
+                    setSelectedCategories([]);
+                    setPrecisionCategory(null);
+                    setReplacePhase("categories");
                   }
                   setStep(step - 1);
                 }}
@@ -3366,22 +3278,38 @@ export function KoalaDesignStudio() {
                 Continue
               </StudioButton>
             )}
-            {/* Selection phase: confirm what may change before choosing products. */}
+            {/* Choose what to replace, then what to replace it with. */}
             {step === 3 &&
               designMode === "replace-items" &&
-              replacePhase === "select" && (
+              replacePhase === "categories" && (
                 <StudioButton
-                  onClick={() => setReplacePhase("confirm")}
+                  onClick={() => setReplacePhase("products")}
+                  disabled={selectedCategories.length === 0}
+                  className="min-h-14 rounded-2xl text-base"
+                >
+                  {selectedCategories.length === 0
+                    ? "Choose what to replace"
+                    : `Continue with ${selectedCategories.length}`}
+                </StudioButton>
+              )}
+            {step === 3 &&
+              designMode === "replace-items" &&
+              replacePhase === "precision" && (
+                <StudioButton
+                  onClick={() => setReplacePhase("products")}
                   disabled={roomSelections.length === 0}
                   className="min-h-14 rounded-2xl text-base"
                 >
                   {roomSelections.length === 0
-                    ? "Select an item to continue"
+                    ? "Choose a piece"
                     : `Continue with ${roomSelections.length}`}
                 </StudioButton>
               )}
             {step === 3 &&
-              !(designMode === "replace-items" && replacePhase === "select") && (
+              !(
+                designMode === "replace-items" &&
+                (replacePhase === "categories" || replacePhase === "precision")
+              ) && (
                 <StudioButton
                   onClick={() => void handleGenerate()}
                   disabled={!canGenerateConcept() || loading}

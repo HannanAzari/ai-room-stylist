@@ -181,6 +181,79 @@ export function toSelectableObjects(
 }
 
 /**
+ * A furniture TYPE found in the room, with how many of it there are.
+ *
+ * This is the unit the customer actually chooses in. People think "replace my
+ * sofas", not "replace detected object 3 and detected object 7", so instances
+ * are grouped away from the interface and only re-surfaced if someone
+ * explicitly asks to pick one out.
+ */
+export type DetectedCategory = {
+  canonicalCategory: CanonicalCategory;
+  /** Plural-aware customer-facing name, e.g. "Sofas". */
+  label: string;
+  count: number;
+  /** The individual objects behind this type; not shown by default. */
+  objects: SelectableObject[];
+};
+
+/** Simple English pluralisation for the category labels we actually use. */
+function pluralise(label: string, count: number): string {
+  if (count === 1) return label;
+  if (/y$/i.test(label)) return `${label.slice(0, -1)}ies`;
+  if (/(s|x|z|ch|sh)$/i.test(label)) return `${label}es`;
+  return `${label}s`;
+}
+
+/**
+ * Group detected objects into the furniture types the customer chooses from.
+ * Ordered by count then name so the list is stable between renders.
+ */
+export function groupDetectedByCategory(
+  objects: SelectableObject[]
+): DetectedCategory[] {
+  const byCategory = new Map<CanonicalCategory, SelectableObject[]>();
+  for (const object of objects) {
+    const list = byCategory.get(object.canonicalCategory) ?? [];
+    list.push(object);
+    byCategory.set(object.canonicalCategory, list);
+  }
+
+  return [...byCategory.entries()]
+    .map(([canonicalCategory, group]) => ({
+      canonicalCategory,
+      label: pluralise(displayCategoryName(canonicalCategory), group.length),
+      count: group.length,
+      objects: group,
+    }))
+    .sort(
+      (a, b) => b.count - a.count || a.label.localeCompare(b.label)
+    );
+}
+
+/**
+ * The objects a set of chosen types resolves to.
+ *
+ * Choosing a type means every object of that type changes — that is what
+ * "replace my sofas" means. `precisionOverrides` lets the advanced picker
+ * narrow a type down to specific objects; anything not overridden keeps the
+ * whole-type behaviour.
+ */
+export function objectsForSelectedCategories(
+  categories: CanonicalCategory[],
+  detected: SelectableObject[],
+  precisionOverrides?: Record<string, string[] | undefined>
+): SelectableObject[] {
+  const chosen = new Set(categories);
+  return detected.filter((object) => {
+    if (!chosen.has(object.canonicalCategory)) return false;
+    const override = precisionOverrides?.[object.canonicalCategory];
+    if (!override || override.length === 0) return true;
+    return override.includes(object.sceneItemId);
+  });
+}
+
+/**
  * A room object the customer has authorised for change.
  *
  * `confidence` is OPTIONAL and only ever set from a real model output. A

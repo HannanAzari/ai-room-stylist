@@ -490,8 +490,8 @@ section("I/J. Concept mode gating");
   }).prompt;
   check(
     "concept OFF prompt forbids additions",
-    offPrompt.includes("CONCEPT MODE — OFF") &&
-      offPrompt.includes("Do NOT add any other furniture")
+    offPrompt.includes("THIS IS A REPLACEMENT, NOT A REDESIGN") &&
+      /Do NOT add ANY object that is not in those tasks/.test(offPrompt)
   );
 
   // Concept ON: complementary products appear as explicit, named plan items.

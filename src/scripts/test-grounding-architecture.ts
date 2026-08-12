@@ -382,6 +382,7 @@ section("Reviewer — architecture and instance failures");
     wallStructurePreserved: true,
     unselectedSameCategoryUnchanged: true,
     unrelatedFurniturePreserved: true,
+    noUnrequestedAdditions: true,
     reasoning: "Everything checks out.",
   };
   const goodTask: TaskReviewResult = {
@@ -431,7 +432,7 @@ section("Reviewer — architecture and instance failures");
   const missingGlobal: GlobalReviewChecks = {
     noNewArchitecture: false, allOriginalArchitecturePresent: false,
     wallStructurePreserved: false, unselectedSameCategoryUnchanged: false,
-    unrelatedFurniturePreserved: false, reasoning: "",
+    unrelatedFurniturePreserved: false, noUnrequestedAdditions: false, reasoning: "",
   };
   check(
     "absent whole-room checks fail safe",
@@ -578,7 +579,7 @@ section("Acceptance D — debug visibility");
     {
       noNewArchitecture: false, allOriginalArchitecturePresent: true,
       wallStructurePreserved: true, unselectedSameCategoryUnchanged: true,
-      unrelatedFurniturePreserved: true, reasoning: "A new doorway appeared on the left wall.",
+      unrelatedFurniturePreserved: true, noUnrequestedAdditions: true, reasoning: "A new doorway appeared on the left wall.",
     }
   );
 

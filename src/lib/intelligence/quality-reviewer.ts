@@ -63,6 +63,7 @@ export type CriticalFailureKind =
   | "architecture-hallucinated"
   | "architecture-element-missing"
   | "unselected-same-category-changed"
+  | "unrequested-addition"
   | "camera-reframed";
 
 export type CriticalFailure = {
@@ -118,6 +119,11 @@ export type GlobalReviewChecks = {
   unselectedSameCategoryUnchanged: boolean;
   /** Furniture outside the plan is untouched. */
   unrelatedFurniturePreserved: boolean;
+  /**
+   * No object exists that the plan never asked for. Replace mode must not
+   * "complete" the room — an unrequested side table is a defect.
+   */
+  noUnrequestedAdditions: boolean;
   /** The model's explanation of the global verdict (debug-visible). */
   reasoning: string;
 };
@@ -293,6 +299,15 @@ export function deriveCriticalFailures(
         taskId: null,
         productId: null,
         detail: "The wall structure or room envelope was altered.",
+      });
+    }
+    if (!globalChecks.noUnrequestedAdditions) {
+      failures.push({
+        kind: "unrequested-addition",
+        taskId: null,
+        productId: null,
+        detail:
+          "An object appears that the customer never asked for. Replace mode may only change what was chosen.",
       });
     }
     if (!globalChecks.unselectedSameCategoryUnchanged) {
@@ -490,6 +505,7 @@ PART B — whole-room checks. These are about the room itself, not any single pr
   wallStructurePreserved          — TRUE if the walls, corners, ceiling line and floor line are unchanged, and no wall was added, removed, moved or turned into an opening.
   unselectedSameCategoryUnchanged — TRUE if objects that share a category with a planned item, but were NOT named in the plan, are completely unchanged. If the plan replaced one sofa and a second sofa also changed, answer FALSE.
   unrelatedFurniturePreserved     — TRUE if all furniture outside the plan is untouched.
+  noUnrequestedAdditions          — TRUE if the generated image contains NO object that is absent from the original photo and not requested by a task. Look specifically for small additions a designer might make unprompted: side tables, plants, lamps, cushions, throws, vases, artwork, mirrors, shelving. Any of these appearing uninvited means FALSE.
   reasoning                       — one or two sentences explaining the whole-room verdict.
 
 PART C — global quality axes, each 0-100.
@@ -505,7 +521,7 @@ Return ONLY JSON with EXACTLY this shape:
   "globalChecks": {
     "noNewArchitecture": boolean, "allOriginalArchitecturePresent": boolean,
     "wallStructurePreserved": boolean, "unselectedSameCategoryUnchanged": boolean,
-    "unrelatedFurniturePreserved": boolean, "reasoning": string
+    "unrelatedFurniturePreserved": boolean, "noUnrequestedAdditions": boolean, "reasoning": string
   },
   "roomPreservation": number,      // original walls, floor and ceiling preserved
   "perspective": number,           // same camera angle / vanishing point as the original
@@ -561,6 +577,7 @@ function parseGlobalChecks(value: unknown): GlobalReviewChecks {
     wallStructurePreserved: asBool(item.wallStructurePreserved),
     unselectedSameCategoryUnchanged: asBool(item.unselectedSameCategoryUnchanged),
     unrelatedFurniturePreserved: asBool(item.unrelatedFurniturePreserved),
+    noUnrequestedAdditions: asBool(item.noUnrequestedAdditions),
     reasoning:
       typeof item.reasoning === "string" && item.reasoning.trim()
         ? item.reasoning.trim()
