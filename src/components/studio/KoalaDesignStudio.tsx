@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ProductImage } from "@/features/room-stylist/components/ProductImage";
 import { useProgressIndex } from "@/features/room-stylist/hooks/useProgressIndex";
 import {
@@ -1580,6 +1580,18 @@ export function KoalaDesignStudio() {
   const suppressResultViewerOpenRef = useRef(false);
   const toastTimeoutRef = useRef<number | null>(null);
   const summaryViewedRef = useRef(false);
+  /**
+   * The app shell is `h-dvh overflow-hidden`, so the window never scrolls —
+   * THIS element is the scroll owner. `window.scrollTo` would silently do
+   * nothing here.
+   */
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * Bumped for every new primary result. The scroll reset keys off this rather
+   * than the image bytes, so a regenerate that happens to return an identical
+   * image still starts the customer at the top.
+   */
+  const [resultEpoch, setResultEpoch] = useState(0);
   const [loadingIndex, resetLoadingIndex] = useProgressIndex(
     loading || refining,
     loadingMessages.length,
@@ -1854,6 +1866,7 @@ export function KoalaDesignStudio() {
 
         if (cachedConcepts.length > 0) {
           setSelectedConceptIndex(0);
+          setResultEpoch((epoch) => epoch + 1);
           setStep(4);
         }
       }, 0);
@@ -1863,6 +1876,27 @@ export function KoalaDesignStudio() {
       localStorage.removeItem(CACHE_KEY);
     }
   }, []);
+
+  /**
+   * A new result must open at the very top: image, then Shop this room, then
+   * everything else.
+   *
+   * `useLayoutEffect` runs before paint so the customer never sees the old
+   * Design-page offset. The extra frame afterwards defends against the browser
+   * restoring or anchoring the previous position once the generated image and
+   * product thumbnails finish decoding — that late shift was the "second jump"
+   * this bug produced.
+   */
+  useLayoutEffect(() => {
+    const element = scrollContainerRef.current;
+    if (!element) return;
+
+    element.scrollTop = 0;
+    const frame = requestAnimationFrame(() => {
+      element.scrollTop = 0;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [step, resultEpoch]);
 
   // Fire room_summary_viewed once each time a result summary becomes visible.
   useEffect(() => {
@@ -2274,6 +2308,8 @@ export function KoalaDesignStudio() {
       setGeneratedConcepts(nextConcepts);
       setProducts(nextProducts);
       setSelectedConceptIndex(0);
+      // A new primary result — open it at the top.
+      setResultEpoch((epoch) => epoch + 1);
       setStep(4);
       trackGenerateCompleted({
         roomType,
@@ -2357,6 +2393,8 @@ export function KoalaDesignStudio() {
       setGeneratedConcepts(updatedConcepts);
       setProducts(updatedProducts);
       setSelectedConceptIndex(refinedIndex);
+      // A refined room is a new primary result; show it from the top.
+      setResultEpoch((epoch) => epoch + 1);
       setRefineSheetOpen(false);
       setChangeRequest("");
       setSelectedRefinementProductIds([]);
@@ -3248,6 +3286,10 @@ export function KoalaDesignStudio() {
 
 
         <div
+          ref={scrollContainerRef}
+          // Scroll anchoring would re-adjust the offset as images decode,
+          // undoing the reset a frame or two later.
+          style={{ overflowAnchor: "none" }}
           className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${
             step === 4
               ? "px-5 pb-6 pt-4"
