@@ -17,7 +17,8 @@
     "test:design-mode": "tsx src/scripts/test-design-mode.ts",
     "test:object-selection": "tsx src/scripts/test-object-selection.ts",
     "test:region-assignment": "tsx src/scripts/test-region-assignment.ts",
-    "test:room-package": "tsx src/scripts/test-room-package.ts"
+    "test:room-package": "tsx src/scripts/test-room-package.ts",
+    "test:replacement-group": "tsx src/scripts/test-replacement-group.ts"
   },
   "dependencies": {
     "next": "16.2.6",

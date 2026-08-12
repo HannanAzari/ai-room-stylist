@@ -193,15 +193,30 @@ export type PackagePricing = {
  */
 export function getPackagePricing(
   products: Product[],
-  savingRate = BUNDLE_SAVING_RATE
+  savingRate = BUNDLE_SAVING_RATE,
+  /**
+   * Physical units required per product id. A room needing two of the same
+   * sofa is ONE card but TWO units — without this the package would quietly
+   * under-charge. Missing entries default to 1.
+   */
+  quantities?: Record<string, number>
 ): PackagePricing {
-  const totalItems = products.length;
+  const unitsFor = (product: Product) =>
+    Math.max(1, Math.round(quantities?.[product.id] ?? 1));
+
+  const totalItems = products.reduce(
+    (count, product) => count + unitsFor(product),
+    0
+  );
   const pricedProducts = products.filter(
     (product) => typeof product.price === "number"
   );
-  const pricedItems = pricedProducts.length;
+  const pricedItems = pricedProducts.reduce(
+    (count, product) => count + unitsFor(product),
+    0
+  );
   const subtotal = pricedProducts.reduce(
-    (sum, product) => sum + (product.price as number),
+    (sum, product) => sum + (product.price as number) * unitsFor(product),
     0
   );
   const saving = Math.round(subtotal * savingRate);

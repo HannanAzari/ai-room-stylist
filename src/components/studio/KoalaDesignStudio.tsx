@@ -75,8 +75,15 @@ import type {
 } from "@/features/room-stylist/types";
 import {
   buildReplacementContract,
+  selectionToTarget,
   type AssignmentInput,
 } from "@/lib/intelligence/replacement-assignment";
+import {
+  buildReplacementGroups,
+  primaryTargetFor,
+  toPackageLines,
+} from "@/lib/intelligence/replacement-group";
+import type { CanonicalCategory } from "@/lib/intelligence/scene-taxonomy";
 import { getProductProfiles } from "@/lib/intelligence/product-profile";
 import {
   packageProductIds,
@@ -84,7 +91,7 @@ import {
   type RoomPackage,
 } from "@/lib/intelligence/room-package";
 import { getAllProducts as getAllCatalogueProducts } from "@/lib/products";
-import { RegionAssignmentList } from "./RegionAssignmentList";
+import { CategoryProductShelves } from "./CategoryProductShelves";
 import {
   designModeToConceptMode,
   isDesignMode,
@@ -1529,10 +1536,23 @@ export function KoalaDesignStudio() {
   const [replacePhase, setReplacePhase] = useState<"select" | "confirm">(
     "select"
   );
-  // Explicit region → product assignments. Empty until the customer chooses.
-  const [regionAssignments, setRegionAssignments] = useState<AssignmentInput[]>(
-    []
-  );
+  /**
+   * One chosen Koala product per canonical category, keyed by category.
+   *
+   * The customer picks "this sofa", not a product per sofa instance. How that
+   * choice applies across the individual objects they selected is decided by
+   * the replacement groups, never configured by hand.
+   */
+  const [chosenProductByCategory, setChosenProductByCategory] = useState<
+    Record<string, string | undefined>
+  >({});
+  /**
+   * Units required per product id for the generated room. Survives with the
+   * result so the basket charges for two sofas when the room needs two.
+   */
+  const [productQuantities, setProductQuantities] = useState<
+    Record<string, number>
+  >({});
   const [generatedConcepts, setGeneratedConcepts] = useState<
     GeneratedConcept[]
   >([]);
@@ -1575,17 +1595,44 @@ export function KoalaDesignStudio() {
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
   // Full catalogue, so each region can offer only its own category.
   const allCatalogueProducts = getAllCatalogueProducts();
-  // How many objects of each canonical category the room holds — drives the
-  // explicit "this one / all of them" question.
-  const sameCategoryCounts = detectedObjects.reduce<Record<string, number>>(
-    (counts, object) => {
-      counts[object.canonicalCategory] =
-        (counts[object.canonicalCategory] || 0) + 1;
+  /**
+   * One entry per category the customer selected, with how many objects of it
+   * they picked. This is what the product shelves are built from.
+   */
+  const selectedCategories = [
+    ...roomSelections.reduce((counts, selection) => {
+      counts.set(
+        selection.canonicalCategory,
+        (counts.get(selection.canonicalCategory) || 0) + 1
+      );
       return counts;
-    },
-    {}
-  );
-  // Objects the customer did NOT assign a product to, named so the confirm
+    }, new Map<CanonicalCategory, number>()),
+  ].map(([canonicalCategory, targetCount]) => ({
+    canonicalCategory,
+    targetCount,
+  }));
+
+  /** Replacement groups: one chosen product applied across its objects. */
+  const replacementGroups = buildReplacementGroups({
+    targetsByCategory: roomSelections.reduce((map, selection, index) => {
+      const list = map.get(selection.canonicalCategory) ?? [];
+      list.push(selectionToTarget(selection, index));
+      map.set(selection.canonicalCategory, list);
+      return map;
+    }, new Map<CanonicalCategory, ReturnType<typeof selectionToTarget>[]>()),
+    productByCategory: Object.entries(chosenProductByCategory).reduce(
+      (map, [category, productId]) => {
+        const product = productId
+          ? allCatalogueProducts.find((p) => p.id === productId)
+          : undefined;
+        if (product) map.set(category as CanonicalCategory, product);
+        return map;
+      },
+      new Map<CanonicalCategory, Product>()
+    ),
+  });
+
+  // Objects with no product chosen for their category, named so the confirm
   // screen can promise they stay untouched.
   const protectedSummary = detectedObjects
     .filter(
@@ -1593,9 +1640,7 @@ export function KoalaDesignStudio() {
         !roomSelections.some(
           (selection) =>
             selection.sceneItemId === object.sceneItemId &&
-            regionAssignments.some(
-              (assignment) => assignment.selectionId === selection.selectionId
-            )
+            Boolean(chosenProductByCategory[selection.canonicalCategory])
         )
     )
     .map((object) => object.displayName);
@@ -1633,7 +1678,13 @@ export function KoalaDesignStudio() {
     (product) => !products.some((existing) => existing.id === product.id)
   );
   const packageProducts = mergeUniqueProducts(products, addedRecommendations);
-  const packagePricing = getPackagePricing(packageProducts);
+  // Physical units per product, so a room needing two of the same sofa is one
+  // card but two units in the basket.
+  const packagePricing = getPackagePricing(
+    packageProducts,
+    undefined,
+    productQuantities
+  );
   const roomSummary =
     products.length > 0
       ? buildRoomSummary(packageProducts, roomType, selectedStylePrompt)
@@ -1958,7 +2009,8 @@ export function KoalaDesignStudio() {
       setPreviewUrl(objectUrl);
       // A new photo invalidates everything selected against the old one.
       setRoomSelections([]);
-      setRegionAssignments([]);
+      setChosenProductByCategory({});
+    setProductQuantities({});
       setDetectedObjects([]);
       setDetectionState("idle");
       // Record the photo's true pixel size so selections stay resolution
@@ -2070,8 +2122,19 @@ export function KoalaDesignStudio() {
     // "Surprise me" needs no picks — that is the whole point of it. "Replace
     // items" needs at least one region with an actual product assigned to it,
     // because that flow only ever executes explicit assignments.
-    if (designMode === "replace-items") return regionAssignments.length > 0;
+    if (designMode === "replace-items") return replacementGroups.length > 0;
     return true;
+  }
+
+  /** Choose (or clear) the single product for a category. */
+  function chooseProductForCategory(
+    category: CanonicalCategory,
+    productId: string | null
+  ) {
+    setChosenProductByCategory((current) => ({
+      ...current,
+      [category]: productId ?? undefined,
+    }));
   }
 
   /**
@@ -2079,12 +2142,37 @@ export function KoalaDesignStudio() {
    * product choices. Returns null when there is nothing explicit to send.
    */
   function buildContract() {
-    if (designMode !== "replace-items" || regionAssignments.length === 0) {
+    if (designMode !== "replace-items" || replacementGroups.length === 0) {
       return null;
     }
+    // Groups decide which objects each chosen product covers; a combined
+    // sectional clears every seat it absorbs but is only PLACED once.
+    const assignments: AssignmentInput[] = replacementGroups.flatMap((group) => {
+      const acting =
+        group.strategy === "replace-group-with-single"
+          ? [primaryTargetFor(group)]
+          : group.targets;
+      const entries: AssignmentInput[] = [];
+      for (const target of acting) {
+        const selection = roomSelections.find(
+          (candidate, index) =>
+            selectionToTarget(candidate, index).targetId === target.targetId
+        );
+        if (!selection) continue;
+        entries.push({
+          selectionId: selection.selectionId,
+          productId: group.selectedProductId,
+          // Scope is decided by the group's strategy, never asked of the
+          // customer — the old "this one / all of them" question is gone.
+          scope: "this-only",
+        });
+      }
+      return entries;
+    });
+
     return buildReplacementContract({
       selections: roomSelections,
-      assignments: regionAssignments,
+      assignments,
       profiles: getProductProfiles(allCatalogueProducts),
       allDetected: detectedObjects.map((object) => ({
         sceneItemId: object.sceneItemId,
@@ -2151,6 +2239,17 @@ export function KoalaDesignStudio() {
       if (contract) {
         formData.append("replacementContract", JSON.stringify(contract));
       }
+      // Record the units this room needs before the request, so the basket is
+      // correct even if the response is restored from cache later.
+      setProductQuantities(
+        Object.fromEntries(
+          toPackageLines(replacementGroups).map((line) => [
+            line.productId,
+            line.quantity,
+          ])
+        )
+      );
+
       if (curatedIds) {
         formData.append("curatedPackage", "true");
         formData.append("roomPackage", JSON.stringify(roomPackage));
@@ -2403,7 +2502,7 @@ export function KoalaDesignStudio() {
     setSelectedProductIds([]);
     setDesignMode(null);
     setRoomSelections([]);
-    setRegionAssignments([]);
+    setChosenProductByCategory({});
     setGeneratedConcepts([]);
     setProducts([]);
     setAddedRecommendationIds([]);
@@ -2623,18 +2722,17 @@ export function KoalaDesignStudio() {
 
         <div>
           <h3 className="font-serif text-xl text-[#F5F3EE]">
-            Choose a Koala product for each
+            Pick your Koala pieces
           </h3>
           <p className="mt-1 text-xs leading-5 text-[#9a978f]">
-            Only products that fit each object&apos;s category are offered.
+            One choice per type. We&apos;ll fit it to your room.
           </p>
-          <div className="mt-3">
-            <RegionAssignmentList
-              selections={roomSelections}
-              assignments={regionAssignments}
-              onAssignmentsChange={setRegionAssignments}
+          <div className="mt-4">
+            <CategoryProductShelves
+              categories={selectedCategories}
               catalogue={allCatalogueProducts}
-              sameCategoryCounts={sameCategoryCounts}
+              chosenByCategory={chosenProductByCategory}
+              onChoose={chooseProductForCategory}
             />
           </div>
         </div>
@@ -3432,7 +3530,7 @@ export function KoalaDesignStudio() {
                     // a genuine fork rather than a remembered setting.
                     setDesignMode(null);
                     setRoomSelections([]);
-                    setRegionAssignments([]);
+                    setChosenProductByCategory({});
                     setReplacePhase("select");
                   }
                   setStep(step - 1);
