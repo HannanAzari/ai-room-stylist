@@ -87,10 +87,18 @@ import { getProductProfiles } from "@/lib/intelligence/product-profile";
 import { getAllProducts as getAllCatalogueProducts } from "@/lib/products";
 import { CategoryProductShelves } from "./CategoryProductShelves";
 import { ReplaceCategoryPicker } from "./ReplaceCategoryPicker";
+import { SeatingPlanPicker } from "./SeatingPlanPicker";
+import { SurpriseStylePicker } from "./SurpriseStylePicker";
+import {
+  describeSeatingPlan,
+  getCategoryMenu,
+  isCategorySupported,
+  seatingPlanProductCategories,
+  type SeatingPlan,
+} from "@/lib/intelligence/room-categories";
 import {
   designModeToConceptMode,
   displayCategoryName,
-  groupDetectedByCategory,
   isDesignMode,
   objectsForSelectedCategories,
   selectionFromDetectedObject,
@@ -1403,8 +1411,23 @@ export function KoalaDesignStudio() {
   });
   // Replace-items has two stages within step 3: pick the objects, then confirm.
   const [replacePhase, setReplacePhase] = useState<
-    "categories" | "products" | "precision"
+    "categories" | "seating" | "products" | "precision"
   >("categories");
+  /** The category the seating configurator is currently editing. */
+  const [seatingCategory, setSeatingCategory] =
+    useState<CanonicalCategory | null>(null);
+  /**
+   * What configurable categories should END UP as, keyed by category.
+   *
+   * Seating is not a swap: "two tired sofas" can become "one L-shape and two
+   * armchairs". The plan states the destination and the pipeline works out the
+   * difference from what the room actually holds.
+   */
+  const [categoryPlans, setCategoryPlans] = useState<
+    Partial<Record<CanonicalCategory, SeatingPlan>>
+  >({});
+  /** The look chosen for Surprise me. Null until the customer picks one. */
+  const [surpriseStyle, setSurpriseStyle] = useState<string | null>(null);
   /** Furniture TYPES the customer chose to replace. */
   const [selectedCategories, setSelectedCategories] = useState<
     CanonicalCategory[]
@@ -1483,8 +1506,28 @@ export function KoalaDesignStudio() {
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
   // Full catalogue, so each region can offer only its own category.
   const allCatalogueProducts = getAllCatalogueProducts();
-  /** Furniture types found in the room, grouped away from their instances. */
-  const detectedCategories = groupDetectedByCategory(detectedObjects);
+  /**
+   * The menu of things that can be replaced.
+   *
+   * Written from the room TYPE, not the photo, so it is on screen the instant
+   * the customer arrives. A living room has sofas and a rug whether or not we
+   * have looked at this particular one — and nobody should wait half a minute
+   * to be shown a list we could have written in advance.
+   */
+  const menuCategories = getCategoryMenu(roomType);
+  /**
+   * Types the menu offers that the catalogue cannot fill yet. Shown, because
+   * the menu should read like a whole room, but never selectable — a tap that
+   * leads to an empty shelf is worse than an honest "coming soon".
+   */
+  const unavailableCategories = menuCategories
+    .filter(
+      (entry) =>
+        !isCategorySupported(entry.canonicalCategory, allCatalogueProducts)
+    )
+    .map((entry) => entry.canonicalCategory);
+  /** True once the room has actually been looked at. */
+  const hasDetections = detectionState === "ready" && detectedObjects.length > 0;
 
   /**
    * The objects a category choice resolves to.
@@ -1519,19 +1562,56 @@ export function KoalaDesignStudio() {
     ...manualSelections,
   ];
 
-  /** One shelf per chosen type, carrying how many pieces it covers. */
-  const shelfCategories = [
-    ...effectiveSelections.reduce((counts, selection) => {
-      counts.set(
-        selection.canonicalCategory,
-        (counts.get(selection.canonicalCategory) || 0) + 1
-      );
-      return counts;
-    }, new Map<CanonicalCategory, number>()),
-  ].map(([canonicalCategory, targetCount]) => ({
-    canonicalCategory,
-    targetCount,
-  }));
+  /**
+   * One shelf per chosen type, carrying how many pieces it covers.
+   *
+   * Without an analysis there are no instances to count, so the shelves come
+   * straight from what the customer chose: one per type, plus a shelf per
+   * distinct piece kind a seating plan calls for. Once the advanced picker has
+   * analysed the room, the real instance counts take over.
+   */
+  const shelfCategories = hasDetections
+    ? [
+        ...effectiveSelections.reduce((counts, selection) => {
+          counts.set(
+            selection.canonicalCategory,
+            (counts.get(selection.canonicalCategory) || 0) + 1
+          );
+          return counts;
+        }, new Map<CanonicalCategory, number>()),
+      ].map(([canonicalCategory, targetCount]) => ({
+        canonicalCategory,
+        targetCount,
+      }))
+    : selectedCategories.flatMap((canonicalCategory) => {
+        // A shelf nothing can fill is an empty shelf. The menu already marks
+        // these unavailable, so this is belt-and-braces rather than the fix.
+        if (!isCategorySupported(canonicalCategory, allCatalogueProducts)) {
+          return [];
+        }
+        const plan = categoryPlans[canonicalCategory];
+        if (!plan) return [{ canonicalCategory, targetCount: 1 }];
+        // A plan wanting sofas AND armchairs needs a shelf for each, so the
+        // armchair choice is a real choice rather than an assumption.
+        return seatingPlanProductCategories(plan)
+          .filter((productCategory) =>
+            allCatalogueProducts.some(
+              (product) => product.category === productCategory
+            )
+          )
+          .map((productCategory) => ({
+            canonicalCategory:
+              productCategory === "chairs"
+                ? ("armchair" as CanonicalCategory)
+                : canonicalCategory,
+            targetCount: plan.pieces
+              .filter(
+                (piece) =>
+                  (piece.kind === "armchair") === (productCategory === "chairs")
+              )
+              .reduce((total, piece) => total + piece.count, 0),
+          }));
+      });
 
   /** Replacement groups: one chosen product applied across its objects. */
   const replacementGroups = buildReplacementGroups({
@@ -2060,6 +2140,14 @@ export function KoalaDesignStudio() {
       delete next[category];
       return next;
     });
+    // The arrangement goes with it — a plan for a type nobody is replacing
+    // would quietly reappear if the type were chosen again later.
+    setCategoryPlans((current) => {
+      if (!selectedCategories.includes(category)) return current;
+      const next = { ...current };
+      delete next[category];
+      return next;
+    });
   }
 
   /** Choose (or clear) the single product for a category. */
@@ -2077,8 +2165,25 @@ export function KoalaDesignStudio() {
    * Build the explicit replacement contract from the customer's regions and
    * product choices. Returns null when there is nothing explicit to send.
    */
+  /**
+   * A full contract, but only when the room has actually been analysed.
+   *
+   * A contract names INSTANCES — this sofa, at these coordinates — so it can
+   * only be built once something has looked at the photo. In the ordinary
+   * journey nothing has, and the server builds the contract instead from the
+   * category intent below, using the scene graph it was going to compute
+   * anyway. This path exists for the advanced picker, where the customer
+   * singled out specific pieces and the browser already holds the detections.
+   */
   function buildContract() {
-    if (designMode !== "replace-items" || replacementGroups.length === 0) {
+    if (
+      designMode !== "replace-items" ||
+      replacementGroups.length === 0 ||
+      // Hand-drawn areas have no category the server could resolve — they ARE
+      // the geometry — so they always travel as a contract, even when
+      // detection was unavailable and drawing was the only option left.
+      (!hasDetections && manualSelections.length === 0)
+    ) {
       return null;
     }
     // Groups decide which objects each chosen product covers; a combined
@@ -2134,6 +2239,37 @@ export function KoalaDesignStudio() {
    * that chooses the mode, and a `setState` has not landed by then — reading
    * `designMode` here would see the previous value.
    */
+  /**
+   * What the customer asked for, as types rather than regions.
+   *
+   * This is the ordinary path: the browser states the intent, and the server —
+   * which is analysing the room regardless — decides which pieces that means.
+   */
+  function buildCategoryIntents() {
+    return shelfCategories.flatMap((shelf) => {
+      const productId = chosenProductByCategory[shelf.canonicalCategory];
+      if (!productId) return [];
+      const plan = categoryPlans[shelf.canonicalCategory];
+      // Narrow to named pieces only where the customer explicitly did so.
+      const sceneItemIds = roomSelections
+        .filter(
+          (selection) =>
+            selection.canonicalCategory === shelf.canonicalCategory &&
+            selection.sceneItemId
+        )
+        .map((selection) => selection.sceneItemId as string);
+
+      return [
+        {
+          canonicalCategory: shelf.canonicalCategory,
+          productId,
+          ...(sceneItemIds.length > 0 ? { sceneItemIds } : {}),
+          ...(plan ? { seatingPlan: plan } : {}),
+        },
+      ];
+    });
+  }
+
   async function handleGenerate(modeOverride?: DesignMode) {
     const mode = modeOverride ?? designMode;
     if (!image || !roomType || !selectedStylePrompt || !mode) return;
@@ -2181,6 +2317,14 @@ export function KoalaDesignStudio() {
       );
       if (contract) {
         formData.append("replacementContract", JSON.stringify(contract));
+      } else if (mode === "replace-items") {
+        // No contract means nothing has analysed the room yet, which is the
+        // normal case. Send the intent; the server resolves it.
+        formData.append(
+          "replaceCategories",
+          JSON.stringify(buildCategoryIntents())
+        );
+        formData.append("sourceImageSize", JSON.stringify(sourceImageSize));
       }
       // Record the units this room needs before the request, so the basket is
       // correct even if the response is restored from cache later.
@@ -2192,9 +2336,12 @@ export function KoalaDesignStudio() {
           ])
         )
       );
+      // Superseded below by the server's counts when it resolved the intent —
+      // it saw how many sofas the room has and the browser did not.
 
       if (surpriseMe) {
         formData.append("surpriseMe", "true");
+        if (surpriseStyle) formData.append("surpriseStyle", surpriseStyle);
       }
       // The pipeline's wire contract is unchanged — the intent is translated to
       // the concept-mode flag at this boundary. `designMode` is sent alongside
@@ -2237,6 +2384,13 @@ export function KoalaDesignStudio() {
       }
 
       void logAiEvaluation(data.aiDebug, data.imageBase64 ?? null, null);
+
+      if (
+        data.productQuantities &&
+        typeof data.productQuantities === "object"
+      ) {
+        setProductQuantities(data.productQuantities as Record<string, number>);
+      }
 
       setGeneratedConcepts(nextConcepts);
       setProducts(nextProducts);
@@ -2469,14 +2623,9 @@ export function KoalaDesignStudio() {
    * over the photo, no "Sofa 1 / Sofa 2" in the ordinary journey.
    */
   function renderReplaceItemsStep() {
+    if (replacePhase === "seating") return renderSeatingStep();
     if (replacePhase === "products") return renderReplaceProductsStep();
     if (replacePhase === "precision") return renderPrecisionStep();
-
-    const analysing = detectionState === "loading" || detectionState === "idle";
-    const nothingFound =
-      detectionState !== "loading" &&
-      detectionState !== "idle" &&
-      detectedCategories.length === 0;
 
     return (
       <section className="space-y-4">
@@ -2488,56 +2637,125 @@ export function KoalaDesignStudio() {
             What would you like to replace?
           </h1>
           <p className="mt-2 text-sm leading-6 text-[#9a978f]">
-            {analysing
-              ? "Just a moment — we're looking at your room."
-              : nothingFound
-                ? "We couldn't pick out any furniture. You can mark an area yourself instead."
-                : "We found these pieces in your room. Anything you don't choose stays as it is."}
+            Anything you don&apos;t choose stays exactly as it is.
           </p>
         </div>
 
         {/* Context, not an interface: the photo carries no markings. */}
         {previewUrl && (
           <div className="v2-hero-shadow relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#0B0B0B]">
-                      <img
+            <img
               src={previewUrl}
               alt="Your room"
               className="h-[22vh] w-full object-cover object-center"
             />
-            {analysing && (
-              <div className="absolute inset-0 grid place-items-center bg-black/45 backdrop-blur-[2px]">
-                <p className="text-xs font-semibold text-[#F5F3EE]">
-                  Looking at your room…
-                </p>
-              </div>
-            )}
           </div>
         )}
 
-        {!analysing && detectedCategories.length > 0 && (
-          <ReplaceCategoryPicker
-            categories={detectedCategories}
-            selected={selectedCategories}
-            onToggle={toggleCategory}
-            onRefine={(category) => {
-              setPrecisionCategory(category);
-              setReplacePhase("precision");
-            }}
-          />
+        <ReplaceCategoryPicker
+          categories={menuCategories}
+          selected={selectedCategories}
+          unavailable={unavailableCategories}
+          planSummaries={Object.fromEntries(
+            Object.entries(categoryPlans).map(([category, plan]) => [
+              category,
+              plan ? describeSeatingPlan(plan) : "",
+            ])
+          )}
+          onToggle={toggleCategory}
+          onConfigure={(category) => {
+            setSeatingCategory(category);
+            setReplacePhase("seating");
+          }}
+          onRefine={(category) => {
+            setPrecisionCategory(category);
+            setReplacePhase("precision");
+            // The ONE path that needs the room looked at before generating:
+            // singling out a specific piece means naming it, and pieces only
+            // have names once something has seen them.
+            if (detectionState === "idle") void detectRoomObjects();
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={() => {
+            setPrecisionCategory(null);
+            setReplacePhase("precision");
+            if (detectionState === "idle") void detectRoomObjects();
+          }}
+          className="w-full text-center text-xs font-semibold text-[#9a978f] underline underline-offset-4 transition hover:text-[#C9A57A]"
+        >
+          Something missing? Mark an area yourself
+        </button>
+      </section>
+    );
+  }
+
+  /** "What should your seating be?" — the destination, not a swap. */
+  function renderSeatingStep() {
+    const category = seatingCategory;
+    if (!category) return null;
+
+    return (
+      <section className="space-y-5">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+            Seating
+          </p>
+          <h1 className="mt-2 font-serif text-[26px] font-semibold leading-tight text-[#F5F3EE]">
+            What should your seating be?
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+            Tell us what you want the room to end up with — we&apos;ll work out
+            what that means for what&apos;s there now.
+          </p>
+        </div>
+
+        <SeatingPlanPicker
+          plan={categoryPlans[category]}
+          armchairsAvailable={isCategorySupported(
+            "armchair",
+            allCatalogueProducts
+          )}
+          onChange={(plan) =>
+            setCategoryPlans((current) => ({ ...current, [category]: plan }))
+          }
+        />
+      </section>
+    );
+  }
+
+  /** "What look are you after?" — the one question Surprise me asks. */
+  function renderSurpriseStyleStep() {
+    return (
+      <section className="space-y-5">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+            Surprise me
+          </p>
+          <h1 className="mt-2 font-serif text-[26px] font-semibold leading-tight text-[#F5F3EE]">
+            What look are you after?
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+            One question, then we&apos;ll design the whole room for you.
+          </p>
+        </div>
+
+        {previewUrl && (
+          <div className="v2-hero-shadow relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#0B0B0B]">
+            <img
+              src={previewUrl}
+              alt="Your room"
+              className="h-[18vh] w-full object-cover object-center"
+            />
+          </div>
         )}
 
-        {!analysing && (
-          <button
-            type="button"
-            onClick={() => {
-              setPrecisionCategory(null);
-              setReplacePhase("precision");
-            }}
-            className="w-full text-center text-xs font-semibold text-[#9a978f] underline underline-offset-4 transition hover:text-[#C9A57A]"
-          >
-            Something missing? Mark an area yourself
-          </button>
-        )}
+        <SurpriseStylePicker
+          selected={surpriseStyle}
+          onSelect={setSurpriseStyle}
+        />
       </section>
     );
   }
@@ -2559,6 +2777,9 @@ export function KoalaDesignStudio() {
           categories={shelfCategories}
           catalogue={allCatalogueProducts}
           chosenByCategory={chosenProductByCategory}
+          // Without an analysis the counts describe the layout the customer
+          // asked for, not the room we looked at.
+          countsAreFromRoom={hasDetections}
           onChoose={chooseProductForCategory}
         />
 
@@ -2730,12 +2951,12 @@ export function KoalaDesignStudio() {
             description="Choose exactly what you want to change."
             selected={designMode === "replace-items"}
             onClick={() => {
+              // No analysis here. The list of things you can replace is known
+              // from the room type, so it appears instantly; the room is only
+              // looked at once the customer has said what they want.
               setDesignMode("replace-items");
               setReplacePhase("categories");
               setStep(3);
-              // Kick off detection as the screen opens so the customer is not
-              // left waiting on a blank overlay.
-              if (detectionState === "idle") void detectRoomObjects();
             }}
             preview={previewUrl}
             accent="Your choice"
@@ -2746,12 +2967,12 @@ export function KoalaDesignStudio() {
             description="Let Koala create a complete look for your room."
             selected={designMode === "surprise-me"}
             onClick={() => {
-              // Surprise me is one tap. The room is analysed and a coherent
-              // Koala package chosen server-side, then generation starts
-              // immediately — no confirmation screen, because being asked to
-              // approve a package is the opposite of being surprised.
+              // One question — the look — and then the room is designed. The
+              // package itself is still chosen server-side and never shown for
+              // approval: being asked to sign off a package is the opposite of
+              // being surprised.
               setDesignMode("surprise-me");
-              void handleGenerate("surprise-me");
+              setStep(3);
             }}
             preview={previewUrl}
             accent="Koala designs it"
@@ -2764,8 +2985,10 @@ export function KoalaDesignStudio() {
       return renderReplaceItemsStep();
     }
 
-    // Step 3 belongs to Replace items. Surprise me never lands here: it goes
-    // straight from the choice screen into generation and on to the result.
+    if (step === 3 && designMode === "surprise-me") {
+      return renderSurpriseStyleStep();
+    }
+
     if (step === 3) return null;
 
     if (!activeImage) {
@@ -3242,6 +3465,11 @@ export function KoalaDesignStudio() {
                       setReplacePhase("categories");
                       return;
                     }
+                    if (replacePhase === "seating") {
+                      setSeatingCategory(null);
+                      setReplacePhase("categories");
+                      return;
+                    }
                     if (replacePhase === "precision") {
                       // Leaving the advanced picker discards its narrowing so
                       // the type-level choice is what applies again.
@@ -3259,6 +3487,9 @@ export function KoalaDesignStudio() {
                     setChosenProductByCategory({});
                     setSelectedCategories([]);
                     setPrecisionCategory(null);
+                    setSeatingCategory(null);
+                    setCategoryPlans({});
+                    setSurpriseStyle(null);
                     setReplacePhase("categories");
                   }
                   setStep(step - 1);
@@ -3294,6 +3525,40 @@ export function KoalaDesignStudio() {
               )}
             {step === 3 &&
               designMode === "replace-items" &&
+              replacePhase === "seating" && (
+                <StudioButton
+                  onClick={() => {
+                    // Confirming the plan is what selects the category — the
+                    // tick and the arrangement are one decision.
+                    if (seatingCategory && !selectedCategories.includes(seatingCategory)) {
+                      toggleCategory(seatingCategory);
+                    }
+                    setSeatingCategory(null);
+                    setReplacePhase("categories");
+                  }}
+                  disabled={!seatingCategory || !categoryPlans[seatingCategory]}
+                  className="min-h-14 rounded-2xl text-base"
+                >
+                  {seatingCategory && categoryPlans[seatingCategory]
+                    ? "Confirm seating"
+                    : "Choose an arrangement"}
+                </StudioButton>
+              )}
+            {step === 3 && designMode === "surprise-me" && (
+              <StudioButton
+                onClick={() => void handleGenerate("surprise-me")}
+                disabled={!surpriseStyle || loading}
+                className="min-h-14 rounded-2xl text-base"
+              >
+                {loading
+                  ? "Designing..."
+                  : surpriseStyle
+                    ? "Design my room"
+                    : "Choose a look"}
+              </StudioButton>
+            )}
+            {step === 3 &&
+              designMode === "replace-items" &&
               replacePhase === "precision" && (
                 <StudioButton
                   onClick={() => setReplacePhase("products")}
@@ -3306,10 +3571,8 @@ export function KoalaDesignStudio() {
                 </StudioButton>
               )}
             {step === 3 &&
-              !(
-                designMode === "replace-items" &&
-                (replacePhase === "categories" || replacePhase === "precision")
-              ) && (
+              designMode === "replace-items" &&
+              replacePhase === "products" && (
                 <StudioButton
                   onClick={() => void handleGenerate()}
                   disabled={!canGenerateConcept() || loading}

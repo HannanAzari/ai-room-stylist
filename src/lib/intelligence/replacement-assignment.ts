@@ -30,10 +30,16 @@ import type {
   SelectionPoint,
   SourceImageSize,
 } from "./room-selection";
-import { describeLocation, type ReplacementPlan, type ReplacementTask } from "./replacement-planner";
+import {
+  describeLocation,
+  type PlacementTask,
+  type ReplacementPlan,
+  type ReplacementTask,
+} from "./replacement-planner";
 import {
   canonicalCategoryLabel,
   isAnchorCategory,
+  isWallMountedProductCategory,
   type CanonicalCategory,
 } from "./scene-taxonomy";
 
@@ -47,7 +53,12 @@ import {
  */
 const CATEGORY_LOCK: Partial<Record<CanonicalCategory, string[]>> = {
   sofa: ["sofas"],
-  armchair: ["chairs"],
+  // No armchairs in the catalogue — every product filed under "chairs" is a
+  // DINING chair, and a dining chair standing where an armchair was is a
+  // category error, not a near-enough match. Empty means nothing may fill an
+  // armchair region, which surfaces as an honest "coming soon" rather than a
+  // wrong product. Add an armchair category here the day the feed has one.
+  armchair: [],
   chair: ["chairs"],
   "coffee-table": ["coffee-tables"],
   "dining-table": ["dining-tables"],
@@ -123,9 +134,30 @@ export type ProtectedItem = {
   canonicalCategory?: CanonicalCategory;
 };
 
+/**
+ * A piece the customer asked for that has no counterpart in the room.
+ *
+ * Seating plans make this real: someone with two sofas and no armchairs can
+ * ask to end up with an L-shape AND two armchairs. The sofa is a replacement;
+ * the armchairs are not replacing anything. Without this the extra pieces
+ * would be quietly dropped and the promise broken.
+ */
+export type ContractAddition = {
+  taskId: number;
+  action: "PLACE";
+  productId: string;
+  productTitle: string;
+  productCategorySlug: string;
+  canonicalCategory: CanonicalCategory;
+  /** Where it should go, in words — there is no region to point at. */
+  placement: string;
+};
+
 /** The complete, explicit instruction set handed to generation. */
 export type ReplacementContract = {
   assignments: ReplacementAssignment[];
+  /** Pieces with nothing to replace. Empty for a plain swap. */
+  additions?: ContractAddition[];
   protectedItems: ProtectedItem[];
   sourceImage: SourceImageSize;
 };
@@ -348,6 +380,32 @@ export function contractToReplacementPlan(
     })
     .filter((task): task is ReplacementTask => task !== null);
 
+  // Pieces with nothing to replace. These are the only additions a replace
+  // contract may produce — the customer asked for them by name, so they are
+  // not the "improve the room" additions the no-additions guardrail forbids.
+  const additions: PlacementTask[] = (contract.additions ?? [])
+    .map((addition): PlacementTask | null => {
+      const profile = profileById.get(addition.productId);
+      if (!profile) return null;
+      return {
+        kind: "place",
+        taskId: addition.taskId,
+        stage: isAnchorCategory(addition.canonicalCategory)
+          ? "anchor"
+          : "secondary",
+        productId: profile.id,
+        productTitle: profile.title,
+        identity: profile.identity,
+        productCategory: profile.categoryLabel,
+        productCategorySlug: profile.category,
+        target: "an open area of the room",
+        placement: addition.placement,
+        source: "selected",
+        onWall: isWallMountedProductCategory(profile.category),
+      };
+    })
+    .filter((task): task is PlacementTask => task !== null);
+
   const preserved = [
     ...contract.protectedItems.map((item) => item.label),
     ...ALWAYS_PROTECTED.map((item) => item.label),
@@ -393,16 +451,21 @@ export function contractToReplacementPlan(
 
   return {
     replacements,
-    additions: [],
+    additions,
     preserved: [...new Set(preserved)],
     dispositions,
     analysed: true,
   };
 }
 
-/** Every product id the contract intends to place. */
+/** Every product id the contract intends to place, replacements and additions. */
 export function contractProductIds(contract: ReplacementContract): string[] {
-  return [...new Set(contract.assignments.map((a) => a.productId))];
+  return [
+    ...new Set([
+      ...contract.assignments.map((a) => a.productId),
+      ...(contract.additions ?? []).map((a) => a.productId),
+    ]),
+  ];
 }
 
 /** Human-readable summary of the contract, for confirmation screens. */

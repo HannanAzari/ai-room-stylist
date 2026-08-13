@@ -20,7 +20,8 @@
     "test:room-package": "tsx src/scripts/test-room-package.ts",
     "test:replacement-group": "tsx src/scripts/test-replacement-group.ts",
     "test:scroll": "tsx src/scripts/test-scroll-restoration.ts",
-    "test:category-flow": "tsx src/scripts/test-category-flow.ts"
+    "test:category-flow": "tsx src/scripts/test-category-flow.ts",
+    "test:instant-flow": "tsx src/scripts/test-instant-flow.ts"
   },
   "dependencies": {
     "next": "16.2.6",

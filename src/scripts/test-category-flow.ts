@@ -260,10 +260,15 @@ section("7. Surprise Me picks a coherent package with no confirmation step");
     !/pieces, chosen to work together/.test(studio));
   check("no 'Your Koala package' confirmation remains",
     !/Your Koala package/.test(studio));
-  check("Surprise me generates straight away",
-    /setDesignMode\("surprise-me"\);\s*\n\s*(\/\/[^\n]*\n\s*)*void handleGenerate\("surprise-me"\)/.test(
-      studio
-    ));
+  // Surprise me now asks exactly ONE question — the look — before designing.
+  // That is a question about taste, not a package to approve, so the guarantee
+  // being defended is unchanged: the customer never signs off a product list.
+  check("Surprise me asks for a look, then designs",
+    /designMode === "surprise-me"[\s\S]{0,200}renderSurpriseStyleStep/.test(studio));
+  check("choosing the look is the only step before generating",
+    /void handleGenerate\("surprise-me"\)/.test(studio));
+  check("no package screen stands between the look and the room",
+    !/Review your package|Approve your|Confirm your pieces/.test(studio));
 }
 
 // --- 8. Products used derive from the final plan ---------------------------
@@ -299,8 +304,13 @@ section("9. No detection detail reaches the ordinary journey");
   );
   const studio = readFileSync("src/components/studio/KoalaDesignStudio.tsx", "utf8");
 
-  check("the category screen shows a count, not instances",
-    /in your room/.test(picker) && !/Sofa 1|instanceLabel/.test(picker));
+  // The menu is prebuilt from the room type, so there are no counts to show:
+  // nothing has looked at the photo when this screen appears. What must stay
+  // true is that no per-instance detail ever reaches it.
+  check("the category screen names types, never instances",
+    !/Sofa 1|instanceLabel|sceneItemId/.test(picker));
+  check("the menu needs no analysis to render",
+    !/detectionState|detectedObjects|analysed/.test(picker));
   check("no boxes or dots are drawn on the category screen",
     !/boundingBox|projectBox/.test(picker));
   check("the advanced picker is opt-in",
@@ -311,12 +321,18 @@ section("9. No detection detail reaches the ordinary journey");
   // Customer-facing copy must not use engineering vocabulary.
   const customerCopy = [
     "What would you like to replace?",
-    "We found these pieces in your room",
     "Choose your new pieces",
+    "What should your seating be?",
+    "What look are you after?",
   ];
   for (const line of customerCopy) {
     check(`copy present: "${line.slice(0, 34)}…"`, studio.includes(line));
   }
+  // Honesty: the menu appears before any analysis, so it must not claim to
+  // have found anything in the customer's actual room.
+  check("no claim to have found pieces before looking",
+    !studio.includes("We found these pieces in your room"));
+
   for (const jargon of [
     "bounding box",
     "segmentation",

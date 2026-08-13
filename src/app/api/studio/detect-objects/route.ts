@@ -4,6 +4,11 @@ import {
   type SceneGraph,
 } from "@/lib/intelligence/scene-graph";
 import { toSelectableObjects } from "@/lib/intelligence/room-selection";
+import {
+  getCachedSceneGraph,
+  roomImageKey,
+  setCachedSceneGraph,
+} from "@/lib/intelligence/scene-cache";
 
 /**
  * Smart Select — detect the room objects a customer may choose to replace.
@@ -77,11 +82,21 @@ export async function POST(req: Request) {
     // Fallback-safe by design: no key means no detection, not an error page.
     // The client falls back to manual drawing.
     let sceneGraph: SceneGraph | undefined;
+    // Keyed by the photo's bytes, so generating right after this costs one
+    // analysis rather than two.
+    const sceneCacheKey = roomImageKey(await image.arrayBuffer());
+    const cachedScene = getCachedSceneGraph(sceneCacheKey);
     try {
-      sceneGraph = await analyzeSceneGraph(image, {
-        apiKey,
-        roomTypeHint: typeof roomTypeHint === "string" ? roomTypeHint : undefined,
-      });
+      sceneGraph =
+        cachedScene ??
+        (await analyzeSceneGraph(image, {
+          apiKey,
+          roomTypeHint:
+            typeof roomTypeHint === "string" ? roomTypeHint : undefined,
+        }));
+      if (!cachedScene && sceneGraph) {
+        setCachedSceneGraph(sceneCacheKey, sceneGraph);
+      }
     } catch (error) {
       console.warn("[detect-objects] scene analysis failed", error);
       sceneGraph = undefined;

@@ -32,11 +32,22 @@ export function CategoryProductShelves({
   categories,
   catalogue,
   chosenByCategory,
+  countsAreFromRoom = true,
   onChoose,
 }: {
   categories: CategorySelection[];
   catalogue: Product[];
   chosenByCategory: Record<string, string | undefined>;
+  /**
+   * Whether the counts came from looking at the room, or from what the
+   * customer asked for.
+   *
+   * In the ordinary journey nothing has analysed the photo yet, so saying "2
+   * in your room" would be a claim we have not earned. The number is real
+   * either way — it just means something different, and the copy has to say
+   * which.
+   */
+  countsAreFromRoom?: boolean;
   onChoose: (category: CanonicalCategory, productId: string | null) => void;
 }) {
   return (
@@ -74,7 +85,9 @@ export function CategoryProductShelves({
                 <span className="shrink-0 text-[11px] text-[#9a978f]">
                   {combined
                     ? "replaced as one unit"
-                    : `${targetCount} in your room`}
+                    : countsAreFromRoom
+                      ? `${targetCount} in your room`
+                      : `${targetCount} in your new layout`}
                 </span>
               )}
             </div>
@@ -121,14 +134,20 @@ export function CategoryProductShelves({
 
                 {chosen && combined && (
                   <p className="mt-1.5 text-[11px] leading-4 text-[#9a978f]">
-                    This is a corner/sectional design, so it replaces your{" "}
-                    {targetCount} seats as one combined piece.
+                    This is a corner/sectional design, so it works as one
+                    combined piece rather than {targetCount} separate seats.
                   </p>
                 )}
                 {chosen && !combined && targetCount > 1 && (
                   <p className="mt-1.5 text-[11px] leading-4 text-[#9a978f]">
-                    We&apos;ll use {targetCount} of these — one for each{" "}
-                    {label.toLowerCase()} in your room.
+                    {countsAreFromRoom ? (
+                      <>
+                        We&apos;ll use {targetCount} of these — one for each{" "}
+                        {label.toLowerCase()} in your room.
+                      </>
+                    ) : (
+                      <>We&apos;ll use {targetCount} of these.</>
+                    )}
                   </p>
                 )}
               </>

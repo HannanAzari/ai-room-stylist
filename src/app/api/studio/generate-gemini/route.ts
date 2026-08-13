@@ -31,6 +31,11 @@ import {
 } from "@/lib/intelligence/scene-graph";
 import { buildIntelligentRoomPrompt } from "@/lib/intelligence/prompt-builder";
 import {
+  getCachedSceneGraph,
+  roomImageKey,
+  setCachedSceneGraph,
+} from "@/lib/intelligence/scene-cache";
+import {
   buildReplacementPlan,
   shouldUseTwoStageGeneration,
   splitPlanByStage,
@@ -39,8 +44,14 @@ import {
 import { buildReferenceManifest } from "@/lib/intelligence/reference-manifest";
 import {
   contractToReplacementPlan,
+  contractProductIds,
   type ReplacementContract,
 } from "@/lib/intelligence/replacement-assignment";
+import {
+  parseCategoryIntents,
+  resolveCategoryIntents,
+} from "@/lib/intelligence/category-intent";
+import { surpriseStylePrompt } from "@/lib/intelligence/room-categories";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
   reviewGeneratedRoom,
@@ -122,6 +133,29 @@ function parseSelectedProductIds(rawProductIds: FormDataEntryValue | null) {
  * contract with no assignments is treated as absent — there is nothing explicit
  * to honour.
  */
+/**
+ * The photo's true pixel size, so region geometry stays resolution
+ * independent. Zeroes when the browser did not report it — the contract still
+ * works, the coordinates are simply normalised against nothing.
+ */
+function parseSourceImageSize(raw: FormDataEntryValue | null): {
+  width: number;
+  height: number;
+} {
+  if (typeof raw !== "string" || !raw.trim()) return { width: 0, height: 0 };
+  try {
+    const parsed = JSON.parse(raw) as { width?: unknown; height?: unknown };
+    const width = Number(parsed?.width);
+    const height = Number(parsed?.height);
+    return {
+      width: Number.isFinite(width) && width > 0 ? width : 0,
+      height: Number.isFinite(height) && height > 0 ? height : 0,
+    };
+  } catch {
+    return { width: 0, height: 0 };
+  }
+}
+
 function parseReplacementContract(
   raw: FormDataEntryValue | null
 ): ReplacementContract | null {
@@ -311,10 +345,18 @@ async function handleGeneration(req: Request) {
 
   // Room understanding runs FIRST, because "Surprise me" needs to know what
   // kind of room this is before it can choose a package for it. Fallback-safe.
-  const sceneGraph = await analyzeSceneGraph(image, {
-    apiKey,
-    roomTypeHint: roomType,
-  });
+  // The same photo may already have been analysed moments ago by the advanced
+  // picker. Identical bytes mean an identical room, so reuse the answer rather
+  // than paying thirty seconds for it twice.
+  const sceneCacheKey = roomImageKey(await image.arrayBuffer());
+  const cachedScene = getCachedSceneGraph(sceneCacheKey);
+  const sceneGraph =
+    cachedScene ??
+    (await analyzeSceneGraph(image, {
+      apiKey,
+      roomTypeHint: roomType,
+    }));
+  if (!cachedScene) setCachedSceneGraph(sceneCacheKey, sceneGraph);
 
   /**
    * "Surprise me" — the customer asked for a designed room, not a form. The
@@ -324,15 +366,48 @@ async function handleGeneration(req: Request) {
    * generation may not reach past it into the wider catalogue.
    */
   const surpriseMe = formData.get("surpriseMe") === "true";
+  /**
+   * The customer's chosen look, when they picked one. "No preference" falls
+   * back to the style the request already carries rather than imposing a look.
+   */
+  const surpriseStyle =
+    typeof formData.get("surpriseStyle") === "string"
+      ? (formData.get("surpriseStyle") as string)
+      : null;
+  const effectiveStyle = surpriseMe
+    ? surpriseStylePrompt(surpriseStyle, style)
+    : style;
   const autoPackage = surpriseMe
     ? selectRoomPackage({
         roomType: sceneGraph.roomType || roomType,
-        style,
+        style: effectiveStyle,
         catalogue: getAllProducts(),
         // Anything the customer had already shown interest in anchors the room.
         preferProductIds: selectedProductIds,
       })
     : null;
+
+  /**
+   * Category intent → contract, resolved here because the instances only exist
+   * in the scene graph this request already paid for. The customer chose
+   * "Sofas"; the room decides which sofas that means.
+   */
+  const categoryIntents = parseCategoryIntents(formData.get("replaceCategories"));
+  const resolvedIntent =
+    !surpriseMe && categoryIntents.length > 0 && !replacementContract
+      ? resolveCategoryIntents({
+          intents: categoryIntents,
+          sceneGraph,
+          catalogue: getAllProducts(),
+          profiles: getProductProfiles(
+            getProductsByIdsInSelectionOrder(
+              categoryIntents.map((intent) => intent.productId)
+            )
+          ),
+          sourceImage: parseSourceImageSize(formData.get("sourceImageSize")),
+        })
+      : null;
+  const effectiveContract = replacementContract ?? resolvedIntent?.contract ?? null;
 
   // Customer selection order is preserved end-to-end: profiles, the replacement
   // plan and reference-image priority all follow the order the customer picked,
@@ -340,7 +415,14 @@ async function handleGeneration(req: Request) {
   // reference image.
   const selectedProducts = autoPackage
     ? getProductsByIdsInSelectionOrder(packageProductIds(autoPackage))
-    : getProductsByIdsInSelectionOrder(selectedProductIds);
+    : resolvedIntent?.contract
+      ? // Server-resolved intent is authoritative about which products are
+        // actually used: a category the room turned out not to contain
+        // contributes no product, so it cannot appear in the shopping list.
+        getProductsByIdsInSelectionOrder(
+          contractProductIds(resolvedIntent.contract)
+        )
+      : getProductsByIdsInSelectionOrder(selectedProductIds);
   const orderedSelectedIds = selectedProducts.map((product) => product.id);
 
   // A curated package — chosen here for Surprise me, or sent by the client — is
@@ -379,8 +461,8 @@ async function handleGeneration(req: Request) {
   // customer authorised — no category matching, no inference about which object
   // a product belongs to. Without one (Surprise me), the planner infers as
   // before.
-  const replacementPlan = replacementContract
-    ? contractToReplacementPlan(replacementContract, profiles)
+  const replacementPlan = effectiveContract
+    ? contractToReplacementPlan(effectiveContract, profiles)
     : buildReplacementPlan({
         sceneGraph,
         profiles,
@@ -488,7 +570,7 @@ async function handleGeneration(req: Request) {
       sceneGraph,
       replacementPlan: stagePlan,
       profiles,
-      style,
+      style: effectiveStyle,
       roomType,
       aiConceptMode: effectiveConceptMode,
       selectedProductIds: orderedSelectedIds,
@@ -652,6 +734,14 @@ async function handleGeneration(req: Request) {
     images: [best.image],
     imageBase64: best.image.imageBase64,
     products: verifiedProducts,
+    // Units per product. The browser cannot know these — it never saw how many
+    // sofas the room has — so the basket takes them from here.
+    ...(resolvedIntent
+      ? {
+          productQuantities: resolvedIntent.quantities,
+          unmatchedCategories: resolvedIntent.unmatchedCategories,
+        }
+      : {}),
   };
 
   // AI debug payload — only exposed when explicitly enabled, so production
