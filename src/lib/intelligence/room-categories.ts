@@ -118,97 +118,90 @@ export function isSeatingCategory(
 // Seating plans
 // ---------------------------------------------------------------------------
 
-/** A shape of seating the customer can ask for. */
+/**
+ * A shape of seating the customer can ask for.
+ *
+ * No "armchair" kind: the catalogue has none — every product filed under
+ * "chairs" is a dining chair — so this screen only offers what Koala can
+ * actually deliver. Add one back here the day a real armchair exists.
+ */
 export type SeatingPieceKind =
-  | "sofa-2-seater"
   | "sofa-3-seater"
+  | "sofa-2-seater"
   | "sofa-l-shape"
-  | "sofa-modular"
-  | "armchair";
+  | "sofa-modular";
 
 export type SeatingPiece = {
   kind: SeatingPieceKind;
   count: number;
 };
 
-/** What the seating area should end up as. */
+/**
+ * What the seating area should end up as — the DESIRED FINAL layout, not a
+ * mapping onto what is there now. "One L-shape" means the room should end up
+ * with one L-shape sofa, however many sofas it happens to hold today; the
+ * pipeline works out the difference.
+ */
 export type SeatingPlan = {
-  /** Preset this came from, for analytics and for re-selecting the chip. */
-  presetId: string;
   pieces: SeatingPiece[];
 };
 
-export type SeatingPreset = {
-  id: string;
-  label: string;
-  pieces: SeatingPiece[];
-  /** Armchairs can be nudged up or down without leaving the preset. */
-  armchairsAdjustable: boolean;
-};
+/** The four shapes offered, in the order the stepper lists them. */
+export const SEATING_PIECE_KINDS: { kind: SeatingPieceKind; label: string }[] =
+  [
+    { kind: "sofa-3-seater", label: "3-seater sofa" },
+    { kind: "sofa-2-seater", label: "2-seater sofa" },
+    { kind: "sofa-l-shape", label: "L-shape sofa" },
+    { kind: "sofa-modular", label: "Modular sofa" },
+  ];
 
 /**
- * The arrangements offered in v1. Deliberately a short list of real answers
- * rather than a builder — someone redecorating wants to recognise their room,
- * not operate a configurator.
+ * A living room seats a family, not a furniture showroom. Three large pieces
+ * is already a generous room; a fourth stops reading as a considered layout.
  */
-export const SEATING_PRESETS: SeatingPreset[] = [
-  {
-    id: "sofa-3",
-    label: "One 3-seater sofa",
-    pieces: [{ kind: "sofa-3-seater", count: 1 }],
-    armchairsAdjustable: true,
-  },
-  {
-    id: "sofa-2",
-    label: "One 2-seater sofa",
-    pieces: [{ kind: "sofa-2-seater", count: 1 }],
-    armchairsAdjustable: true,
-  },
-  {
-    id: "sofa-l",
-    label: "One L-shape sofa",
-    pieces: [{ kind: "sofa-l-shape", count: 1 }],
-    armchairsAdjustable: true,
-  },
-  {
-    id: "sofa-modular",
-    label: "One modular sofa",
-    pieces: [{ kind: "sofa-modular", count: 1 }],
-    armchairsAdjustable: true,
-  },
-];
+export const MAX_SEATING_PIECES = 3;
 
 /** Human-readable name for a seating piece. */
 export function seatingPieceLabel(kind: SeatingPieceKind): string {
-  switch (kind) {
-    case "sofa-2-seater":
-      return "2-seater sofa";
-    case "sofa-3-seater":
-      return "3-seater sofa";
-    case "sofa-l-shape":
-      return "L-shape sofa";
-    case "sofa-modular":
-      return "modular sofa";
-    case "armchair":
-      return "armchair";
-  }
+  return (
+    SEATING_PIECE_KINDS.find((entry) => entry.kind === kind)?.label ?? kind
+  );
 }
 
-/** Which catalogue category supplies a seating piece. */
+/** Which catalogue category supplies a seating piece. Always sofas today. */
 export function seatingPieceProductCategory(kind: SeatingPieceKind): string {
-  return kind === "armchair" ? "chairs" : "sofas";
+  void kind;
+  return "sofas";
 }
 
-/** Build a plan from a preset plus an armchair count. */
+/**
+ * Build a plan from a count per kind. Zero and absent counts are dropped, so
+ * a plan's `pieces` always lists only what was actually asked for — "is
+ * there a piece here" and "is the count nonzero" are never two different
+ * questions to a caller.
+ */
 export function buildSeatingPlan(
-  preset: SeatingPreset,
-  armchairCount: number
+  counts: Partial<Record<SeatingPieceKind, number>>
 ): SeatingPlan {
-  const pieces = [...preset.pieces];
-  if (armchairCount > 0) {
-    pieces.push({ kind: "armchair", count: armchairCount });
-  }
-  return { presetId: preset.id, pieces };
+  const pieces: SeatingPiece[] = SEATING_PIECE_KINDS.map(({ kind }) => ({
+    kind,
+    count: Math.max(0, Math.floor(counts[kind] ?? 0)),
+  })).filter((piece) => piece.count > 0);
+  return { pieces };
+}
+
+/** Total pieces the finished seating area should contain. */
+export function seatingPlanPieceCount(plan: SeatingPlan): number {
+  return plan.pieces.reduce((total, piece) => total + piece.count, 0);
+}
+
+/**
+ * A plan is submittable once it asks for at least one piece and stays within
+ * the max — the two rules the stepper UI is not allowed to violate.
+ */
+export function isValidSeatingPlan(plan: SeatingPlan): boolean {
+  const total = seatingPlanPieceCount(plan);
+  return total >= 1 && total <= MAX_SEATING_PIECES;
 }
 
 /** "One L-shape sofa and 2 armchairs" — for confirmation copy and prompts. */
@@ -222,25 +215,6 @@ export function describeSeatingPlan(plan: SeatingPlan): string {
   if (parts.length === 0) return "";
   if (parts.length === 1) return parts[0];
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
-}
-
-/** Total pieces the finished seating area should contain. */
-export function seatingPlanPieceCount(plan: SeatingPlan): number {
-  return plan.pieces.reduce((total, piece) => total + piece.count, 0);
-}
-
-/**
- * The distinct product categories a plan needs, so the flow knows how many
- * product shelves to show.
- */
-export function seatingPlanProductCategories(plan: SeatingPlan): string[] {
-  return [
-    ...new Set(
-      plan.pieces
-        .filter((piece) => piece.count > 0)
-        .map((piece) => seatingPieceProductCategory(piece.kind))
-    ),
-  ];
 }
 
 // ---------------------------------------------------------------------------

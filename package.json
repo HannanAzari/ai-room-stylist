@@ -21,7 +21,8 @@
     "test:replacement-group": "tsx src/scripts/test-replacement-group.ts",
     "test:scroll": "tsx src/scripts/test-scroll-restoration.ts",
     "test:category-flow": "tsx src/scripts/test-category-flow.ts",
-    "test:instant-flow": "tsx src/scripts/test-instant-flow.ts"
+    "test:instant-flow": "tsx src/scripts/test-instant-flow.ts",
+    "test:seating-contract": "tsx src/scripts/test-seating-contract.ts"
   },
   "dependencies": {
     "next": "16.2.6",

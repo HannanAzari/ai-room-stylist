@@ -48,6 +48,7 @@ import {
   type ReplacementContract,
 } from "@/lib/intelligence/replacement-assignment";
 import {
+  intentProductIds,
   parseCategoryIntents,
   resolveCategoryIntents,
 } from "@/lib/intelligence/category-intent";
@@ -401,7 +402,7 @@ async function handleGeneration(req: Request) {
           catalogue: getAllProducts(),
           profiles: getProductProfiles(
             getProductsByIdsInSelectionOrder(
-              categoryIntents.map((intent) => intent.productId)
+              categoryIntents.flatMap((intent) => intentProductIds(intent))
             )
           ),
           sourceImage: parseSourceImageSize(formData.get("sourceImageSize")),
@@ -749,6 +750,14 @@ async function handleGeneration(req: Request) {
   if (isAiDebugEnabled()) {
     responseBody.aiDebug = {
       provider: best.image.provider,
+      // Proof, not a claim: whether THIS request paid for a fresh vision call
+      // or reused an analysis from moments ago. Internal only — a customer
+      // has no reason to see a cache key.
+      sceneAnalysis: {
+        imageHash: sceneCacheKey,
+        source: cachedScene ? "cache" : "fresh",
+        analysisCallMade: !cachedScene,
+      },
       sceneGraph,
       roomAnalysis,
       replacementPlan,

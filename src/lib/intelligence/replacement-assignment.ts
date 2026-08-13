@@ -33,6 +33,7 @@ import type {
 import {
   describeLocation,
   type PlacementTask,
+  type RemovalTask,
   type ReplacementPlan,
   type ReplacementTask,
 } from "./replacement-planner";
@@ -153,11 +154,29 @@ export type ContractAddition = {
   placement: string;
 };
 
+/**
+ * An existing region that must be deleted outright, with nothing replacing
+ * it — the other half of a desired-count reconciliation. "2 sofas → 1
+ * L-shape" replaces one of them and REMOVES the other; leaving the removed
+ * one with no instruction at all is exactly the silent gap that let a model
+ * invent furniture in an undocumented region.
+ */
+export type ContractRemoval = {
+  taskId: number;
+  action: "REMOVE";
+  target: ReplacementTarget;
+  canonicalCategory: CanonicalCategory;
+  /** Why, e.g. "consolidated into the L-shape sofa (task 2)". */
+  reason: string;
+};
+
 /** The complete, explicit instruction set handed to generation. */
 export type ReplacementContract = {
   assignments: ReplacementAssignment[];
   /** Pieces with nothing to replace. Empty for a plain swap. */
   additions?: ContractAddition[];
+  /** Existing pieces deleted outright. Empty unless a plan asked for fewer. */
+  removals?: ContractRemoval[];
   protectedItems: ProtectedItem[];
   sourceImage: SourceImageSize;
 };
@@ -406,6 +425,29 @@ export function contractToReplacementPlan(
     })
     .filter((task): task is PlacementTask => task !== null);
 
+  // Existing pieces with nothing to become — the other half of a desired-count
+  // reconciliation. A removal gets its own task and its own "remove"
+  // disposition below; it must never also land in `protectedItems`; the
+  // resolver that builds the contract is responsible for keeping those two
+  // sets disjoint (checkPlanInvariants catches it if that ever slips).
+  const removals: RemovalTask[] = (contract.removals ?? []).map((removal) => ({
+    kind: "remove",
+    taskId: removal.taskId,
+    stage: isAnchorCategory(removal.canonicalCategory) ? "anchor" : "secondary",
+    existingItemId: removal.target.sceneItemId ?? removal.target.targetId,
+    existingCategory:
+      removal.target.originalObjectDescription ||
+      canonicalCategoryLabel(removal.canonicalCategory),
+    existingCanonicalCategory: removal.canonicalCategory,
+    existingInstanceLabel: removal.target.instanceLabel,
+    existingSharesCategory: contract.protectedItems.some(
+      (item) => item.canonicalCategory === removal.canonicalCategory
+    ),
+    location: removal.target.location,
+    boundingBox: removal.target.boundingBox,
+    reason: removal.reason,
+  }));
+
   const preserved = [
     ...contract.protectedItems.map((item) => item.label),
     ...ALWAYS_PROTECTED.map((item) => item.label),
@@ -447,11 +489,25 @@ export function contractToReplacementPlan(
         productId: null,
         taskId: null,
       })),
+    ...(contract.removals ?? []).map((removal) => ({
+      itemId: removal.target.sceneItemId ?? removal.target.targetId,
+      rawCategory: canonicalCategoryLabel(removal.canonicalCategory),
+      canonicalCategory: removal.canonicalCategory,
+      instanceLabel: removal.target.instanceLabel,
+      sharesCategoryWithOthers: contract.protectedItems.some(
+        (item) => item.canonicalCategory === removal.canonicalCategory
+      ),
+      disposition: "remove" as const,
+      reason: `Removed, not replaced — ${removal.reason}`,
+      productId: null,
+      taskId: removal.taskId,
+    })),
   ];
 
   return {
     replacements,
     additions,
+    removals,
     preserved: [...new Set(preserved)],
     dispositions,
     analysed: true,

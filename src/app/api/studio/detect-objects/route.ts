@@ -115,6 +115,14 @@ export async function POST(req: Request) {
 
     if (isAiDebugEnabled()) {
       body.debug = {
+        // Proof, not a claim: whether this request paid for a fresh vision
+        // call or reused an analysis from moments ago (e.g. generation
+        // running right after this). Internal only.
+        sceneAnalysis: {
+          imageHash: sceneCacheKey,
+          source: cachedScene ? "cache" : "fresh",
+          analysisCallMade: !cachedScene,
+        },
         detectedFurnitureCount: sceneGraph?.furniture.length ?? 0,
         selectableCount: objects.length,
         excluded: (sceneGraph?.furniture ?? [])

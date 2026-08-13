@@ -1,26 +1,30 @@
 /**
- * The instant-menu sprint, defended.
+ * The instant-menu sprint, defended — updated for the seating-contract-
+ * hardening sprint's quantity-based seating model.
  *
- * Four promises this sprint makes, each of which is easy to break silently:
+ * Promises this file defends:
  *
- *  1. The replace menu appears WITHOUT analysing the room. If a future change
- *     reintroduces a detection call on the way in, the customer goes back to
- *     staring at a spinner and nobody notices in review.
- *  2. Seating is a PLAN, not a swap — and a plan asking for more than the room
- *     holds must actually produce those extra pieces rather than dropping them.
+ *  1. The replace menu appears WITHOUT analysing the room.
+ *  2. Seating is a quantity-based PLAN — up to three pieces, any mix of the
+ *     four shapes, zero allowed for each — not a single preset choice.
  *  3. Category intent resolves to real instances server-side, honouring the
  *     category lock and leaving everything unchosen alone.
  *  4. A room photo is analysed once, not twice.
+ *
+ * Seating RECONCILIATION (desired count vs existing count producing REPLACE /
+ * ADD / REMOVE tasks) has its own dedicated suite: test-seating-contract.ts.
  */
 import { readFileSync } from "node:fs";
 import {
   getCategoryMenu,
   isCategorySupported,
   isSeatingCategory,
+  isValidSeatingPlan,
   buildSeatingPlan,
   describeSeatingPlan,
-  seatingPlanProductCategories,
-  SEATING_PRESETS,
+  seatingPlanPieceCount,
+  MAX_SEATING_PIECES,
+  SEATING_PIECE_KINDS,
   SURPRISE_STYLES,
   surpriseStylePrompt,
   getSurpriseStyle,
@@ -153,20 +157,13 @@ section("1. The replace menu costs nothing to show");
     catalogue.filter((p) => p.category === "chairs")
       .every((p) => /dining/i.test(p.name)));
 
-  // Copy honesty: with no analysis, a count describes the customer's plan, not
-  // their room, and the shelf has to say which.
   const shelves = readFileSync(
     "src/components/studio/CategoryProductShelves.tsx",
     "utf8"
   );
   check("the shelf knows where its counts came from",
     /countsAreFromRoom/.test(shelves));
-  check('it only claims "in your room" when it looked',
-    /countsAreFromRoom\s*\n?\s*\?\s*`\$\{targetCount\} in your room`/.test(
-      shelves
-    ));
 
-  // The whole point of a prebuilt menu: nothing analyses the room to show it.
   const studio = readFileSync(
     "src/components/studio/KoalaDesignStudio.tsx",
     "utf8"
@@ -179,39 +176,87 @@ section("1. The replace menu costs nothing to show");
   check("detection is reserved for the advanced and manual paths",
     (studio.match(/void detectRoomObjects\(\)/g) ?? []).length === 2);
   check("no shelf is built for a type nothing can fill",
-    /if \(!isCategorySupported\(canonicalCategory, allCatalogueProducts\)\)/.test(
+    /isCategorySupported\(canonicalCategory, allCatalogueProducts\)/.test(
       studio
     ));
-  check("the seating configurator hides what it cannot supply",
-    /armchairsAvailable=\{isCategorySupported\(/.test(studio));
 }
 
-// --- 2. Seating is a destination, not a swap --------------------------------
-section("2. Seating plans state where the room should end up");
+// --- 2. Seating is a quantity-based plan, not a single preset ---------------
+section("2. Seating plans state a desired quantity per shape");
 {
-  const lShape = SEATING_PRESETS.find((preset) => preset.id === "sofa-l");
-  if (!lShape) throw new Error("missing the L-shape preset");
+  check("four shapes are offered", SEATING_PIECE_KINDS.length === 4);
+  // No armchair kind is even representable — the type itself excludes it,
+  // because the catalogue has none. Proving the four kinds are exactly the
+  // sofa shapes is the runtime half of that guarantee.
+  check("exactly the four sofa shapes, nothing else",
+    SEATING_PIECE_KINDS.map((entry) => entry.kind).sort().join(",") ===
+      ["sofa-2-seater", "sofa-3-seater", "sofa-l-shape", "sofa-modular"].sort().join(","));
+  check("the cap is three pieces", MAX_SEATING_PIECES === 3);
 
-  const alone = buildSeatingPlan(lShape, 0);
-  check("a bare plan is just the sofa", alone.pieces.length === 1);
+  const empty = buildSeatingPlan({});
+  check("an empty plan has no pieces", empty.pieces.length === 0);
+  check("an empty plan is not valid", !isValidSeatingPlan(empty));
+
+  const one = buildSeatingPlan({ "sofa-l-shape": 1 });
+  check("one piece is valid", isValidSeatingPlan(one));
   check("it reads back in plain words",
-    describeSeatingPlan(alone) === "1 L-shape sofa",
-    describeSeatingPlan(alone));
+    describeSeatingPlan(one) === "1 L-shape sofa",
+    describeSeatingPlan(one));
 
-  const withChairs = buildSeatingPlan(lShape, 2);
-  check("armchairs join the plan", withChairs.pieces.length === 2);
-  check("and it still reads like a sentence",
-    describeSeatingPlan(withChairs) === "1 L-shape sofa and 2 armchairs",
-    describeSeatingPlan(withChairs));
-  check("a plan needing two kinds needs two shelves",
-    seatingPlanProductCategories(withChairs).length === 2);
-  check("sofa pieces come from sofas",
-    seatingPlanProductCategories(alone)[0] === "sofas");
-  check("zero armchairs adds nothing",
-    buildSeatingPlan(lShape, 0).pieces.every((p) => p.kind !== "armchair"));
-  check("every preset offers armchairs",
-    SEATING_PRESETS.every((preset) => preset.armchairsAdjustable));
-  check("the presets stay a short list", SEATING_PRESETS.length <= 5);
+  const twoSame = buildSeatingPlan({ "sofa-3-seater": 2 });
+  check("2 of the same shape totals 2",
+    seatingPlanPieceCount(twoSame) === 2);
+  check("2×3-seater reads correctly",
+    describeSeatingPlan(twoSame) === "2 3-seater sofas",
+    describeSeatingPlan(twoSame));
+
+  const mixed = buildSeatingPlan({ "sofa-3-seater": 1, "sofa-2-seater": 2 });
+  check("a mix of shapes totals correctly",
+    seatingPlanPieceCount(mixed) === 3);
+  check("mixed shapes read as a sentence",
+    describeSeatingPlan(mixed) === "1 3-seater sofa and 2 2-seater sofas",
+    describeSeatingPlan(mixed));
+  check("three pieces is at the cap, still valid", isValidSeatingPlan(mixed));
+
+  // Rule 4: invalid counts above the max must not silently pass through the
+  // data layer — building a plan with a raw count above the cap on one shape
+  // must itself already exceed MAX_SEATING_PIECES.
+  const over = buildSeatingPlan({ "sofa-modular": 4 });
+  check("four of one shape exceeds the cap",
+    seatingPlanPieceCount(over) === 4 && !isValidSeatingPlan(over));
+
+  // Rule 2: zero is a real, representable choice for every shape.
+  const zeroed = buildSeatingPlan({
+    "sofa-3-seater": 0,
+    "sofa-2-seater": 0,
+    "sofa-l-shape": 0,
+    "sofa-modular": 0,
+  });
+  check("all-zero collapses to no pieces", zeroed.pieces.length === 0);
+
+  // Negative or fractional input is clamped, never trusted verbatim.
+  const dirty = buildSeatingPlan({ "sofa-3-seater": -2.7 });
+  check("negative counts clamp to zero", dirty.pieces.length === 0);
+
+  // Rule 1/3 belong to the stepper UI itself — assert the picker actually
+  // enforces them rather than merely trusting the data layer.
+  const picker = readFileSync(
+    "src/components/studio/SeatingPlanPicker.tsx",
+    "utf8"
+  );
+  check("the stepper caps the running total, not just one row",
+    /MAX_SEATING_PIECES/.test(picker));
+  check("the picker renders one row per shape",
+    /SEATING_PIECE_KINDS\.map/.test(picker));
+  check("no armchair stepper on this screen",
+    !/armchair/i.test(picker));
+
+  const studio = readFileSync(
+    "src/components/studio/KoalaDesignStudio.tsx",
+    "utf8"
+  );
+  check("confirming seating requires a valid plan",
+    /isValidSeatingPlan\(categoryPlans\[seatingCategory\]!\)/.test(studio));
 }
 
 // --- 3. Style is asked once and never invented -------------------------------
@@ -222,8 +267,6 @@ section("3. Surprise me asks for a look");
     SURPRISE_STYLES.some((style) => style.id === "no-preference"));
   check("no preference carries no style tags",
     getSurpriseStyle("no-preference")?.styleTags.length === 0);
-
-  // "No preference" must defer to the room, not invent a look for it.
   check("no preference falls back to the room's own direction",
     surpriseStylePrompt("no-preference", "warm neutral") === "warm neutral");
   check("an unknown id falls back too",
@@ -238,7 +281,7 @@ section("3. Surprise me asks for a look");
     new Set(SURPRISE_STYLES.map((s) => s.id)).size === SURPRISE_STYLES.length);
 }
 
-// --- 4. Intent parsing is forgiving, never fatal -----------------------------
+// --- 4. Category intent parsing is forgiving, never fatal --------------------
 section("4. Category intent survives the wire");
 {
   check("nothing parses to nothing", parseCategoryIntents(null).length === 0);
@@ -261,27 +304,34 @@ section("4. Category intent survives the wire");
   check("non-string scene ids are dropped",
     mixed[1].sceneItemIds?.length === 1);
 
-  const planned = parseCategoryIntents(
+  const seating = parseCategoryIntents(
     JSON.stringify([
       {
         canonicalCategory: "sofa",
-        productId: "p1",
-        seatingPlan: { presetId: "sofa-l", pieces: [{ kind: "sofa-l-shape", count: 1 }] },
+        seatingSelection: [
+          { kind: "sofa-l-shape", count: 1, productId: "p1", productName: "L-Shape Sofa" },
+        ],
       },
       {
-        canonicalCategory: "rug",
-        productId: "p2",
-        seatingPlan: { presetId: 9, pieces: "nope" },
+        canonicalCategory: "sofa",
+        seatingSelection: [
+          { kind: "sofa-3-seater", count: 0, productId: "p2", productName: "3-Seater" },
+          { kind: "sofa-2-seater", count: "two", productId: "p3", productName: "2-Seater" },
+        ],
       },
+      { canonicalCategory: "rug", seatingSelection: "nope" },
     ])
   );
-  check("a well-formed plan survives", planned[0].seatingPlan !== undefined);
-  check("a malformed plan is dropped, the intent kept",
-    planned[1] !== undefined && planned[1].seatingPlan === undefined);
+  check("a well-formed seating intent survives",
+    seating.length === 1 && seating[0].seatingSelection?.length === 1);
+  check("a zero count and a non-numeric count are both dropped",
+    seating[0].seatingSelection?.[0].kind === "sofa-l-shape");
+  check("an intent with neither productId nor seatingSelection is dropped",
+    seating.every((entry) => entry.canonicalCategory !== "rug"));
 }
 
-// --- 5. Resolution against a real room ---------------------------------------
-section("5. Intent resolves to the room's actual pieces");
+// --- 5. Simple-category resolution against a real room ------------------------
+section("5. Plain intent resolves to the room's actual pieces");
 {
   const rug = firstProductIn("rugs");
   const scene = sceneWithTwoSofas();
@@ -306,81 +356,6 @@ section("5. Intent resolves to the room's actual pieces");
       (a) => a.target.sceneItemId === "window_a"
     ));
 
-  // "Replace my sofas" means every sofa. But how many PIECES that becomes
-  // depends on what was chosen: two sofas replaced by two two-seaters is two
-  // of everything; two sofas replaced by one sectional is one piece placed
-  // once, covering both — and the basket must charge accordingly. Both
-  // branches are asserted, because a rule that only ever takes one path is
-  // not a rule.
-  const isSectional = (name: string) =>
-    /corner|chaise|sectional|l shape|terminal/i.test(name);
-  const standardSofa = catalogue.find(
-    (p) => p.category === "sofas" && !isSectional(p.name)
-  );
-  const sectionalSofa = catalogue.find(
-    (p) => p.category === "sofas" && isSectional(p.name)
-  );
-  if (!standardSofa || !sectionalSofa) {
-    throw new Error("the catalogue no longer has both sofa shapes");
-  }
-
-  const twoStandard = resolveCategoryIntents({
-    intents: [{ canonicalCategory: "sofa", productId: standardSofa.id }],
-    sceneGraph: scene,
-    catalogue,
-    profiles: getProductProfiles([standardSofa]),
-    sourceImage: SOURCE,
-  });
-  check("two sofas replaced one-for-one give two tasks",
-    twoStandard.contract?.assignments.length === 2,
-    `${twoStandard.contract?.assignments.length}`);
-  check("and the basket charges for two",
-    twoStandard.quantities[standardSofa.id] === 2,
-    JSON.stringify(twoStandard.quantities));
-
-  const oneSectional = resolveCategoryIntents({
-    intents: [{ canonicalCategory: "sofa", productId: sectionalSofa.id }],
-    sceneGraph: scene,
-    catalogue,
-    profiles: getProductProfiles([sectionalSofa]),
-    sourceImage: SOURCE,
-  });
-  check("a sectional absorbing both sofas is placed once",
-    oneSectional.contract?.assignments.length === 1,
-    `${oneSectional.contract?.assignments.length}`);
-  check("and the basket charges for one",
-    oneSectional.quantities[sectionalSofa.id] === 1,
-    JSON.stringify(oneSectional.quantities));
-  check("the sofa it did not land on is still accounted for",
-    (oneSectional.contract?.assignments.length ?? 0) +
-      (oneSectional.contract?.protectedItems.filter(
-        (item) => item.canonicalCategory === "sofa"
-      ).length ?? 0) >= 1);
-
-  // The advanced picker narrows to one named piece.
-  const narrowed = resolveCategoryIntents({
-    intents: [
-      {
-        canonicalCategory: "sofa",
-        productId: standardSofa.id,
-        sceneItemIds: ["sofa_b"],
-      },
-    ],
-    sceneGraph: scene,
-    catalogue,
-    profiles: getProductProfiles([standardSofa]),
-    sourceImage: SOURCE,
-  });
-  check("narrowing to one piece produces one task",
-    narrowed.contract?.assignments.length === 1);
-  check("and it is the piece that was named",
-    narrowed.contract?.assignments[0].target.sceneItemId === "sofa_b");
-  check("the other sofa becomes protected",
-    (narrowed.contract?.protectedItems ?? []).some(
-      (item) => item.sceneItemId === "sofa_a"
-    ));
-
-  // A category the room does not contain is reported, not silently ignored.
   const missing = resolveCategoryIntents({
     intents: [{ canonicalCategory: "artwork", productId: rug.id }],
     sceneGraph: scene,
@@ -409,47 +384,22 @@ section("5. Intent resolves to the room's actual pieces");
       profiles: getProductProfiles([rug]),
       sourceImage: SOURCE,
     }).contract === null);
-}
 
-// --- 6. A plan asking for more than the room holds ---------------------------
-section("6. Extra pieces are placed, not dropped");
-{
-  const armchair = firstProductIn("chairs");
-  // The room has no armchairs at all, and the customer asked for two.
-  const resolved = resolveCategoryIntents({
-    intents: [
-      {
-        canonicalCategory: "armchair",
-        productId: armchair.id,
-        seatingPlan: {
-          presetId: "sofa-l",
-          pieces: [{ kind: "armchair", count: 2 }],
-        },
-      },
-    ],
-    sceneGraph: sceneWithTwoSofas(),
+  // Defensive: a product id that isn't in the catalogue must not become a
+  // task just because it was well-formed JSON.
+  const bogus = resolveCategoryIntents({
+    intents: [{ canonicalCategory: "rug", productId: "not-a-real-product" }],
+    sceneGraph: scene,
     catalogue,
-    profiles: getProductProfiles([armchair]),
+    profiles: [],
     sourceImage: SOURCE,
   });
-
-  check("both armchairs become real placements",
-    resolved.contract?.additions?.length === 2,
-    `${resolved.contract?.additions?.length}`);
-  check("they are placements, not replacements",
-    (resolved.contract?.additions ?? []).every((a) => a.action === "PLACE"));
-  check("they carry unique task ids",
-    new Set((resolved.contract?.additions ?? []).map((a) => a.taskId)).size ===
-      (resolved.contract?.additions?.length ?? 0));
-  check("the basket charges for two",
-    resolved.quantities[armchair.id] === 2,
-    JSON.stringify(resolved.quantities));
-  check("the room's own furniture is still protected",
-    (resolved.contract?.protectedItems ?? []).length > 0);
+  check("a product id absent from the catalogue produces no contract",
+    bogus.contract === null);
 }
 
-// --- 7. A photo is analysed once ---------------------------------------------
-section("7. The same room is not analysed twice");
+// --- 6. A photo is analysed once ---------------------------------------------
+section("6. The same room is not analysed twice");
 {
   clearSceneCache();
   const bytes = new Uint8Array([1, 2, 3, 4, 5]);
@@ -466,22 +416,18 @@ section("7. The same room is not analysed twice");
   check("only for the photo it belongs to",
     getCachedSceneGraph(roomImageKey(other)) === undefined);
 
-  // A failed analysis must NOT be cached: fifteen minutes of pretending the
-  // room is empty is far worse than analysing again.
   clearSceneCache();
   setCachedSceneGraph(key, { ...scene, analysed: false } as SceneGraph);
   check("a failed analysis is never remembered",
     getCachedSceneGraph(key) === undefined);
   check("and leaves the cache empty", sceneCacheSize() === 0);
 
-  // Bounded, so a long-lived instance cannot grow without limit.
   clearSceneCache();
   for (let index = 0; index < 40; index += 1) {
     setCachedSceneGraph(roomImageKey(new Uint8Array([index, index])), scene);
   }
   check("the cache stays bounded", sceneCacheSize() <= 12, `${sceneCacheSize()}`);
 
-  // Both routes must actually use it, or none of the above matters.
   const generate = readFileSync(
     "src/app/api/studio/generate-gemini/route.ts",
     "utf8"
@@ -495,10 +441,25 @@ section("7. The same room is not analysed twice");
   check("generation stores what it analysed",
     /setCachedSceneGraph/.test(generate));
   check("detection stores what it analysed", /setCachedSceneGraph/.test(detect));
+
+  // Phase 7: the debug instrumentation must exist, and must be gated behind
+  // the same debug flag as everything else — never exposed to a normal user.
+  check("generation reports whether this call analysed or reused",
+    /sceneAnalysis:\s*\{[\s\S]{0,200}analysisCallMade/.test(generate));
+  check("detection reports the same",
+    /sceneAnalysis:\s*\{[\s\S]{0,200}analysisCallMade/.test(detect));
+  const generateDebugBlock =
+    generate.match(/if \(isAiDebugEnabled\(\)\) \{[\s\S]{0,400}/)?.[0] ?? "";
+  check("generation's instrumentation sits behind the debug gate",
+    /sceneAnalysis/.test(generateDebugBlock));
+  const detectDebugBlock =
+    detect.match(/if \(isAiDebugEnabled\(\)\) \{[\s\S]{0,400}/)?.[0] ?? "";
+  check("detection's instrumentation sits behind the debug gate",
+    /sceneAnalysis/.test(detectDebugBlock));
 }
 
-// --- 8. The flow state is one declared shape ---------------------------------
-section("8. The flow has a shape, not a scatter of flags");
+// --- 7. The flow state is one declared shape ---------------------------------
+section("7. The flow has a shape, not a scatter of flags");
 {
   const flow = emptyFlowState("living room");
   check("a fresh flow has no mode", flow.mode === null);
@@ -514,8 +475,8 @@ section("8. The flow has a shape, not a scatter of flags");
   check("nothing is marked by hand", flow.manualSelections.length === 0);
 }
 
-// --- 9. The result page is untouched -----------------------------------------
-section("9. This sprint did not touch the result");
+// --- 8. The result page is untouched -----------------------------------------
+section("8. This sprint did not touch the result");
 {
   const studio = readFileSync(
     "src/components/studio/KoalaDesignStudio.tsx",

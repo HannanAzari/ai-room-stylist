@@ -71,6 +71,8 @@ const GLOBAL_NEGATIVE = [
   "overlaying new furniture on top of existing furniture",
   "duplicated, cloned or repeated furniture",
   "inventing furniture that is not in the replacement plan",
+  "adding a desk, console, monitor, computer equipment or storage unit that is not in the plan",
+  "filling a space left by a removal with any new object",
   "people, pets, text, captions, watermarks or logos",
   "distorted, warped or floating furniture",
   "furniture at an unrealistic scale",
@@ -107,7 +109,12 @@ function buildNeverMoveLines(preserved: string[]): string[] {
   );
   const lines = CANONICAL_FIXED.map((item) => `- Never move or alter ${item}.`);
   for (const raw of preserved) {
-    const name = raw.trim();
+    // Labels arrive both ways — some already carry "the" (ALWAYS_PROTECTED,
+    // scene instance labels like "the television"), some are bare category
+    // nouns. Stripping any leading "the" before re-adding it once is what
+    // keeps this "Never move or alter the television." rather than
+    // "the the television." for every already-prefixed label.
+    const name = raw.trim().replace(/^the\s+/i, "");
     const key = name.toLowerCase();
     if (!name) continue;
     // Skip anything already covered by the canonical set.
@@ -153,6 +160,25 @@ function formatReplacementTasks(plan: ReplacementPlan): {
     numbered.push({
       taskId: task.taskId,
       line: `Task ${task.taskId} — ${placement}, ${task.placement}.\n    IDENTITY (must match the reference image for task ${task.taskId}) — ${formatIdentity(task.identity)}.`,
+    });
+  }
+
+  // A removal is a real, authorised change with no product attached to it —
+  // it must be as explicit as a replacement, or the region it leaves behind
+  // is exactly the kind of undocumented gap a model fills with invented
+  // furniture.
+  for (const task of plan.removals) {
+    const where = task.location ? `, currently ${task.location}` : "";
+    const sharedNoun = canonicalCategoryLabel(task.existingCanonicalCategory);
+    const target = task.existingSharesCategory
+      ? `${task.existingInstanceLabel}${where} — and ONLY that one`
+      : `the existing ${task.existingCategory}${where}`;
+    const othersWarning = task.existingSharesCategory
+      ? ` This room contains more than one ${sharedNoun}: remove ONLY ${task.existingInstanceLabel}. Every other ${sharedNoun} must remain exactly as photographed unless it has its own numbered task.`
+      : "";
+    numbered.push({
+      taskId: task.taskId,
+      line: `Task ${task.taskId} — REMOVE ${target} completely. ${task.reason}. Do NOT put any replacement furniture, decor or object in the space it leaves — that area becomes open floor, or is absorbed by the seating placed in another task.${othersWarning}`,
     });
   }
 
@@ -256,19 +282,29 @@ function buildConceptSection(
               ...plan.additions
                 .filter((task) => task.source === "selected")
                 .map((task) => task.productCategory),
+              ...plan.removals.map((task) => task.existingCategory),
             ].filter(Boolean)
           ),
         ]
       : [];
+    const hasWork = Boolean(
+      plan &&
+        (plan.replacements.length > 0 ||
+          plan.additions.length > 0 ||
+          plan.removals.length > 0)
+    );
 
     return [
       "SCOPE — THIS IS A REPLACEMENT, NOT A REDESIGN:",
       allowed.length > 0
         ? `- The ONLY things that may change are: ${allowed.join(", ")}.`
-        : "- Nothing in this room may change.",
+        : hasWork
+          ? "- Only the numbered tasks above may change."
+          : "- Nothing in this room may change.",
       "- Execute ONLY the numbered tasks above.",
-      "- Do NOT add ANY object that is not in those tasks — no side tables, no plants, no lamps, no mirrors, no artwork, no rugs, no cushions, no shelving, no decor of any kind.",
-      "- Do NOT add an object just because the room looks like it needs one. An empty corner stays empty.",
+      "- Do NOT add ANY object that is not in those tasks — no side tables, no plants, no lamps, no mirrors, no artwork, no rugs, no cushions, no shelving, no desks, no consoles, no monitors, no computer equipment, no storage units, no decor of any kind.",
+      "- Do not introduce any new object that does not correspond to an authorised task. This applies to furniture as much as decor — a desk, a monitor or a console you were not asked for is exactly as much a violation as an unrequested side table.",
+      "- Do NOT add an object just because the room looks like it needs one. An empty corner stays empty, and a space left by a REMOVE task stays empty unless another task fills it.",
       "- Do NOT tidy, restyle, relight or improve anything outside those tasks.",
       "- Every other object, and all empty space, must appear EXACTLY as in the uploaded photo.",
       "- If you are unsure whether something may change, leave it alone.",
@@ -370,7 +406,9 @@ export function buildIntelligentRoomPrompt(
     "- Never change an object of the same category as a planned item unless that exact object is named in the plan.",
     ...buildNeverMoveLines(plan?.preserved ?? []),
     "- Never invent furniture that is not in the plan.",
-    "- Generate ONLY the requested replacements and placements.",
+    "- Never leave a REMOVE task's item in place — it must be genuinely gone, not recoloured or pushed aside.",
+    "- Never fill a REMOVE task's space with a new object of any kind.",
+    "- Generate ONLY the requested replacements, placements and removals.",
   ].join("\n");
 
   // Sections are joined with blank lines; empty sections drop out entirely so

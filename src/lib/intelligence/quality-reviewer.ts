@@ -29,6 +29,80 @@ import type { ReplacementPlan } from "./replacement-planner";
 import type { SceneArchitecture } from "./scene-graph";
 import { canonicalCategoryLabel } from "./scene-taxonomy";
 
+/**
+ * Product-quantity ground truth, derived from the plan itself — not asked of
+ * the model. The plan already states, deterministically, how many instances
+ * of a product the finished room must contain; that is arithmetic on task
+ * ids, not a judgement call. Only whether each task's instance actually
+ * rendered (`productPresent`) is left to the model's eyes.
+ */
+export type ProductQuantityExpectation = {
+  productId: string;
+  productName: string;
+  expectedFinalInstanceCount: number;
+  /** The task ids whose fulfilment together satisfy this count. */
+  taskIds: number[];
+};
+
+/** One expectation per product the plan actually uses. */
+export function deriveProductQuantityExpectations(
+  plan: ReplacementPlan
+): ProductQuantityExpectation[] {
+  const byProduct = new Map<string, ProductQuantityExpectation>();
+  const bump = (productId: string, productName: string, taskId: number) => {
+    const existing = byProduct.get(productId);
+    if (existing) {
+      existing.expectedFinalInstanceCount += 1;
+      existing.taskIds.push(taskId);
+    } else {
+      byProduct.set(productId, {
+        productId,
+        productName,
+        expectedFinalInstanceCount: 1,
+        taskIds: [taskId],
+      });
+    }
+  };
+  for (const task of plan.replacements) {
+    bump(task.productId, task.productTitle, task.taskId);
+  }
+  for (const task of plan.additions) {
+    bump(task.productId, task.productTitle, task.taskId);
+  }
+  return [...byProduct.values()];
+}
+
+/**
+ * Compare each product's expected final instance count against how many of
+ * its tasks the reviewer actually saw fulfilled. A task counts as fulfilled
+ * only when the model reported `productPresent` for it — that field is
+ * already per-task ground truth, so this needs no new question asked of the
+ * model, just arithmetic over the answer it already gave.
+ */
+export function checkProductQuantities(
+  expectations: ProductQuantityExpectation[],
+  taskResults: TaskReviewResult[]
+): CriticalFailure[] {
+  const presentTaskIds = new Set(
+    taskResults.filter((task) => task.productPresent).map((task) => task.taskId)
+  );
+  const failures: CriticalFailure[] = [];
+  for (const expectation of expectations) {
+    const observed = expectation.taskIds.filter((taskId) =>
+      presentTaskIds.has(taskId)
+    ).length;
+    if (observed !== expectation.expectedFinalInstanceCount) {
+      failures.push({
+        kind: "product-instance-count-mismatch",
+        taskId: expectation.taskIds[0] ?? null,
+        productId: expectation.productId,
+        detail: `${expectation.productName}: the finished room should contain ${expectation.expectedFinalInstanceCount} (tasks ${expectation.taskIds.join(", ")}), but ${observed} actually appeared.`,
+      });
+    }
+  }
+  return failures;
+}
+
 const REVIEW_MODEL = "gemini-2.5-flash";
 const REVIEW_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${REVIEW_MODEL}:generateContent`;
 const REVIEW_TIMEOUT_MS = 12_000;
@@ -63,8 +137,23 @@ export type CriticalFailureKind =
   | "architecture-hallucinated"
   | "architecture-element-missing"
   | "unselected-same-category-changed"
-  | "unrequested-addition"
-  | "camera-reframed";
+  /**
+   * An object appears that no authorised task explains — the plan's ADD
+   * tasks are the only objects allowed to be new. Renamed from
+   * "unrequested-addition": the underlying check is unchanged, but the name
+   * now matches the typed REPLACE/ADD/REMOVE contract rather than the older,
+   * looser "the customer didn't ask for this" framing.
+   */
+  | "unexplained-addition"
+  | "camera-reframed"
+  /**
+   * The finished room contains the wrong number of instances of a selected
+   * product. Computed deterministically from the plan's task count against
+   * how many of those tasks the reviewer actually saw fulfilled — never from
+   * an aggregate score, so "requested 2, only 1 rendered" cannot be masked by
+   * an otherwise good-looking image.
+   */
+  | "product-instance-count-mismatch";
 
 export type CriticalFailure = {
   kind: CriticalFailureKind;
@@ -213,7 +302,15 @@ export function deriveCriticalFailures(
   taskResults: TaskReviewResult[],
   axes: ReviewAxes,
   globalChecks?: GlobalReviewChecks,
-  criticalThreshold = CRITICAL_AXIS_THRESHOLD
+  criticalThreshold = CRITICAL_AXIS_THRESHOLD,
+  /**
+   * When supplied, the plan's own task counts are checked against how many
+   * of those tasks actually rendered — see `checkProductQuantities`. Added
+   * as a trailing optional parameter so every existing call site, tests
+   * included, keeps working unchanged; only the caller that has a plan
+   * needs to pass it.
+   */
+  plan?: ReplacementPlan
 ): CriticalFailure[] {
   const failures: CriticalFailure[] = [];
 
@@ -303,11 +400,11 @@ export function deriveCriticalFailures(
     }
     if (!globalChecks.noUnrequestedAdditions) {
       failures.push({
-        kind: "unrequested-addition",
+        kind: "unexplained-addition",
         taskId: null,
         productId: null,
         detail:
-          "An object appears that the customer never asked for. Replace mode may only change what was chosen.",
+          "An object appears that no authorised task explains — furniture-scale or decor, large or small. Replace mode may only change what a REPLACE, ADD or REMOVE task named.",
       });
     }
     if (!globalChecks.unselectedSameCategoryUnchanged) {
@@ -339,6 +436,19 @@ export function deriveCriticalFailures(
       productId: null,
       detail: `The camera was cropped, zoomed or reframed (crop ${axes.crop}).`,
     });
+  }
+
+  // Quantity is arithmetic, not judgement, so it is checked in code against
+  // the plan's own task counts rather than left to the model's aggregate
+  // impression. This is what makes "the UI said ×2 but only one rendered"
+  // structurally detectable instead of hoping a low score happens to catch it.
+  if (plan) {
+    failures.push(
+      ...checkProductQuantities(
+        deriveProductQuantityExpectations(plan),
+        taskResults
+      )
+    );
   }
 
   // De-duplicate: the same kind can be reached from both a structured check and
@@ -417,6 +527,16 @@ export function formatPlanForReview(
     );
   }
 
+  // Informational for the model's own judgement: an item on this list is
+  // SUPPOSED to be gone, so its absence must not be read as a problem, and
+  // nothing should have been put in the space it left.
+  const removeLines = plan.removals.map((task) => {
+    const instance = task.existingSharesCategory
+      ? `${task.existingInstanceLabel} (NOT any other ${canonicalCategoryLabel(task.existingCanonicalCategory)} in the room)`
+      : `the existing ${task.existingCategory}`;
+    return `- Task ${task.taskId}: ${instance}, ${task.location}, must be REMOVED with nothing put in its place.`;
+  });
+
   const preserveLines = plan.dispositions
     .filter((entry) => entry.disposition === "preserve")
     .map((entry) => {
@@ -439,6 +559,7 @@ export function formatPlanForReview(
 
   if (
     lines.length === 0 &&
+    removeLines.length === 0 &&
     preserveLines.length === 0 &&
     architectureLines.length === 0
   ) {
@@ -448,6 +569,9 @@ export function formatPlanForReview(
   const sections = [
     lines.length > 0
       ? `REPLACEMENT PLAN — the generated image must execute exactly these tasks:\n${lines.join("\n")}`
+      : "",
+    removeLines.length > 0
+      ? `MUST BE REMOVED (gone, with nothing new in its place):\n${removeLines.join("\n")}`
       : "",
     preserveLines.length > 0
       ? `MUST BE PRESERVED UNCHANGED:\n${preserveLines.join("\n")}`
@@ -505,7 +629,7 @@ PART B — whole-room checks. These are about the room itself, not any single pr
   wallStructurePreserved          — TRUE if the walls, corners, ceiling line and floor line are unchanged, and no wall was added, removed, moved or turned into an opening.
   unselectedSameCategoryUnchanged — TRUE if objects that share a category with a planned item, but were NOT named in the plan, are completely unchanged. If the plan replaced one sofa and a second sofa also changed, answer FALSE.
   unrelatedFurniturePreserved     — TRUE if all furniture outside the plan is untouched.
-  noUnrequestedAdditions          — TRUE if the generated image contains NO object that is absent from the original photo and not requested by a task. Look specifically for small additions a designer might make unprompted: side tables, plants, lamps, cushions, throws, vases, artwork, mirrors, shelving. Any of these appearing uninvited means FALSE.
+  noUnrequestedAdditions          — TRUE if the generated image contains NO object that is absent from the original photo and not authorised by a REPLACE, ADD or REMOVE task above. This applies to furniture at ANY scale, not only small decor: a desk, console, monitor, computer equipment, storage unit or other large piece appearing where nothing was requested is exactly as serious a failure as an unrequested side table, plant, lamp, cushion, throw, vase, artwork or mirror. Look especially at any space left empty by a task above — nothing may fill it. If you see an object you cannot match to a numbered task, answer FALSE.
   reasoning                       — one or two sentences explaining the whole-room verdict.
 
 PART C — global quality axes, each 0-100.
@@ -764,7 +888,9 @@ export async function reviewGeneratedRoom(input: {
     const criticalFailures = deriveCriticalFailures(
       taskResults,
       axes,
-      globalChecks
+      globalChecks,
+      CRITICAL_AXIS_THRESHOLD,
+      input.replacementPlan
     );
     const overall = computeReviewOverall(axes);
     const recommendation = decideRecommendation(criticalFailures, overall);

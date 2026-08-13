@@ -18,19 +18,33 @@
  *
  * The browser sends INTENT. The server, holding the only scene graph anyone
  * paid for, turns it into targets.
+ *
+ * ---------------------------------------------------------------------------
+ * SIMPLE CATEGORIES vs SEATING
+ * ---------------------------------------------------------------------------
+ * A plain category ("replace my rug") means every existing instance of that
+ * type is replaced — the desired count and the existing count are the same
+ * thing, because there is no separate concept of a "desired rug count".
+ *
+ * Seating is different: the customer states a DESIRED FINAL layout ("one
+ * L-shape sofa") that is independent of how many sofas the room happens to
+ * hold. Treating that the same way a plain category is treated — replace
+ * every existing sofa with the chosen product — silently ignores the
+ * customer's actual request and, worse, can leave an existing sofa with NO
+ * task at all when a plan consolidates seats, which is exactly the kind of
+ * undocumented region a model fills with invented furniture. Seating is
+ * therefore resolved by `reconcileSeating` (seating-resolution.ts) instead,
+ * which reasons from desired count vs existing count and can produce REPLACE,
+ * ADD and REMOVE tasks — never a silent gap.
  */
 import {
   buildReplacementContract,
   selectionToTarget,
   type AssignmentInput,
   type ContractAddition,
+  type ContractRemoval,
   type ReplacementContract,
 } from "./replacement-assignment";
-import {
-  buildReplacementGroups,
-  primaryTargetFor,
-  toPackageLines,
-} from "./replacement-group";
 import type { Product } from "@/lib/products";
 import type { ProductProfile } from "./product-profile";
 import {
@@ -41,25 +55,58 @@ import {
   type SourceImageSize,
 } from "./room-selection";
 import {
-  seatingPieceProductCategory,
-  type SeatingPlan,
-} from "./room-categories";
+  flattenDesiredPieces,
+  reconcileSeating,
+  type DesiredSeatingPiece,
+} from "./seating-resolution";
+import type { SeatingPieceKind } from "./room-categories";
 import type { SceneGraph } from "./scene-graph";
 import type { CanonicalCategory } from "./scene-taxonomy";
 
-/** One "replace this type with this product" instruction from the browser. */
+/** One desired seating piece as it travels the wire: kind, count, product. */
+export type SeatingSelectionEntry = {
+  kind: SeatingPieceKind;
+  count: number;
+  productId: string;
+  productName: string;
+};
+
+/**
+ * One "here is what I want for this type" instruction from the browser.
+ *
+ * A simple category carries `productId`. Seating carries `seatingSelection`
+ * instead — potentially several entries, since a mixed request ("1 three-seat
+ * + 1 two-seat") binds a different product to each shape. An intent has
+ * exactly one of the two; never both, never neither.
+ */
 export type CategoryIntent = {
   canonicalCategory: CanonicalCategory;
-  productId: string;
+  /** Simple categories only. */
+  productId?: string;
   /**
    * Narrow to specific pieces. Set only when the customer used "Choose a
    * specific one instead", which is the one path that analyses first. Empty or
    * absent means every piece of this type, which is what choosing a type means.
+   * Not used for seating — a seating plan already describes the whole
+   * category's desired final state, not a subset of it.
    */
   sceneItemIds?: string[];
-  /** Seating only: what the room should end up with. */
-  seatingPlan?: SeatingPlan;
+  /** Seating only: the desired final pieces, each bound to its product. */
+  seatingSelection?: SeatingSelectionEntry[];
 };
+
+function isSeatingSelectionEntry(value: unknown): value is SeatingSelectionEntry {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.kind === "string" &&
+    typeof record.count === "number" &&
+    Number.isFinite(record.count) &&
+    typeof record.productId === "string" &&
+    record.productId !== "" &&
+    typeof record.productName === "string"
+  );
+}
 
 /**
  * Read intents off the wire. Malformed entries are dropped rather than
@@ -81,11 +128,30 @@ export function parseCategoryIntents(raw: unknown): CategoryIntent[] {
     if (!entry || typeof entry !== "object") return [];
     const record = entry as Record<string, unknown>;
     const canonicalCategory = record.canonicalCategory;
-    const productId = record.productId;
     if (typeof canonicalCategory !== "string" || canonicalCategory === "") {
       return [];
     }
-    if (typeof productId !== "string" || productId === "") return [];
+
+    const seatingSelection = Array.isArray(record.seatingSelection)
+      ? record.seatingSelection
+          .filter(isSeatingSelectionEntry)
+          .map((entry) => ({
+            kind: entry.kind,
+            count: Math.max(0, Math.floor(entry.count)),
+            productId: entry.productId,
+            productName: entry.productName,
+          }))
+          .filter((entry) => entry.count > 0)
+      : [];
+
+    const productId =
+      typeof record.productId === "string" && record.productId !== ""
+        ? record.productId
+        : undefined;
+
+    // Exactly one of the two shapes. Neither present means there is nothing
+    // to act on — drop the entry rather than guess.
+    if (seatingSelection.length === 0 && !productId) return [];
 
     const sceneItemIds = Array.isArray(record.sceneItemIds)
       ? record.sceneItemIds.filter(
@@ -96,26 +162,20 @@ export function parseCategoryIntents(raw: unknown): CategoryIntent[] {
     return [
       {
         canonicalCategory: canonicalCategory as CanonicalCategory,
-        productId,
+        ...(productId ? { productId } : {}),
         ...(sceneItemIds && sceneItemIds.length > 0 ? { sceneItemIds } : {}),
-        ...(isSeatingPlan(record.seatingPlan)
-          ? { seatingPlan: record.seatingPlan }
-          : {}),
+        ...(seatingSelection.length > 0 ? { seatingSelection } : {}),
       },
     ];
   });
 }
 
-function isSeatingPlan(value: unknown): value is SeatingPlan {
-  if (!value || typeof value !== "object") return false;
-  const record = value as Record<string, unknown>;
-  if (typeof record.presetId !== "string") return false;
-  if (!Array.isArray(record.pieces)) return false;
-  return record.pieces.every((piece) => {
-    if (!piece || typeof piece !== "object") return false;
-    const entry = piece as Record<string, unknown>;
-    return typeof entry.kind === "string" && typeof entry.count === "number";
-  });
+/** Every product id an intent references — one for a simple category, one per bound piece for seating. */
+export function intentProductIds(intent: CategoryIntent): string[] {
+  if (intent.seatingSelection) {
+    return intent.seatingSelection.map((entry) => entry.productId);
+  }
+  return intent.productId ? [intent.productId] : [];
 }
 
 export type ResolvedIntent = {
@@ -129,14 +189,14 @@ export type ResolvedIntent = {
 /**
  * Resolve category intents against the room the scene graph describes.
  *
- * The shape of the answer differs by intent:
- *
- *  - A plain type ("replace my rug") becomes one assignment per piece of that
- *    type in the room.
- *  - A seating plan ("end up with one L-shape and two armchairs") is matched
- *    against what is already there. Existing pieces are replaced; anything the
- *    plan asks for beyond that becomes an ADDITION, because the customer named
- *    it and it would otherwise be silently dropped.
+ * Every REPLACE task, whether it came from a plain category or from seating
+ * reconciliation, is funnelled through the same `buildReplacementContract`
+ * call — one place that assigns task ids, applies the category lock and
+ * computes what stays protected. Seating additionally contributes ADD and
+ * REMOVE tasks, numbered to continue from whatever `buildReplacementContract`
+ * assigned, and its removal targets are struck from `protectedItems` — a
+ * removed item must carry exactly one instruction (remove it), never two
+ * contradictory ones (remove it, but also leave it exactly as it is).
  */
 export function resolveCategoryIntents(input: {
   intents: CategoryIntent[];
@@ -151,35 +211,48 @@ export function resolveCategoryIntents(input: {
   }
 
   const detected = toSelectableObjects(sceneGraph);
-  const productById = new Map(catalogue.map((product) => [product.id, product]));
+  const catalogueIds = new Set(catalogue.map((product) => product.id));
 
   const selections: RoomSelection[] = [];
   const assignments: AssignmentInput[] = [];
-  const additions: ContractAddition[] = [];
+  const pendingAdditions: Omit<ContractAddition, "taskId">[] = [];
+  const pendingRemovals: Omit<ContractRemoval, "taskId">[] = [];
   const unmatchedCategories: CanonicalCategory[] = [];
   const quantities: Record<string, number> = {};
 
-  // Intents that narrow to named pieces win over the broad "all of this type"
-  // reading, exactly as they do in the browser.
+  const bump = (productId: string, by: number) => {
+    quantities[productId] = (quantities[productId] ?? 0) + by;
+  };
+
+  // Narrowing overrides apply only to simple categories — see the type doc on
+  // `sceneItemIds`.
   const overrides = intents.reduce<Record<string, string[]>>((map, intent) => {
-    if (intent.sceneItemIds && intent.sceneItemIds.length > 0) {
+    if (
+      !intent.seatingSelection &&
+      intent.sceneItemIds &&
+      intent.sceneItemIds.length > 0
+    ) {
       map[intent.canonicalCategory] = intent.sceneItemIds;
     }
     return map;
   }, {});
 
+  // --- Simple categories: every existing instance is replaced -------------
   for (const intent of intents) {
-    const product = productById.get(intent.productId);
-    if (!product) continue;
+    if (intent.seatingSelection || !intent.productId) continue;
+    const productId = intent.productId;
+    // A product id that doesn't exist in the catalogue can't become a real
+    // task — drop the intent rather than build a selection for nothing.
+    if (!catalogueIds.has(productId)) continue;
 
     const objects = objectsForSelectedCategories(
       [intent.canonicalCategory],
       detected,
       overrides
     );
-
     if (objects.length === 0) {
       unmatchedCategories.push(intent.canonicalCategory);
+      continue;
     }
 
     for (const object of objects) {
@@ -187,8 +260,68 @@ export function resolveCategoryIntents(input: {
       selections.push(selection);
       assignments.push({
         selectionId: selection.selectionId,
-        productId: intent.productId,
+        productId,
         scope: "this-only",
+      });
+    }
+    bump(productId, objects.length);
+  }
+
+  // --- Seating: desired final layout vs what the room actually holds ------
+  for (const intent of intents) {
+    if (!intent.seatingSelection || intent.seatingSelection.length === 0) {
+      continue;
+    }
+
+    const existing = objectsForSelectedCategories(
+      [intent.canonicalCategory],
+      detected,
+      {}
+    );
+    const desired: DesiredSeatingPiece[] = flattenDesiredPieces(
+      intent.seatingSelection
+    ).filter((piece) => catalogueIds.has(piece.productId));
+    if (desired.length === 0) continue;
+
+    const { replacements, additions, removals } = reconcileSeating({
+      existing,
+      desired,
+    });
+
+    for (const pairing of replacements) {
+      const selection = selectionFromDetectedObject(pairing.target, sourceImage);
+      selections.push(selection);
+      assignments.push({
+        selectionId: selection.selectionId,
+        productId: pairing.piece.productId,
+        scope: "this-only",
+      });
+      bump(pairing.piece.productId, 1);
+    }
+
+    for (const piece of additions) {
+      bump(piece.productId, 1);
+      pendingAdditions.push({
+        action: "PLACE",
+        productId: piece.productId,
+        productTitle: piece.productName,
+        productCategorySlug: "sofas",
+        canonicalCategory: intent.canonicalCategory,
+        placement:
+          "in the seating area, arranged with the other seating so the group reads as one setting",
+      });
+    }
+
+    for (const target of removals) {
+      const selection = selectionFromDetectedObject(target, sourceImage);
+      pendingRemovals.push({
+        action: "REMOVE",
+        target: selectionToTarget(selection, 0),
+        canonicalCategory: intent.canonicalCategory,
+        reason:
+          replacements.length > 0 || additions.length > 0
+            ? "the seating area is being consolidated into fewer, larger pieces"
+            : "the customer asked for fewer seats than the room currently has",
       });
     }
   }
@@ -197,100 +330,61 @@ export function resolveCategoryIntents(input: {
     selections,
     assignments,
     profiles,
-    allDetected: detected.map((object) => ({
-      sceneItemId: object.sceneItemId,
-      canonicalCategory: object.canonicalCategory,
-      displayName: object.displayName,
+    // The WHOLE scene, not just the customer-selectable subset `detected`
+    // narrows to. `toSelectableObjects` drops fixed/non-replaceable items
+    // (the TV, architecture-adjacent furniture) because those can never be
+    // chosen — but `buildReplacementContract`'s protectedItems accounting is
+    // only exhaustive over whatever list it is given. Handing it the
+    // selectable subset left every fixed item with NO disposition at all:
+    // not replaced, not explicitly preserved either, just absent from the
+    // plan the prompt and reviewer both read. Passing the full scene closes
+    // that gap without changing what a customer can ever select.
+    allDetected: (sceneGraph?.furniture ?? []).map((item) => ({
+      sceneItemId: item.id,
+      canonicalCategory: item.canonicalCategory,
+      displayName: item.instanceLabel,
     })),
     sourceImage,
   });
 
-  // Groups decide how many units a room actually needs: two sofas replaced by
-  // one L-shape is one unit, two sofas replaced by two two-seaters is two.
-  const groups = buildReplacementGroups({
-    targetsByCategory: selections.reduce((map, selection, index) => {
-      const list = map.get(selection.canonicalCategory) ?? [];
-      list.push(selectionToTarget(selection, index));
-      map.set(selection.canonicalCategory, list);
-      return map;
-    }, new Map<CanonicalCategory, ReturnType<typeof selectionToTarget>[]>()),
-    productByCategory: intents.reduce((map, intent) => {
-      const product = productById.get(intent.productId);
-      if (product) map.set(intent.canonicalCategory, product);
-      return map;
-    }, new Map<CanonicalCategory, Product>()),
-  });
-  for (const line of toPackageLines(groups)) {
-    quantities[line.productId] = line.quantity;
-  }
-
-  // A group that collapses several seats into one sectional PLACES that
-  // sectional once, so drop the tasks for the seats it absorbs.
-  const absorbedTargetIds = new Set(
-    groups
-      .filter((group) => group.strategy === "replace-group-with-single")
-      .flatMap((group) => {
-        const primary = primaryTargetFor(group);
-        return group.targets
-          .filter((target) => target.targetId !== primary.targetId)
-          .map((target) => target.targetId);
-      })
-  );
-  const keptAssignments = contract.assignments.filter(
-    (assignment) => !absorbedTargetIds.has(assignment.target.targetId)
-  );
-
-  // Seating plans can ask for more than the room holds. Those extras are the
-  // only additions a replace contract may produce — the customer named them.
+  // Additions and removals are numbered to continue from whatever
+  // `buildReplacementContract` assigned the replace tasks, so every task id
+  // in the finished contract is unique and the prompt's numbering is gapless.
   let nextTaskId =
-    keptAssignments.reduce((max, a) => Math.max(max, a.taskId), 0) + 1;
+    contract.assignments.reduce((max, a) => Math.max(max, a.taskId), 0) + 1;
+  const additions: ContractAddition[] = pendingAdditions.map((addition) => ({
+    ...addition,
+    taskId: nextTaskId++,
+  }));
+  const removals: ContractRemoval[] = pendingRemovals.map((removal) => ({
+    ...removal,
+    taskId: nextTaskId++,
+  }));
 
-  for (const intent of intents) {
-    if (!intent.seatingPlan) continue;
-    const product = productById.get(intent.productId);
-    if (!product) continue;
-
-    for (const piece of intent.seatingPlan.pieces) {
-      if (piece.count <= 0) continue;
-      const pieceCategory = seatingPieceProductCategory(piece.kind);
-      // Only the piece kinds this intent's product can actually supply. An
-      // armchair in a sofa plan is a different intent's job, or nobody's.
-      if (pieceCategory !== product.category) continue;
-
-      const alreadyPlaced = keptAssignments.filter(
-        (assignment) => assignment.productId === intent.productId
-      ).length;
-      const shortfall = piece.count - alreadyPlaced;
-      for (let index = 0; index < shortfall; index += 1) {
-        additions.push({
-          taskId: nextTaskId,
-          action: "PLACE",
-          productId: intent.productId,
-          productTitle: product.name,
-          productCategorySlug: product.category,
-          canonicalCategory: intent.canonicalCategory,
-          placement:
-            "in the seating area, arranged with the other seating so the group reads as one setting",
-        });
-        nextTaskId += 1;
-      }
-      if (piece.count > 0) {
-        quantities[intent.productId] = Math.max(
-          quantities[intent.productId] ?? 0,
-          piece.count
-        );
-      }
-    }
-  }
+  // A removed item must carry exactly one instruction. `buildReplacementContract`
+  // does not know about removals, so it has already (correctly, from its own
+  // point of view) placed every removed scene item in `protectedItems` —
+  // "nobody assigned this, so preserve it". That is now wrong for these
+  // specific items, and must be corrected here rather than left to silently
+  // contradict the removal task.
+  const removedSceneIds = new Set(
+    removals.map((removal) => removal.target.sceneItemId).filter(Boolean)
+  );
+  const protectedItems = contract.protectedItems.filter(
+    (item) => !item.sceneItemId || !removedSceneIds.has(item.sceneItemId)
+  );
 
   const resolved: ReplacementContract = {
     ...contract,
-    assignments: keptAssignments,
+    protectedItems,
     ...(additions.length > 0 ? { additions } : {}),
+    ...(removals.length > 0 ? { removals } : {}),
   };
 
   const hasWork =
-    resolved.assignments.length > 0 || (resolved.additions?.length ?? 0) > 0;
+    resolved.assignments.length > 0 ||
+    (resolved.additions?.length ?? 0) > 0 ||
+    (resolved.removals?.length ?? 0) > 0;
 
   return {
     contract: hasWork ? resolved : null,

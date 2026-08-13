@@ -87,6 +87,30 @@ export type ReplacementTask = {
   confidence: number;
 };
 
+/**
+ * Remove an existing item entirely, with nothing replacing it.
+ *
+ * The desired-final-layout model needs this as a first-class outcome: "2
+ * sofas → 1 L-shape" replaces one and REMOVES the other, and that removed
+ * item must be exactly as documented in the prompt as a replaced one — the
+ * alternative is a region the prompt says nothing about, which is what let
+ * the model invent a desk and monitor in an earlier version of this flow.
+ */
+export type RemovalTask = {
+  kind: "remove";
+  taskId: number;
+  stage: GenerationStage;
+  existingItemId: string;
+  existingCategory: string;
+  existingCanonicalCategory: CanonicalCategory;
+  existingInstanceLabel: string;
+  existingSharesCategory: boolean;
+  location: string;
+  boundingBox: BoundingBox | null;
+  /** Why this item is being removed, e.g. "consolidated into task 2". */
+  reason: string;
+};
+
 /** Place a product into an empty zone (no existing counterpart to replace). */
 export type PlacementTask = {
   kind: "place";
@@ -137,6 +161,8 @@ export type FurnitureDisposition = {
 export type ReplacementPlan = {
   replacements: ReplacementTask[];
   additions: PlacementTask[];
+  /** Existing items deleted outright, with nothing replacing them. */
+  removals: RemovalTask[];
   // Fixed objects + non-replaceable furniture that must be preserved untouched.
   // Retained for prompt/reviewer compatibility; `dispositions` is authoritative.
   preserved: string[];
@@ -415,6 +441,11 @@ export function buildReplacementPlan(
   return {
     replacements,
     additions,
+    // This detection-driven planner never removes anything outright — it only
+    // ever replaces a matched item or places an unmatched product. Removal is
+    // a desired-final-layout concept, produced by the category-intent
+    // resolver when a seating plan asks for fewer pieces than exist.
+    removals: [],
     preserved,
     dispositions,
     analysed: Boolean(sceneGraph?.analysed),
@@ -438,19 +469,25 @@ export function splitPlanByStage(
 ): { stage: GenerationStage; plan: ReplacementPlan }[] {
   const anchorReplacements = plan.replacements.filter((t) => t.stage === "anchor");
   const anchorAdditions = plan.additions.filter((t) => t.stage === "anchor");
+  const anchorRemovals = plan.removals.filter((t) => t.stage === "anchor");
   const secondaryReplacements = plan.replacements.filter(
     (t) => t.stage === "secondary"
   );
   const secondaryAdditions = plan.additions.filter(
     (t) => t.stage === "secondary"
   );
+  const secondaryRemovals = plan.removals.filter((t) => t.stage === "secondary");
 
   const anchorPlan: ReplacementPlan = {
     ...plan,
     replacements: anchorReplacements,
     additions: anchorAdditions,
+    removals: anchorRemovals,
   };
-  // Everything placed in pass 1 becomes untouchable in pass 2.
+  // Everything placed OR removed in pass 1 becomes untouchable in pass 2 — a
+  // removed item must not be treated as still-present furniture pass 2 could
+  // change, so its label joins the preserved-from-pass-1 set exactly like a
+  // newly placed product would.
   const anchorProductTitles = [
     ...anchorReplacements.map((t) => t.productTitle),
     ...anchorAdditions.map((t) => t.productTitle),
@@ -459,14 +496,20 @@ export function splitPlanByStage(
     ...plan,
     replacements: secondaryReplacements,
     additions: secondaryAdditions,
+    removals: secondaryRemovals,
     preserved: [...plan.preserved, ...anchorProductTitles],
   };
 
   const stages: { stage: GenerationStage; plan: ReplacementPlan }[] = [];
-  if (anchorReplacements.length + anchorAdditions.length > 0) {
+  if (anchorReplacements.length + anchorAdditions.length + anchorRemovals.length > 0) {
     stages.push({ stage: "anchor", plan: anchorPlan });
   }
-  if (secondaryReplacements.length + secondaryAdditions.length > 0) {
+  if (
+    secondaryReplacements.length +
+      secondaryAdditions.length +
+      secondaryRemovals.length >
+    0
+  ) {
     stages.push({ stage: "secondary", plan: secondaryPlan });
   }
   return stages;
@@ -484,7 +527,7 @@ export const TWO_STAGE_TASK_THRESHOLD = 3;
  * nothing from splitting.
  */
 export function shouldUseTwoStageGeneration(plan: ReplacementPlan): boolean {
-  const all = [...plan.replacements, ...plan.additions];
+  const all = [...plan.replacements, ...plan.additions, ...plan.removals];
   if (all.length < TWO_STAGE_TASK_THRESHOLD) return false;
   const hasAnchor = all.some((task) => task.stage === "anchor");
   const hasSecondary = all.some((task) => task.stage === "secondary");
@@ -537,10 +580,34 @@ export function checkPlanInvariants(
     }
   }
 
-  // 3. No existing item is targeted twice.
+  // 3. No existing item is targeted twice — by two replacements, two
+  //    removals, or one of each. A REPLACE and a REMOVE both claiming the
+  //    same footprint is exactly the kind of silent contradiction that used
+  //    to leave an item with no real disposition at all.
   const targeted = plan.replacements.map((task) => task.existingItemId);
   if (new Set(targeted).size !== targeted.length) {
     violations.push("an existing item is targeted by more than one replacement");
+  }
+  const removed = plan.removals.map((task) => task.existingItemId);
+  if (new Set(removed).size !== removed.length) {
+    violations.push("an existing item is targeted by more than one removal");
+  }
+  const doubleBooked = removed.filter((id) => targeted.includes(id));
+  if (doubleBooked.length > 0) {
+    violations.push(
+      `item(s) both replaced and removed: ${[...new Set(doubleBooked)].join(", ")}`
+    );
+  }
+
+  // 3b. No fixed object is ever removed — the same guarantee as #2, for the
+  //     other way an existing item can be made to disappear.
+  for (const task of plan.removals) {
+    const item = furniture.find((f) => f.id === task.existingItemId);
+    if (item && !item.replaceable) {
+      violations.push(
+        `removal targets non-replaceable item "${item.id}" (${item.canonicalCategory})`
+      );
+    }
   }
 
   // 4. Every selected product has exactly one destination.
@@ -578,6 +645,7 @@ export function checkPlanInvariants(
   const taskIds = [
     ...plan.replacements.map((task) => task.taskId),
     ...plan.additions.map((task) => task.taskId),
+    ...plan.removals.map((task) => task.taskId),
   ];
   if (new Set(taskIds).size !== taskIds.length) {
     violations.push("duplicate task ids in the plan");
@@ -609,6 +677,18 @@ export function formatReplacementPlan(plan: ReplacementPlan): string {
   for (const task of plan.additions) {
     lines.push(
       `Task ${task.taskId} — PLACE the ${task.productTitle} (${task.productCategory}) at ${task.target}. ${task.placement}.`
+    );
+  }
+
+  for (const task of plan.removals) {
+    const existing = [
+      task.existingCategory,
+      `— ${task.location}`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    lines.push(
+      `Task ${task.taskId} — REMOVE the existing ${existing} completely. Do NOT put any replacement furniture in its place — that space becomes part of the room's remaining open area or the seating placed by another task. ${task.reason}.`
     );
   }
 

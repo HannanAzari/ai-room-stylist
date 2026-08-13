@@ -93,7 +93,10 @@ import {
   describeSeatingPlan,
   getCategoryMenu,
   isCategorySupported,
-  seatingPlanProductCategories,
+  isSeatingCategory,
+  isValidSeatingPlan,
+  seatingPieceLabel,
+  type SeatingPieceKind,
   type SeatingPlan,
 } from "@/lib/intelligence/room-categories";
 import {
@@ -1419,12 +1422,23 @@ export function KoalaDesignStudio() {
   /**
    * What configurable categories should END UP as, keyed by category.
    *
-   * Seating is not a swap: "two tired sofas" can become "one L-shape and two
-   * armchairs". The plan states the destination and the pipeline works out the
-   * difference from what the room actually holds.
+   * Seating is not a swap: two tired sofas can become one L-shape, or a 3-seat
+   * plus a 2-seat. The plan states the destination and the pipeline works out
+   * the difference from what the room actually holds.
    */
   const [categoryPlans, setCategoryPlans] = useState<
     Partial<Record<CanonicalCategory, SeatingPlan>>
+  >({});
+  /**
+   * One chosen product per seating SHAPE, not per canonical category.
+   *
+   * A mixed plan — one 3-seater and one 2-seater — needs two independent
+   * product choices even though both shapes are "sofa" for category-lock
+   * purposes, so seating gets its own map keyed by piece kind rather than
+   * sharing `chosenProductByCategory`.
+   */
+  const [chosenSeatingProducts, setChosenSeatingProducts] = useState<
+    Partial<Record<SeatingPieceKind, string>>
   >({});
   /** The look chosen for Surprise me. Null until the customer picks one. */
   const [surpriseStyle, setSurpriseStyle] = useState<string | null>(null);
@@ -1563,57 +1577,86 @@ export function KoalaDesignStudio() {
   ];
 
   /**
-   * One shelf per chosen type, carrying how many pieces it covers.
+   * Seating shelves — ALWAYS one per desired shape, from the plan directly.
    *
-   * Without an analysis there are no instances to count, so the shelves come
-   * straight from what the customer chose: one per type, plus a shelf per
-   * distinct piece kind a seating plan calls for. Once the advanced picker has
-   * analysed the room, the real instance counts take over.
+   * Unlike every other category, seating's shelf count must never come from
+   * detected-instance counting: the whole point of the plan is that it states
+   * the DESIRED final layout independent of how many sofas the room actually
+   * holds. If detection happened to run for some other category in the same
+   * visit, that must not silently switch the sofa shelves over to counting
+   * real objects — "1 L-shape" means one shelf wanting one L-shape, whether
+   * or not anything has looked at the photo yet.
    */
-  const shelfCategories = hasDetections
-    ? [
-        ...effectiveSelections.reduce((counts, selection) => {
-          counts.set(
-            selection.canonicalCategory,
-            (counts.get(selection.canonicalCategory) || 0) + 1
-          );
-          return counts;
-        }, new Map<CanonicalCategory, number>()),
-      ].map(([canonicalCategory, targetCount]) => ({
-        canonicalCategory,
-        targetCount,
-      }))
-    : selectedCategories.flatMap((canonicalCategory) => {
-        // A shelf nothing can fill is an empty shelf. The menu already marks
-        // these unavailable, so this is belt-and-braces rather than the fix.
-        if (!isCategorySupported(canonicalCategory, allCatalogueProducts)) {
-          return [];
-        }
-        const plan = categoryPlans[canonicalCategory];
-        if (!plan) return [{ canonicalCategory, targetCount: 1 }];
-        // A plan wanting sofas AND armchairs needs a shelf for each, so the
-        // armchair choice is a real choice rather than an assumption.
-        return seatingPlanProductCategories(plan)
-          .filter((productCategory) =>
-            allCatalogueProducts.some(
-              (product) => product.category === productCategory
-            )
-          )
-          .map((productCategory) => ({
-            canonicalCategory:
-              productCategory === "chairs"
-                ? ("armchair" as CanonicalCategory)
-                : canonicalCategory,
-            targetCount: plan.pieces
-              .filter(
-                (piece) =>
-                  (piece.kind === "armchair") === (productCategory === "chairs")
-              )
-              .reduce((total, piece) => total + piece.count, 0),
-          }));
-      });
+  const seatingShelfCategories = selectedCategories
+    .filter((canonicalCategory) => isSeatingCategory(roomType, canonicalCategory))
+    .flatMap((canonicalCategory) => {
+      const plan = categoryPlans[canonicalCategory];
+      if (!plan) return [];
+      return plan.pieces
+        .filter((piece) => piece.count > 0)
+        .map((piece) => ({
+          canonicalCategory,
+          key: piece.kind,
+          label: seatingPieceLabel(piece.kind),
+          targetCount: piece.count,
+          quantityIsExplicit: true,
+        }));
+    });
+
+  /**
+   * One shelf per other chosen type, carrying how many pieces it covers.
+   *
+   * Without an analysis there are no instances to count, so these shelves
+   * default to one each. Once the advanced picker has analysed the room, the
+   * real instance counts take over.
+   */
+  const simpleShelfCategories = (
+    hasDetections
+      ? [
+          ...effectiveSelections.reduce((counts, selection) => {
+            counts.set(
+              selection.canonicalCategory,
+              (counts.get(selection.canonicalCategory) || 0) + 1
+            );
+            return counts;
+          }, new Map<CanonicalCategory, number>()),
+        ].map(([canonicalCategory, targetCount]) => ({
+          canonicalCategory,
+          targetCount,
+        }))
+      : selectedCategories.map((canonicalCategory) => ({
+          canonicalCategory,
+          targetCount: 1,
+        }))
+  ).filter(
+    ({ canonicalCategory }) =>
+      !isSeatingCategory(roomType, canonicalCategory) &&
+      // A shelf nothing can fill is an empty shelf. The menu already marks
+      // these unavailable, so this is belt-and-braces rather than the fix.
+      isCategorySupported(canonicalCategory, allCatalogueProducts)
+  );
+
+  const shelfCategories = [...seatingShelfCategories, ...simpleShelfCategories];
 
   /** Replacement groups: one chosen product applied across its objects. */
+  /**
+   * The advanced picker (real, detected instances) needs ONE product per
+   * canonical category — a model `replacementGroups` still assumes. Seating
+   * products now live per SHAPE, which can genuinely be ambiguous here: if
+   * the plan bound two different products to two different shapes, there is
+   * no single "the sofa product" to hand the advanced picker. In that case
+   * this deliberately contributes nothing for sofa, rather than guessing —
+   * the precision path is secondary, and a real product chosen through it
+   * must never be silently swapped for the wrong one of two candidates.
+   */
+  const unambiguousSeatingProductId = (() => {
+    const chosen = Object.values(chosenSeatingProducts).filter(
+      (id): id is string => Boolean(id)
+    );
+    const distinct = new Set(chosen);
+    return distinct.size === 1 ? chosen[0] : undefined;
+  })();
+
   const replacementGroups = buildReplacementGroups({
     targetsByCategory: effectiveSelections.reduce((map, selection, index) => {
       const list = map.get(selection.canonicalCategory) ?? [];
@@ -1621,30 +1664,27 @@ export function KoalaDesignStudio() {
       map.set(selection.canonicalCategory, list);
       return map;
     }, new Map<CanonicalCategory, ReturnType<typeof selectionToTarget>[]>()),
-    productByCategory: Object.entries(chosenProductByCategory).reduce(
-      (map, [category, productId]) => {
-        const product = productId
-          ? allCatalogueProducts.find((p) => p.id === productId)
-          : undefined;
-        if (product) map.set(category as CanonicalCategory, product);
-        return map;
-      },
-      new Map<CanonicalCategory, Product>()
-    ),
+    productByCategory: (() => {
+      const map = Object.entries(chosenProductByCategory).reduce(
+        (map, [category, productId]) => {
+          const product = productId
+            ? allCatalogueProducts.find((p) => p.id === productId)
+            : undefined;
+          if (product) map.set(category as CanonicalCategory, product);
+          return map;
+        },
+        new Map<CanonicalCategory, Product>()
+      );
+      if (unambiguousSeatingProductId) {
+        const product = allCatalogueProducts.find(
+          (p) => p.id === unambiguousSeatingProductId
+        );
+        if (product) map.set("sofa", product);
+      }
+      return map;
+    })(),
   });
 
-  // Objects with no product chosen for their category, named so the confirm
-  // screen can promise they stay untouched.
-  const protectedSummary = detectedObjects
-    .filter(
-      (object) =>
-        !effectiveSelections.some(
-          (selection) =>
-            selection.sceneItemId === object.sceneItemId &&
-            Boolean(chosenProductByCategory[selection.canonicalCategory])
-        )
-    )
-    .map((object) => object.displayName);
   const activeConcept = generatedConcepts[selectedConceptIndex] || null;
   const activeImage = activeConcept?.imageBase64 || "";
   const activeImageDataUrl = activeConcept
@@ -2016,6 +2056,7 @@ export function KoalaDesignStudio() {
       // A new photo invalidates everything selected against the old one.
       setRoomSelections([]);
       setChosenProductByCategory({});
+      setChosenSeatingProducts({});
     setProductQuantities({});
       setDetectedObjects([]);
       setDetectionState("idle");
@@ -2121,7 +2162,19 @@ export function KoalaDesignStudio() {
     // "Surprise me" needs no picks — that is the whole point of it. "Replace
     // items" needs at least one region with an actual product assigned to it,
     // because that flow only ever executes explicit assignments.
-    if (designMode === "replace-items") return replacementGroups.length > 0;
+    //
+    // Only the advanced picker actually resolves category choices into real
+    // objects client-side (`replacementGroups`, from real detections). The
+    // ordinary journey has no detections yet — that is the entire point of
+    // the instant menu — so the gate there has to be "would there be
+    // anything to send", i.e. the same category intents `handleGenerate`
+    // would actually build, not a signal that only ever exists once the
+    // photo has been analysed.
+    if (designMode === "replace-items") {
+      return hasDetections
+        ? replacementGroups.length > 0
+        : buildCategoryIntents().length > 0;
+    }
     return true;
   }
 
@@ -2141,7 +2194,12 @@ export function KoalaDesignStudio() {
       return next;
     });
     // The arrangement goes with it — a plan for a type nobody is replacing
-    // would quietly reappear if the type were chosen again later.
+    // would quietly reappear if the type were chosen again later. Only
+    // "sofa" is a seating category today, so clearing the whole seating
+    // product map is exactly as scoped as clearing categoryPlans[category].
+    if (isSeatingCategory(roomType, category)) {
+      setChosenSeatingProducts({});
+    }
     setCategoryPlans((current) => {
       if (!selectedCategories.includes(category)) return current;
       const next = { ...current };
@@ -2150,14 +2208,28 @@ export function KoalaDesignStudio() {
     });
   }
 
-  /** Choose (or clear) the single product for a category. */
-  function chooseProductForCategory(
-    category: CanonicalCategory,
-    productId: string | null
+  /**
+   * Choose (or clear) a product for a shelf.
+   *
+   * `key` addresses the shelf: for a plain category it is the canonical
+   * category itself, for a seating shape it is the piece kind — two
+   * different state buckets, dispatched on which kind of category this is.
+   */
+  function chooseProductForShelf(
+    key: string,
+    productId: string | null,
+    canonicalCategory: CanonicalCategory
   ) {
+    if (isSeatingCategory(roomType, canonicalCategory)) {
+      setChosenSeatingProducts((current) => ({
+        ...current,
+        [key as SeatingPieceKind]: productId ?? undefined,
+      }));
+      return;
+    }
     setChosenProductByCategory((current) => ({
       ...current,
-      [category]: productId ?? undefined,
+      [key]: productId ?? undefined,
     }));
   }
 
@@ -2244,30 +2316,65 @@ export function KoalaDesignStudio() {
    *
    * This is the ordinary path: the browser states the intent, and the server —
    * which is analysing the room regardless — decides which pieces that means.
+   *
+   * A simple category becomes one intent carrying its one product. Seating
+   * becomes ONE intent per seating category carrying every bound piece —
+   * kind, count and product — so the server can reconcile the whole desired
+   * layout in one pass rather than being handed pieces one at a time with no
+   * view of the total.
    */
   function buildCategoryIntents() {
-    return shelfCategories.flatMap((shelf) => {
-      const productId = chosenProductByCategory[shelf.canonicalCategory];
-      if (!productId) return [];
-      const plan = categoryPlans[shelf.canonicalCategory];
-      // Narrow to named pieces only where the customer explicitly did so.
-      const sceneItemIds = roomSelections
-        .filter(
-          (selection) =>
-            selection.canonicalCategory === shelf.canonicalCategory &&
-            selection.sceneItemId
-        )
-        .map((selection) => selection.sceneItemId as string);
+    const simple = selectedCategories
+      .filter((category) => !isSeatingCategory(roomType, category))
+      .flatMap((category) => {
+        const productId = chosenProductByCategory[category];
+        if (!productId) return [];
+        // Narrow to named pieces only where the customer explicitly did so.
+        const sceneItemIds = roomSelections
+          .filter(
+            (selection) =>
+              selection.canonicalCategory === category && selection.sceneItemId
+          )
+          .map((selection) => selection.sceneItemId as string);
 
-      return [
-        {
-          canonicalCategory: shelf.canonicalCategory,
-          productId,
-          ...(sceneItemIds.length > 0 ? { sceneItemIds } : {}),
-          ...(plan ? { seatingPlan: plan } : {}),
-        },
-      ];
-    });
+        return [
+          {
+            canonicalCategory: category,
+            productId,
+            ...(sceneItemIds.length > 0 ? { sceneItemIds } : {}),
+          },
+        ];
+      });
+
+    const seating = selectedCategories
+      .filter((category) => isSeatingCategory(roomType, category))
+      .flatMap((category) => {
+        const plan = categoryPlans[category];
+        if (!plan) return [];
+        const seatingSelection = plan.pieces
+          .map((piece) => {
+            const productId = chosenSeatingProducts[piece.kind];
+            const product = productId
+              ? allCatalogueProducts.find((p) => p.id === productId)
+              : undefined;
+            return productId && product
+              ? {
+                  kind: piece.kind,
+                  count: piece.count,
+                  productId,
+                  productName: product.name,
+                }
+              : null;
+          })
+          .filter(
+            (entry): entry is NonNullable<typeof entry> => entry !== null
+          );
+        if (seatingSelection.length === 0) return [];
+
+        return [{ canonicalCategory: category, seatingSelection }];
+      });
+
+    return [...simple, ...seating];
   }
 
   async function handleGenerate(modeOverride?: DesignMode) {
@@ -2634,10 +2741,11 @@ export function KoalaDesignStudio() {
             Replace items
           </p>
           <h1 className="mt-2 font-serif text-[26px] font-semibold leading-tight text-[#F5F3EE]">
-            What would you like to replace?
+            What would you like to change?
           </h1>
           <p className="mt-2 text-sm leading-6 text-[#9a978f]">
-            Anything you don&apos;t choose stays exactly as it is.
+            Tell us what you want your room to end up with. Anything you
+            don&apos;t choose stays exactly as it is.
           </p>
         </div>
 
@@ -2714,10 +2822,6 @@ export function KoalaDesignStudio() {
 
         <SeatingPlanPicker
           plan={categoryPlans[category]}
-          armchairsAvailable={isCategorySupported(
-            "armchair",
-            allCatalogueProducts
-          )}
           onChange={(plan) =>
             setCategoryPlans((current) => ({ ...current, [category]: plan }))
           }
@@ -2776,24 +2880,18 @@ export function KoalaDesignStudio() {
         <CategoryProductShelves
           categories={shelfCategories}
           catalogue={allCatalogueProducts}
-          chosenByCategory={chosenProductByCategory}
+          // Seating products are keyed by piece kind, everything else by
+          // canonical category — the two maps never share a key, so they can
+          // sit side by side here without colliding.
+          chosenByCategory={{
+            ...chosenProductByCategory,
+            ...chosenSeatingProducts,
+          }}
           // Without an analysis the counts describe the layout the customer
           // asked for, not the room we looked at.
           countsAreFromRoom={hasDetections}
-          onChoose={chooseProductForCategory}
+          onChoose={chooseProductForShelf}
         />
-
-        {protectedSummary.length > 0 && (
-          <div className="v2-surface rounded-2xl p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a978f]">
-              Staying as it is
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[#9a978f]">
-              {protectedSummary.join(", ")}, plus your walls, floor, ceiling,
-              windows and doors.
-            </p>
-          </div>
-        )}
       </section>
     );
   }
@@ -3485,6 +3583,7 @@ export function KoalaDesignStudio() {
                     setDesignMode(null);
                     setRoomSelections([]);
                     setChosenProductByCategory({});
+                    setChosenSeatingProducts({});
                     setSelectedCategories([]);
                     setPrecisionCategory(null);
                     setSeatingCategory(null);
@@ -3536,12 +3635,18 @@ export function KoalaDesignStudio() {
                     setSeatingCategory(null);
                     setReplacePhase("categories");
                   }}
-                  disabled={!seatingCategory || !categoryPlans[seatingCategory]}
+                  disabled={
+                    !seatingCategory ||
+                    !categoryPlans[seatingCategory] ||
+                    !isValidSeatingPlan(categoryPlans[seatingCategory]!)
+                  }
                   className="min-h-14 rounded-2xl text-base"
                 >
-                  {seatingCategory && categoryPlans[seatingCategory]
+                  {seatingCategory &&
+                  categoryPlans[seatingCategory] &&
+                  isValidSeatingPlan(categoryPlans[seatingCategory]!)
                     ? "Confirm seating"
-                    : "Choose an arrangement"}
+                    : "Choose at least one piece"}
                 </StudioButton>
               )}
             {step === 3 && designMode === "surprise-me" && (

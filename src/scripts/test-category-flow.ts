@@ -318,9 +318,14 @@ section("9. No detection detail reaches the ordinary journey");
   check("manual marking is a secondary link",
     /Mark an area yourself/.test(studio));
 
-  // Customer-facing copy must not use engineering vocabulary.
+  // Customer-facing copy must not use engineering vocabulary. The top
+  // question moved from "replace" to "change" (Phase 8 of the seating-
+  // contract-hardening sprint): the flow now handles ADD/REMOVE/REPLACE, so
+  // "what would you like to replace" mis-describes what a seating plan can
+  // actually do — the customer states a desired final room, not a literal
+  // one-for-one swap.
   const customerCopy = [
-    "What would you like to replace?",
+    "What would you like to change?",
     "Choose your new pieces",
     "What should your seating be?",
     "What look are you after?",
