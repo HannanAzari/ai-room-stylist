@@ -204,6 +204,85 @@ export function isValidSeatingPlan(plan: SeatingPlan): boolean {
   return total >= 1 && total <= MAX_SEATING_PIECES;
 }
 
+// ---------------------------------------------------------------------------
+// Seating slots
+// ---------------------------------------------------------------------------
+
+/**
+ * One physical piece of seating the customer will choose a product for.
+ *
+ * A plan states shapes and counts ("2 × 3-seater"); a SLOT is one of the actual
+ * pieces that plan resolves to. The distinction matters because two 3-seaters
+ * do not have to be the same sofa — someone may want a matching pair, or two
+ * different models — and a product choice keyed by SHAPE cannot express that.
+ * Slots are the unit the product shelves, the wire payload and the replacement
+ * contract all address, so "2 × 3-seater" is two independent choices that
+ * happen to default to nothing rather than one choice used twice.
+ */
+export type SeatingSlot = {
+  kind: SeatingPieceKind;
+  /** 1-based position within this kind. */
+  index: number;
+  /** How many slots this kind has in total, for "1 of 2" style copy. */
+  totalForKind: number;
+  /** Stable address for this slot in the chosen-product map. */
+  key: string;
+  /** "3-seater sofa" or "3-seater sofa · 1 of 2". */
+  label: string;
+};
+
+/**
+ * The address of a seating slot.
+ *
+ * Deliberately NOT the bare piece kind: a bare kind collapses every unit of a
+ * shape onto one product choice, which is exactly the limitation that stopped
+ * two 3-seaters from being two different sofas. The `#n` suffix cannot collide
+ * with a canonical category, so slot choices and plain-category choices can
+ * still share one map.
+ */
+export function seatingSlotKey(kind: SeatingPieceKind, index: number): string {
+  return `${kind}#${index}`;
+}
+
+/** The kind a slot key addresses, or null if it is not a slot key. */
+export function parseSeatingSlotKey(
+  key: string
+): { kind: SeatingPieceKind; index: number } | null {
+  const [kind, rawIndex] = key.split("#");
+  if (!rawIndex) return null;
+  if (!SEATING_PIECE_KINDS.some((entry) => entry.kind === kind)) return null;
+  const index = Number.parseInt(rawIndex, 10);
+  if (!Number.isFinite(index) || index < 1) return null;
+  return { kind: kind as SeatingPieceKind, index };
+}
+
+/**
+ * Expand a plan into its individual slots, in a fixed order: every unit of the
+ * first kind, then every unit of the next. The order is the one the contract
+ * and the prompt will use, so what the customer sees on the shelves is the
+ * order their sofas are assigned in.
+ */
+export function seatingPlanSlots(plan: SeatingPlan): SeatingSlot[] {
+  const slots: SeatingSlot[] = [];
+  for (const { kind } of SEATING_PIECE_KINDS) {
+    const piece = plan.pieces.find((entry) => entry.kind === kind);
+    const count = piece?.count ?? 0;
+    for (let index = 1; index <= count; index += 1) {
+      const base = seatingPieceLabel(kind);
+      slots.push({
+        kind,
+        index,
+        totalForKind: count,
+        key: seatingSlotKey(kind, index),
+        // A single piece of a shape needs no ordinal — "3-seater sofa" is
+        // already unambiguous, and "1 of 1" is noise.
+        label: count > 1 ? `${base} · ${index} of ${count}` : base,
+      });
+    }
+  }
+  return slots;
+}
+
 /** "One L-shape sofa and 2 armchairs" — for confirmation copy and prompts. */
 export function describeSeatingPlan(plan: SeatingPlan): string {
   const parts = plan.pieces
@@ -213,6 +292,36 @@ export function describeSeatingPlan(plan: SeatingPlan): string {
       return piece.count === 1 ? `1 ${label}` : `${piece.count} ${label}s`;
     });
   if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * What the customer actually chose, by product — "2 × Dune 3-seater" for a
+ * matching pair, "Dune 3-seater and Halo 3-seater" for two different models.
+ *
+ * `describeSeatingPlan` only knows shapes and counts, so it says "2 3-seater
+ * sofas" whether those are the same sofa twice or two different ones. That is
+ * the wrong summary to confirm against once slots can differ: the customer
+ * needs to see the models they picked, not the shapes they asked for.
+ */
+export function describeSeatingProducts(
+  slots: SeatingSlot[],
+  productNameByKey: (key: string) => string | undefined
+): string {
+  const names = slots
+    .map((slot) => productNameByKey(slot.key))
+    .filter((name): name is string => Boolean(name));
+  if (names.length === 0) return "";
+
+  // Group runs of the same model so a matching pair reads as "2 × X" rather
+  // than the same name written out twice.
+  const counts = new Map<string, number>();
+  for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
+
+  const parts = [...counts.entries()].map(([name, count]) =>
+    count === 1 ? name : `${count} × ${name}`
+  );
   if (parts.length === 1) return parts[0];
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }

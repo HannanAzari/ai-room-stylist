@@ -13,10 +13,16 @@ import type { Product } from "@/features/room-stylist/types";
 /**
  * Visual product shelves for the categories the customer actually selected.
  *
- * One shelf per category, one chosen product per category — the customer picks
- * "this sofa", not "a product for sofa 1 and another for sofa 2". How that
- * choice applies across the individual objects is a planner concern and is
- * never surfaced as configuration.
+ * One shelf per SHELF KEY, one chosen product each. For a plain category that
+ * key is the category itself — the customer picks "this rug", and how that
+ * choice applies across the individual objects is a planner concern never
+ * surfaced as configuration.
+ *
+ * Seating is the exception, and deliberately so: a plan asking for two
+ * 3-seaters draws two shelves, one per physical piece, because a matching pair
+ * and two different models are both things people actually want and a single
+ * shared shelf can only express the first. The second shelf offers "use the
+ * same as the first" so the common case stays one tap.
  *
  * Cross-category products are not merely hidden: a shelf can only ever list
  * products its region category is locked to.
@@ -43,6 +49,28 @@ export type CategorySelection = {
    * answer, and the shelf must not re-derive it.
    */
   quantityIsExplicit?: boolean;
+  /**
+   * Offer "use the same one as before" on this shelf.
+   *
+   * Set on the second and later slots of a seating shape. Choosing two
+   * matching sofas is the common case and scrolling a shelf to find the card
+   * you already picked is a chore, so the shortcut is offered explicitly —
+   * while leaving the shelf itself fully browsable, which is what makes two
+   * DIFFERENT models equally available. Without this the "same or different"
+   * choice would be implied by the shelves rather than stated.
+   */
+  sameAs?: {
+    /** Shelf key whose choice this one can copy. */
+    key: string;
+    /**
+     * Short name for the shelf being copied, e.g. "the first". Deliberately
+     * short rather than the full shelf label: this appears inside button copy
+     * on a 375px screen, directly under a heading that already says which
+     * piece this is, so repeating the full "3-seater sofa · 1 of 2" there
+     * only costs a line of wrapping.
+     */
+    label: string;
+  };
 };
 
 export function CategoryProductShelves({
@@ -80,6 +108,7 @@ export function CategoryProductShelves({
           key: keyOverride,
           label: labelOverride,
           quantityIsExplicit = false,
+          sameAs,
         }) => {
           const shelfKey = keyOverride ?? canonicalCategory;
           const eligible = catalogue.filter((product) =>
@@ -88,6 +117,15 @@ export function CategoryProductShelves({
           const chosenId = chosenByCategory[shelfKey];
           const chosen = eligible.find((p) => p.id === chosenId);
           const label = labelOverride ?? displayCategoryName(canonicalCategory);
+          // The shortcut is only real once the shelf it copies has a choice,
+          // and only worth showing while this shelf does not already match it.
+          const sameAsChosenId = sameAs ? chosenByCategory[sameAs.key] : undefined;
+          const canCopyPrevious = Boolean(
+            sameAsChosenId && sameAsChosenId !== chosenId
+          );
+          const matchesPrevious = Boolean(
+            sameAsChosenId && sameAsChosenId === chosenId
+          );
 
           // How the chosen product would actually be applied, so the shelf can
           // say "× 2" or explain a combined unit without asking the customer
@@ -128,6 +166,28 @@ export function CategoryProductShelves({
                 </p>
               ) : (
                 <>
+                  {canCopyPrevious && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onChoose(
+                          shelfKey,
+                          sameAsChosenId ?? null,
+                          canonicalCategory
+                        )
+                      }
+                      className="mt-2 w-full rounded-2xl border border-[#C9A57A]/40 bg-[#C9A57A]/10 px-4 py-2.5 text-[12px] font-semibold text-[#E8D6BC] transition active:scale-[0.99]"
+                    >
+                      Use the same as {sameAs?.label} — a matching pair
+                    </button>
+                  )}
+                  {matchesPrevious && (
+                    <p className="mt-2 text-[11px] leading-4 text-[#9a978f]">
+                      Same model as {sameAs?.label} — a matching pair. Pick a
+                      different one below to mix two models.
+                    </p>
+                  )}
+
                   {/* Full-bleed shelf so the next card peeks past the edge. */}
                   <div className="v2-noscrollbar -mx-6 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-1">
                     {eligible.map((product) => {

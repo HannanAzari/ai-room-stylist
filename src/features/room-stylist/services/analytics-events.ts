@@ -289,9 +289,9 @@ export function trackFullscreenProviderViewed({
   });
 }
 
-export function trackProviderWarning(warning: string) {
+export function trackProviderWarning(warning: string, provider = "studio") {
   trackEvent("provider_warning", {
-    provider: "gemini",
+    provider,
     warning,
   });
 }

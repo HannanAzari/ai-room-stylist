@@ -358,6 +358,40 @@ export function contractToReplacementPlan(
 ): ReplacementPlan {
   const profileById = new Map(profiles.map((p) => [p.id, p]));
 
+  /**
+   * How many objects of each canonical category the room holds, counting
+   * EVERYTHING the contract accounts for: replaced, removed and protected.
+   *
+   * `existingSharesCategory` drives the prompt's "this room contains more than
+   * one sofa — change ONLY the left one" wording. It used to be computed from
+   * `protectedItems` alone, which answered a narrower question: "is some sofa
+   * being left alone?" That is false when BOTH sofas are being replaced — so a
+   * two-sofa replacement produced two tasks that each said "the existing sofa",
+   * with nothing anywhere in the prompt establishing that there were two of
+   * them or that both had to change. Combined with the reference-manifest bug
+   * (see buildProductTaskIndex), that is how a two-sofa request came back with
+   * one sofa changed.
+   *
+   * Counting every disposition asks the right question — "does this room hold
+   * more than one of these?" — which is what makes the per-instance wording
+   * kick in.
+   */
+  const categoryPopulation = new Map<CanonicalCategory, number>();
+  const countCategory = (category: CanonicalCategory) => {
+    categoryPopulation.set(category, (categoryPopulation.get(category) ?? 0) + 1);
+  };
+  for (const assignment of contract.assignments) {
+    countCategory(assignment.canonicalCategory);
+  }
+  for (const removal of contract.removals ?? []) {
+    countCategory(removal.canonicalCategory);
+  }
+  for (const item of contract.protectedItems) {
+    if (item.canonicalCategory) countCategory(item.canonicalCategory);
+  }
+  const sharesCategory = (category: CanonicalCategory) =>
+    (categoryPopulation.get(category) ?? 0) > 1;
+
   const replacements: ReplacementTask[] = contract.assignments
     .map((assignment): ReplacementTask | null => {
       const profile = profileById.get(assignment.productId);
@@ -376,13 +410,11 @@ export function contractToReplacementPlan(
           canonicalCategoryLabel(assignment.canonicalCategory),
         existingCanonicalCategory: assignment.canonicalCategory,
         existingInstanceLabel: assignment.target.instanceLabel,
-        // True when a PROTECTED object shares this category. That is exactly
-        // the dangerous case — "replace the sofa" would be ambiguous — so the
-        // prompt must name the instance and spell out that the other is
-        // off-limits.
-        existingSharesCategory: contract.protectedItems.some(
-          (item) => item.canonicalCategory === assignment.canonicalCategory
-        ),
+        // True when the room holds ANOTHER object of this category, whatever
+        // is happening to it. That is the dangerous case — "replace the sofa"
+        // is ambiguous the moment there are two — so the prompt must name the
+        // instance and say explicitly what happens to the other one.
+        existingSharesCategory: sharesCategory(assignment.canonicalCategory),
         identity: profile.identity,
         existingColor: "",
         productId: profile.id,
@@ -440,9 +472,7 @@ export function contractToReplacementPlan(
       canonicalCategoryLabel(removal.canonicalCategory),
     existingCanonicalCategory: removal.canonicalCategory,
     existingInstanceLabel: removal.target.instanceLabel,
-    existingSharesCategory: contract.protectedItems.some(
-      (item) => item.canonicalCategory === removal.canonicalCategory
-    ),
+    existingSharesCategory: sharesCategory(removal.canonicalCategory),
     location: removal.target.location,
     boundingBox: removal.target.boundingBox,
     reason: removal.reason,
@@ -462,9 +492,7 @@ export function contractToReplacementPlan(
       rawCategory: canonicalCategoryLabel(assignment.canonicalCategory),
       canonicalCategory: assignment.canonicalCategory,
       instanceLabel: assignment.target.instanceLabel,
-      sharesCategoryWithOthers: contract.protectedItems.some(
-        (item) => item.canonicalCategory === assignment.canonicalCategory
-      ),
+      sharesCategoryWithOthers: sharesCategory(assignment.canonicalCategory),
       disposition: "replace" as const,
       reason: `Explicitly assigned by the customer to ${assignment.productTitle} (task ${assignment.taskId}).`,
       productId: assignment.productId,
@@ -494,9 +522,7 @@ export function contractToReplacementPlan(
       rawCategory: canonicalCategoryLabel(removal.canonicalCategory),
       canonicalCategory: removal.canonicalCategory,
       instanceLabel: removal.target.instanceLabel,
-      sharesCategoryWithOthers: contract.protectedItems.some(
-        (item) => item.canonicalCategory === removal.canonicalCategory
-      ),
+      sharesCategoryWithOthers: sharesCategory(removal.canonicalCategory),
       disposition: "remove" as const,
       reason: `Removed, not replaced — ${removal.reason}`,
       productId: null,

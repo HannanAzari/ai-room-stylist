@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  generateGeminiImage,
-} from "@/features/room-stylist/services/image-providers/gemini";
+import { getRoomEditProvider } from "@/features/room-stylist/services/image-providers/room-edit-provider";
 import type { GeneratedImageResult } from "@/features/room-stylist/services/image-providers/types";
 import {
   loadProductReferenceImageFiles,
@@ -93,7 +91,7 @@ const HEIC_UPLOAD_ERROR =
 const UNSUPPORTED_UPLOAD_ERROR =
   "Unsupported room image type. Please upload JPG, PNG, or WebP.";
 const GEMINI_CONFIGURATION_ERROR =
-  "Gemini is not configured. Add GEMINI_API_KEY.";
+  "Room analysis is not configured. Add GEMINI_API_KEY.";
 
 function devLog(message: string, details?: unknown) {
   if (process.env.NODE_ENV !== "development") return;
@@ -273,7 +271,15 @@ function pickBestAttempt(attempts: GenerationAttempt[]): GenerationAttempt {
   });
 }
 
-function getStudioGeminiApiKey() {
+/**
+ * The key for the ANALYSIS models — the scene graph and the quality reviewer.
+ *
+ * Deliberately separate from the renderer's credentials. Those two read images
+ * to build the plan and to judge the result, and they still run on Gemini
+ * whichever renderer produces the pixels; conflating the two keys would mean
+ * swapping the renderer silently swapped the thing grading it.
+ */
+function getStudioAnalysisApiKey() {
   const apiKey = process.env.GEMINI_API_KEY?.trim() || "";
 
   if (!apiKey) {
@@ -336,7 +342,18 @@ async function handleGeneration(req: Request) {
   }
 
   const roomMeasurements = parseRoomMeasurements(formData);
-  const apiKey = getStudioGeminiApiKey();
+  const apiKey = getStudioAnalysisApiKey();
+
+  // The renderer that will actually perform the edit. Checked up front so a
+  // misconfigured provider fails before the customer has waited through a
+  // scene analysis for a request that could never have produced an image.
+  const renderer = getRoomEditProvider();
+  if (!renderer.available) {
+    throw new Error(
+      renderer.unavailableReason ??
+        `The ${renderer.label} renderer is not configured.`
+    );
+  }
 
   // An explicit replacement contract, when the customer built one, states
   // exactly which region becomes which product.
@@ -522,6 +539,7 @@ async function handleGeneration(req: Request) {
   };
 
   devLog("[studio-gemini] generation request", {
+    renderer: renderer.id,
     imageName: image.name,
     imageType: image.type,
     imageSize: image.size,
@@ -595,12 +613,13 @@ async function handleGeneration(req: Request) {
         break;
       }
 
-      const generatedImage = await generateGeminiImage({
+      const generatedImage = await renderer.generate({
         prompt: built.prompt,
         roomImage: stageInputImage,
         productImages: [],
         labelledProductImages: stageReferences,
-        apiKey,
+        // The renderer's own credentials, NOT the analysis key.
+        apiKey: renderer.apiKey,
       });
       generationsUsed += 1;
 
@@ -663,7 +682,7 @@ async function handleGeneration(req: Request) {
   }
 
   if (!finalAttempt) {
-    throw new Error("Gemini image generation produced no result.");
+    throw new Error(`${renderer.label} image generation produced no result.`);
   }
 
   // The result is the best attempt of the FINAL stage. It must never be an
@@ -904,11 +923,23 @@ ${buildScaleInstructions()}
     productReferenceCount: productImageFiles.length,
   });
 
-  const refinedImage = await generateGeminiImage({
+  // Refinement edits a room image exactly as generation does, so it uses the
+  // same renderer. Splitting them would mean a customer's refine silently
+  // switched providers mid-session and the result stopped matching the room
+  // they were just looking at.
+  const refineRenderer = getRoomEditProvider();
+  if (!refineRenderer.available) {
+    throw new Error(
+      refineRenderer.unavailableReason ??
+        `The ${refineRenderer.label} renderer is not configured.`
+    );
+  }
+
+  const refinedImage = await refineRenderer.generate({
     prompt,
     roomImage: conceptImage,
     productImages: productImageFiles,
-    apiKey: getStudioGeminiApiKey(),
+    apiKey: refineRenderer.apiKey,
   });
 
   return NextResponse.json({
@@ -941,7 +972,7 @@ export async function POST(req: Request) {
       {
         error:
           getErrorText(error) ||
-          "Gemini image generation failed. Please try again.",
+          "Room image generation failed. Please try again.",
       },
       { status: 500 }
     );

@@ -91,12 +91,13 @@ import { SeatingPlanPicker } from "./SeatingPlanPicker";
 import { SurpriseStylePicker } from "./SurpriseStylePicker";
 import {
   describeSeatingPlan,
+  describeSeatingProducts,
   getCategoryMenu,
   isCategorySupported,
   isSeatingCategory,
   isValidSeatingPlan,
-  seatingPieceLabel,
-  type SeatingPieceKind,
+  seatingPlanSlots,
+  seatingSlotKey,
   type SeatingPlan,
 } from "@/lib/intelligence/room-categories";
 import {
@@ -193,11 +194,10 @@ function normalizeStudioGeminiConcepts(
     assertStudioGeminiProvider(concept.provider);
   });
 
-  return concepts.map((concept) => ({
-    ...concept,
-    provider: "gemini",
-    label: "Gemini",
-  }));
+  // The provider and label are reported as the server rendered them. Rewriting
+  // them to a fixed vendor here would make the debug view lie about which
+  // renderer produced the image, which is exactly what it exists to show.
+  return concepts;
 }
 
 function getImageFileExtension(mimeType: string) {
@@ -1430,15 +1430,17 @@ export function KoalaDesignStudio() {
     Partial<Record<CanonicalCategory, SeatingPlan>>
   >({});
   /**
-   * One chosen product per seating SHAPE, not per canonical category.
+   * One chosen product per seating SLOT — per physical piece, not per shape
+   * and not per canonical category.
    *
-   * A mixed plan — one 3-seater and one 2-seater — needs two independent
-   * product choices even though both shapes are "sofa" for category-lock
-   * purposes, so seating gets its own map keyed by piece kind rather than
-   * sharing `chosenProductByCategory`.
+   * Keyed by slot (`sofa-3-seater#1`, `sofa-3-seater#2`) for the reason
+   * `SeatingSlot` documents: "2 × 3-seater" is two independent choices, which
+   * may be the same sofa twice or two different models. Keying by shape — as
+   * this map used to — could only ever express the first, and silently
+   * collapsed a two-sofa request onto one product.
    */
   const [chosenSeatingProducts, setChosenSeatingProducts] = useState<
-    Partial<Record<SeatingPieceKind, string>>
+    Record<string, string | undefined>
   >({});
   /** The look chosen for Surprise me. Null until the customer picks one. */
   const [surpriseStyle, setSurpriseStyle] = useState<string | null>(null);
@@ -1512,6 +1514,32 @@ export function KoalaDesignStudio() {
    * image still starts the customer at the top.
    */
   const [resultEpoch, setResultEpoch] = useState(0);
+  /**
+   * The identity of the screen currently on show — the single source of truth
+   * for "the customer has navigated somewhere new".
+   *
+   * The wizard's `step` is NOT that identity: step 3 alone hosts four distinct
+   * screens (the category menu, the seating configurator, the product shelves
+   * and the advanced picker), and moving between them is navigation as far as
+   * the customer is concerned. Everything that should happen on a screen change
+   * — currently the scroll reset and the enter animation — keys off this, so a
+   * new screen never has to remember to do it for itself.
+   */
+  const screenKey = [
+    step,
+    designMode ?? "-",
+    step === 3 && designMode === "replace-items" ? replacePhase : "-",
+    seatingCategory ?? "-",
+    precisionCategory ?? "-",
+  ].join("/");
+  /**
+   * `screenKey` plus the result epoch. A regenerate or refine keeps the customer
+   * on the same screen — so it must NOT remount the result subtree and replay
+   * its enter animation — but it does produce a new room to look at, which must
+   * start at the top. The scroll reset therefore watches this; the DOM key
+   * watches `screenKey` alone.
+   */
+  const viewKey = `${screenKey}/${resultEpoch}`;
   const [loadingIndex, resetLoadingIndex] = useProgressIndex(
     loading || refining,
     loadingMessages.length,
@@ -1577,7 +1605,26 @@ export function KoalaDesignStudio() {
   ];
 
   /**
-   * Seating shelves — ALWAYS one per desired shape, from the plan directly.
+   * Every seating slot the plan asks for, in contract order.
+   *
+   * Kept as one flat list because it is the thing three different places need
+   * to agree on: the shelves the customer picks from, the payload sent to the
+   * server, and the confirmation copy. Deriving each of those from the same
+   * list is what stops them drifting apart.
+   */
+  const seatingSlotsByCategory = selectedCategories
+    .filter((canonicalCategory) => isSeatingCategory(roomType, canonicalCategory))
+    .flatMap((canonicalCategory) => {
+      const plan = categoryPlans[canonicalCategory];
+      if (!plan) return [];
+      return seatingPlanSlots(plan).map((slot) => ({
+        canonicalCategory,
+        slot,
+      }));
+    });
+
+  /**
+   * Seating shelves — ALWAYS one per desired SLOT, from the plan directly.
    *
    * Unlike every other category, seating's shelf count must never come from
    * detected-instance counting: the whole point of the plan is that it states
@@ -1586,22 +1633,36 @@ export function KoalaDesignStudio() {
    * visit, that must not silently switch the sofa shelves over to counting
    * real objects — "1 L-shape" means one shelf wanting one L-shape, whether
    * or not anything has looked at the photo yet.
+   *
+   * One shelf per slot rather than per shape, so "2 × 3-seater" is genuinely
+   * two choices. Each shelf therefore covers exactly one piece; the second and
+   * later slots of a shape carry a "same as the previous one" shortcut so a
+   * matching pair stays a single tap.
    */
-  const seatingShelfCategories = selectedCategories
-    .filter((canonicalCategory) => isSeatingCategory(roomType, canonicalCategory))
-    .flatMap((canonicalCategory) => {
-      const plan = categoryPlans[canonicalCategory];
-      if (!plan) return [];
-      return plan.pieces
-        .filter((piece) => piece.count > 0)
-        .map((piece) => ({
-          canonicalCategory,
-          key: piece.kind,
-          label: seatingPieceLabel(piece.kind),
-          targetCount: piece.count,
-          quantityIsExplicit: true,
-        }));
-    });
+  /** Slots the customer has not chosen a sofa for yet. */
+  const unfilledSeatingSlots = seatingSlotsByCategory.filter(
+    ({ slot }) => !chosenSeatingProducts[slot.key]
+  ).length;
+
+  const seatingShelfCategories = seatingSlotsByCategory.map(
+    ({ canonicalCategory, slot }) => ({
+      canonicalCategory,
+      key: slot.key,
+      label: slot.label,
+      targetCount: 1,
+      quantityIsExplicit: true,
+      ...(slot.index > 1
+        ? {
+            sameAs: {
+              key: seatingSlotKey(slot.kind, slot.index - 1),
+              // Short on purpose — see the `sameAs.label` note on
+              // CategorySelection. The heading above already names the piece.
+              label: slot.index === 2 ? "the first" : `number ${slot.index - 1}`,
+            },
+          }
+        : {}),
+    })
+  );
 
   /**
    * One shelf per other chosen type, carrying how many pieces it covers.
@@ -1637,6 +1698,22 @@ export function KoalaDesignStudio() {
   );
 
   const shelfCategories = [...seatingShelfCategories, ...simpleShelfCategories];
+
+  /**
+   * Shelves the customer has been shown but not chosen a product for.
+   *
+   * Found in mobile QA: selecting "Coffee table" and then generating without
+   * picking one silently dropped it — `buildCategoryIntents` omits a category
+   * with no product, so the request faithfully asked for the sofas and said
+   * nothing at all about the coffee table the customer had ticked. Same defect
+   * class as an unfilled seating slot, and the same rule applies: the request
+   * must match what the customer was told they were getting, so an empty shelf
+   * blocks generation and is named in the button rather than being dropped.
+   */
+  const unfilledSimpleShelves = simpleShelfCategories.filter(
+    ({ canonicalCategory }) => !chosenProductByCategory[canonicalCategory]
+  );
+  const unfilledShelfCount = unfilledSeatingSlots + unfilledSimpleShelves.length;
 
   /** Replacement groups: one chosen product applied across its objects. */
   /**
@@ -1914,14 +1991,22 @@ export function KoalaDesignStudio() {
   }, []);
 
   /**
-   * A new result must open at the very top: image, then Shop this room, then
-   * everything else.
+   * EVERY new screen must open at the very top.
+   *
+   * This is deliberately keyed off `viewKey` — one derived identity for "which
+   * screen is the customer looking at" — rather than off `step` alone. Most of
+   * this flow's screens are phases WITHIN step 3 (categories, seating, the
+   * product shelves, the advanced picker), so a step-only dependency reset the
+   * scroll on one transition in four and left the rest carrying the previous
+   * screen's offset. Anything that adds a screen later gets this for free by
+   * contributing to `viewKey`, instead of remembering to patch its own reset in.
    *
    * `useLayoutEffect` runs before paint so the customer never sees the old
-   * Design-page offset. The extra frame afterwards defends against the browser
-   * restoring or anchoring the previous position once the generated image and
-   * product thumbnails finish decoding — that late shift was the "second jump"
-   * this bug produced.
+   * offset. The extra frame afterwards defends against the browser restoring or
+   * anchoring the previous position once images finish decoding — that late
+   * shift was the "second jump" the original result-page bug produced. On iOS
+   * Safari it also lands after any in-flight momentum scroll has been cancelled
+   * by the DOM swap, which a single synchronous write can miss.
    */
   useLayoutEffect(() => {
     const element = scrollContainerRef.current;
@@ -1932,7 +2017,7 @@ export function KoalaDesignStudio() {
       element.scrollTop = 0;
     });
     return () => cancelAnimationFrame(frame);
-  }, [step, resultEpoch]);
+  }, [viewKey]);
 
   // Fire room_summary_viewed once each time a result summary becomes visible.
   useEffect(() => {
@@ -2170,6 +2255,17 @@ export function KoalaDesignStudio() {
     // anything to send", i.e. the same category intents `handleGenerate`
     // would actually build, not a signal that only ever exists once the
     // photo has been analysed.
+    // Every shelf the customer was shown must have a product before generating.
+    //
+    // Without this a plan asking for two 3-seaters could be sent with only one
+    // of them chosen, and the request would faithfully replace one sofa — the
+    // customer having asked for two and been told "2 in your new layout" on
+    // the previous screen. The same applied to a ticked category with no
+    // product picked, which was dropped from the payload entirely. Under-
+    // delivering against the stated plan is the same defect as the renderer
+    // dropping a task; it just happens earlier.
+    if (unfilledShelfCount > 0) return false;
+
     if (designMode === "replace-items") {
       return hasDetections
         ? replacementGroups.length > 0
@@ -2212,8 +2308,8 @@ export function KoalaDesignStudio() {
    * Choose (or clear) a product for a shelf.
    *
    * `key` addresses the shelf: for a plain category it is the canonical
-   * category itself, for a seating shape it is the piece kind — two
-   * different state buckets, dispatched on which kind of category this is.
+   * category itself, for seating it is the SLOT key — two different state
+   * buckets, dispatched on which kind of category this is.
    */
   function chooseProductForShelf(
     key: string,
@@ -2223,7 +2319,7 @@ export function KoalaDesignStudio() {
     if (isSeatingCategory(roomType, canonicalCategory)) {
       setChosenSeatingProducts((current) => ({
         ...current,
-        [key as SeatingPieceKind]: productId ?? undefined,
+        [key]: productId ?? undefined,
       }));
       return;
     }
@@ -2351,16 +2447,27 @@ export function KoalaDesignStudio() {
       .flatMap((category) => {
         const plan = categoryPlans[category];
         if (!plan) return [];
-        const seatingSelection = plan.pieces
-          .map((piece) => {
-            const productId = chosenSeatingProducts[piece.kind];
+        /**
+         * ONE ENTRY PER SLOT, each with `count: 1` — never one entry with
+         * `count: 2`.
+         *
+         * The server flattens these into individual desired pieces in order,
+         * so a per-slot list is what lets two 3-seaters be two DIFFERENT
+         * sofas. Emitting `count: 2` against a single product would flatten to
+         * the same thing for a matching pair, but it cannot represent a mixed
+         * pair at all — so slots are always sent one at a time and the wire
+         * shape has exactly one meaning.
+         */
+        const seatingSelection = seatingPlanSlots(plan)
+          .map((slot) => {
+            const productId = chosenSeatingProducts[slot.key];
             const product = productId
               ? allCatalogueProducts.find((p) => p.id === productId)
               : undefined;
             return productId && product
               ? {
-                  kind: piece.kind,
-                  count: piece.count,
+                  kind: slot.kind,
+                  count: 1,
                   productId,
                   productName: product.name,
                 }
@@ -2523,7 +2630,7 @@ export function KoalaDesignStudio() {
       const reason =
         generationError instanceof Error
           ? generationError.message
-          : "Gemini generation failed. Please try again.";
+          : "Room generation failed. Please try again.";
       setError(reason);
       void logAiEvaluation(undefined, null, reason);
     } finally {
@@ -2610,7 +2717,7 @@ export function KoalaDesignStudio() {
       setError(
         refinementError instanceof Error
           ? refinementError.message
-          : "Gemini refinement failed. Please try again."
+          : "Room refinement failed. Please try again."
       );
     } finally {
       setRefining(false);
@@ -2866,6 +2973,20 @@ export function KoalaDesignStudio() {
 
   /** "Choose your new pieces" — one visual shelf per chosen type. */
   function renderReplaceProductsStep() {
+    // Named models, not shapes. "2 3-seater sofas" is true of a matching pair
+    // and of two different sofas alike, so it is the wrong thing to confirm
+    // against now that those are genuinely different orders.
+    const seatingChoiceSummary = describeSeatingProducts(
+      seatingSlotsByCategory.map(({ slot }) => slot),
+      (key) => {
+        const productId = chosenSeatingProducts[key];
+        const product = productId
+          ? allCatalogueProducts.find((p) => p.id === productId)
+          : undefined;
+        return product ? getShortProductName(product) : undefined;
+      }
+    );
+
     return (
       <section className="space-y-4">
         <div>
@@ -2875,6 +2996,28 @@ export function KoalaDesignStudio() {
           <h1 className="mt-2 font-serif text-[26px] font-semibold leading-tight text-[#F5F3EE]">
             Choose your new pieces
           </h1>
+          {seatingSlotsByCategory.length > 0 && (
+            <p className="mt-2 text-sm leading-6 text-[#9a978f]">
+              {seatingChoiceSummary ? (
+                <>
+                  Your seating:{" "}
+                  <span className="text-[#F5F3EE]">{seatingChoiceSummary}</span>
+                  {unfilledSeatingSlots > 0 && (
+                    <>
+                      {" "}
+                      — {unfilledSeatingSlots} still to choose.
+                    </>
+                  )}
+                  {unfilledSeatingSlots === 0 && "."}
+                </>
+              ) : (
+                <>
+                  Pick a sofa for each of your {seatingSlotsByCategory.length}{" "}
+                  seating pieces. They can be the same model or different ones.
+                </>
+              )}
+            </p>
+          )}
         </div>
 
         <CategoryProductShelves
@@ -3533,7 +3676,7 @@ export function KoalaDesignStudio() {
           {/* min-h-full lets a short step (the choice screen) centre itself
               vertically, while taller steps still grow and scroll normally. */}
           <div
-            key={step}
+            key={screenKey}
             className="flex min-h-full flex-col animate-[stepIn_360ms_ease-out]"
           >
             {renderStep()}
@@ -3683,7 +3826,13 @@ export function KoalaDesignStudio() {
                   disabled={!canGenerateConcept() || loading}
                   className="min-h-14 rounded-2xl text-base"
                 >
-                  {loading ? "Generating..." : "Generate my room"}
+                  {loading
+                    ? "Generating..."
+                    : // Naming what is missing, rather than a dead button the
+                      // customer has to work out for themselves.
+                      unfilledShelfCount > 0
+                      ? `Choose ${unfilledShelfCount} more ${unfilledShelfCount > 1 ? "pieces" : "piece"}`
+                      : "Generate my room"}
                 </StudioButton>
               )}
           </footer>

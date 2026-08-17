@@ -7,8 +7,11 @@ function getProvider(value: unknown): ImageProviderId {
   return typeof value === "string" && value.trim() ? value.trim() : "legacy";
 }
 
+/** Fallback only — providers supply their own label; this covers old results. */
 function getDefaultLabel(provider: ImageProviderId) {
-  return provider === "gemini" ? "Gemini" : "Generated concept";
+  if (provider === "gpt-image") return "GPT Image 2";
+  if (provider === "gemini") return "Gemini";
+  return "Generated concept";
 }
 
 function normalizeConcept(value: unknown): GeneratedConcept | null {

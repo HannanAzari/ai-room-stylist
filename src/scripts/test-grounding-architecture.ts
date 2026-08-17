@@ -271,7 +271,10 @@ section("Product identity grounding");
 
   const prompt = promptFor([SOFA]);
   check("prompt carries an IDENTITY line per task", prompt.includes("IDENTITY (must match the reference image"));
-  check("identity is tied to the reference image", prompt.includes("must match the reference image for task 1"));
+  // "labelled for task N" rather than "for task N": one reference image can
+  // legitimately be labelled for several tasks when the same product fills
+  // more than one, so the wording points at the LABEL, which names them all.
+  check("identity is tied to the reference image", prompt.includes("must match the reference image labelled for task 1"));
 
   const reviewText = formatPlanForReview(planFor([SOFA]).plan, scene.architecture);
   check("reviewer receives the identity too", reviewText.includes("IDENTITY —"));

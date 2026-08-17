@@ -1,17 +1,26 @@
 /**
- * Regression tests for result-page scroll restoration.
+ * Regression tests for scroll restoration across the whole flow.
  *
  * Run with:  npm run test:scroll
  *
- * The bug: after generating, the Result page opened part-way down, showing
- * products before the generated room. The cause was that the app shell is
- * `h-dvh overflow-hidden`, so the WINDOW never scrolls — an inner element owns
- * the scroll, and its `scrollTop` survived the step change.
+ * The original bug: after generating, the Result page opened part-way down,
+ * showing products before the generated room. The cause was that the app shell
+ * is `h-dvh overflow-hidden`, so the WINDOW never scrolls — an inner element
+ * owns the scroll, and its `scrollTop` survived the step change.
  *
- * These tests guard the two things that actually made it break:
+ * The follow-up bug these tests now also cover: the fix keyed off `step`, but
+ * most of this flow's screens are PHASES WITHIN step 3 (the category menu, the
+ * seating configurator, the product shelves, the advanced picker). Moving
+ * between them is navigation as far as the customer is concerned, and none of
+ * those transitions reset the scroll — so the result page was fixed and every
+ * other screen still opened wherever the previous one had been left.
+ *
+ * These tests guard:
  *   1. the scroll owner is the inner container, not the window;
- *   2. the reset fires for every new primary result, and again after layout so
- *      a late image decode cannot restore the old offset.
+ *   2. the reset fires before paint and again after layout, so a late image
+ *      decode cannot restore the old offset;
+ *   3. the reset is driven by ONE derived screen identity that covers every
+ *      screen, not by `step` alone.
  *
  * No DOM framework is used — the relevant behaviour is modelled directly, and
  * the source is asserted against so the real component cannot drift away from
@@ -95,9 +104,6 @@ section("2. The reset survives layout and late image decode");
 // --- 3. Every new primary result triggers a reset --------------------------
 section("3. Every new primary result resets the scroll");
 {
-  check("the effect keys off the step and the result epoch",
-    /\}, \[step, resultEpoch\]\);/.test(STUDIO));
-
   const bumps = STUDIO.match(/setResultEpoch\(\(epoch\) => epoch \+ 1\)/g) || [];
   check("the epoch is bumped at every result transition",
     bumps.length >= 3, `${bumps.length} bump sites`);
@@ -111,10 +117,56 @@ section("3. Every new primary result resets the scroll");
     /refinedIndex\);[\s\S]{0,200}setResultEpoch/.test(STUDIO));
   check("a restored cached result bumps it",
     /cachedConcepts\.length > 0[\s\S]{0,200}setResultEpoch/.test(STUDIO));
+  check("the result epoch still reaches the reset",
+    /const viewKey = `\$\{screenKey\}\/\$\{resultEpoch\}`/.test(STUDIO),
+    "a regenerate must still start the customer at the top");
 }
 
-// --- 4. Existing scroll behaviour is not broken ---------------------------
-section("4. Existing behaviour still intact");
+// --- 4. The reset is centralised, not per-screen ---------------------------
+section("4. One screen identity drives every reset");
+{
+  check("the reset keys off a single derived view key",
+    /\}, \[viewKey\]\);/.test(STUDIO),
+    "a step-only dependency misses the phases inside step 3");
+
+  // The screen identity must actually contain the things that change when the
+  // customer navigates. `step` alone was the bug.
+  const screenKey =
+    STUDIO.match(/const screenKey = \[([\s\S]*?)\]\.join\("\/"\);/)?.[1] ?? "";
+  check("the screen identity exists", screenKey !== "");
+  for (const part of [
+    "step",
+    "designMode",
+    "replacePhase",
+    "seatingCategory",
+    "precisionCategory",
+  ]) {
+    check(`the screen identity includes ${part}`, screenKey.includes(part),
+      "a screen this does not cover will not reset");
+  }
+
+  // Every replace-items phase must be represented, or that screen silently
+  // keeps the previous one's offset — the exact reported symptom.
+  const phases = ["categories", "seating", "products", "precision"];
+  for (const phase of phases) {
+    check(`the "${phase}" phase is a real phase of step 3`,
+      new RegExp(`replacePhase === "${phase}"`).test(STUDIO));
+  }
+  check("all four phases are covered by replacePhase in the screen identity",
+    screenKey.includes("replacePhase"));
+
+  // Remounting on navigation is what guarantees a fresh subtree at the top;
+  // keying it off the epoch too would replay the enter animation on every
+  // regenerate, which is a different (and unwanted) behaviour.
+  check("the animated wrapper remounts per screen, not per result",
+    /key=\{screenKey\}/.test(STUDIO));
+  check("the wrapper is NOT keyed off the epoch-bearing view key",
+    !/key=\{viewKey\}/.test(STUDIO),
+    "that would replay the enter animation on every regenerate");
+}
+
+// --- 5. Existing scroll behaviour is not broken ---------------------------
+section("5. Existing behaviour still intact");
 {
   check("'Shop this room' still scrolls to the shop section",
     /room-shop-section[\s\S]{0,120}scrollIntoView/.test(STUDIO));
@@ -122,27 +174,36 @@ section("4. Existing behaviour still intact");
     /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/.test(STUDIO));
 
   // The reset must not depend on anything that changes when the customer taps
-  // "Shop this room", or it would yank them back up.
-  check("the reset cannot be triggered by in-page navigation",
-    !/\}, \[step, resultEpoch, [^\]]+\]\);/.test(STUDIO),
+  // "Shop this room", or it would yank them back up. The view key is built
+  // only from navigation state, so scrolling and tapping within a screen
+  // cannot change it.
+  check("the reset depends on exactly one value",
+    /\}, \[viewKey\]\);/.test(STUDIO) && !/\}, \[viewKey, /.test(STUDIO),
     "extra dependencies risk fighting the user's own scrolling");
+  for (const volatile of ["selectedConceptIndex", "loading", "products"]) {
+    check(`the screen identity excludes ${volatile}`,
+      !(STUDIO.match(/const screenKey = \[([\s\S]*?)\]\.join/)?.[1] ?? "")
+        .includes(volatile),
+      "in-screen state must not re-trigger the reset");
+  }
 }
 
-// --- 5. Behavioural model of the reset ------------------------------------
-section("5. Behavioural model");
-{
-  // A minimal stand-in for the scroll container plus the effect's logic.
-  function makeContainer(initialTop: number) {
-    return { scrollTop: initialTop };
-  }
-  function applyReset(el: { scrollTop: number }) {
+// A minimal stand-in for the scroll container plus the effect's logic, shared
+// by the behavioural model below and the flow walk after it.
+function makeContainer(initialTop: number) {
+  return { scrollTop: initialTop };
+}
+function applyReset(el: { scrollTop: number }) {
+  el.scrollTop = 0;
+  // the queued frame
+  return () => {
     el.scrollTop = 0;
-    // the queued frame
-    return () => {
-      el.scrollTop = 0;
-    };
-  }
+  };
+}
 
+// --- 6. Behavioural model of the reset ------------------------------------
+section("6. Behavioural model");
+{
   const deepScrolled = makeContainer(1840);
   const frame = applyReset(deepScrolled);
   check("a deeply scrolled container resets immediately",
@@ -158,6 +219,127 @@ section("5. Behavioural model");
   applyReset(alreadyTop);
   check("a container already at the top is unaffected",
     alreadyTop.scrollTop === 0);
+}
+
+// --- 7. Navigating the real flow, screen by screen -------------------------
+section("7. Every transition in the flow lands at the top");
+{
+  // A stand-in for the component's own screen identity, kept deliberately
+  // identical in shape to the source so the walk below exercises the real
+  // rule rather than a convenient one.
+  type Nav = {
+    step: number;
+    designMode: string | null;
+    replacePhase: string;
+    seatingCategory: string | null;
+    precisionCategory: string | null;
+    resultEpoch: number;
+  };
+  const screenKeyOf = (nav: Nav) =>
+    [
+      nav.step,
+      nav.designMode ?? "-",
+      nav.step === 3 && nav.designMode === "replace-items"
+        ? nav.replacePhase
+        : "-",
+      nav.seatingCategory ?? "-",
+      nav.precisionCategory ?? "-",
+    ].join("/");
+  const viewKeyOf = (nav: Nav) => `${screenKeyOf(nav)}/${nav.resultEpoch}`;
+
+  const base: Nav = {
+    step: 1,
+    designMode: null,
+    replacePhase: "categories",
+    seatingCategory: null,
+    precisionCategory: null,
+    resultEpoch: 0,
+  };
+
+  // The exact journey the reported bug was found on: capture → choose →
+  // replace-items landing → seating configurator → back → shelves → result.
+  const journey: { name: string; nav: Nav }[] = [
+    { name: "capture", nav: { ...base } },
+    { name: "choose a mode", nav: { ...base, step: 2 } },
+    {
+      name: "replace-items landing (the category list)",
+      nav: { ...base, step: 3, designMode: "replace-items" },
+    },
+    {
+      name: "seating arrangement",
+      nav: {
+        ...base,
+        step: 3,
+        designMode: "replace-items",
+        replacePhase: "seating",
+        seatingCategory: "sofa",
+      },
+    },
+    {
+      name: "back to the category list",
+      nav: { ...base, step: 3, designMode: "replace-items" },
+    },
+    {
+      name: "product shelves",
+      nav: {
+        ...base,
+        step: 3,
+        designMode: "replace-items",
+        replacePhase: "products",
+      },
+    },
+    {
+      name: "the generated result",
+      nav: {
+        ...base,
+        step: 4,
+        designMode: "replace-items",
+        replacePhase: "products",
+        resultEpoch: 1,
+      },
+    },
+  ];
+
+  const container = makeContainer(0);
+  let previousKey = "";
+  for (const { name, nav } of journey) {
+    const key = viewKeyOf(nav);
+    // The customer reads the screen and scrolls down before moving on.
+    container.scrollTop = 900;
+    if (key !== previousKey) applyReset(container);
+    check(`${name} opens at the top`, container.scrollTop === 0,
+      `scrollTop ${container.scrollTop}, key ${key}`);
+    previousKey = key;
+  }
+
+  // The advanced picker is reached from the category list and is its own
+  // screen; so is the Surprise me style step.
+  const precision = viewKeyOf({
+    ...base,
+    step: 3,
+    designMode: "replace-items",
+    replacePhase: "precision",
+    precisionCategory: "sofa",
+  });
+  const categories = viewKeyOf({ ...base, step: 3, designMode: "replace-items" });
+  check("the advanced picker is a distinct screen", precision !== categories);
+
+  const surprise = viewKeyOf({ ...base, step: 3, designMode: "surprise-me" });
+  check("Surprise me's style step is a distinct screen",
+    surprise !== categories);
+
+  // Refining on the result page keeps the customer on the same screen but
+  // produces a new room, which must still open at the top.
+  const result = viewKeyOf({ ...base, step: 4, resultEpoch: 1 });
+  const refined = viewKeyOf({ ...base, step: 4, resultEpoch: 2 });
+  check("a refinement is a new view (scroll resets)", result !== refined);
+  check("...but not a new screen (no remount, no replayed animation)",
+    screenKeyOf({ ...base, step: 4, resultEpoch: 1 }) ===
+      screenKeyOf({ ...base, step: 4, resultEpoch: 2 }));
+
+  // Scrolling, tapping a product, or switching concept must never reset.
+  const stable = viewKeyOf({ ...base, step: 4, resultEpoch: 1 });
+  check("nothing but navigation changes the key", stable === result);
 }
 
 console.log(`\n${"=".repeat(60)}`);

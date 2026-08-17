@@ -353,8 +353,13 @@ section("Scenario C — 2 existing sofas, desired 1×L-shape");
     replacementPlan: plan,
     sceneGraph: scene,
   });
+  // The removal names the specific instance ("REMOVE the left sofa — and ONLY
+  // that one") whenever the room holds more than one of that category, which
+  // it does here: one sofa is replaced and the other removed. The generic
+  // "REMOVE the existing sofa" form is only correct when there is exactly one.
   check("the prompt issues an explicit REMOVE task",
-    /REMOVE the existing/.test(built.prompt));
+    /REMOVE (the existing|.+ — and ONLY that one)/.test(built.prompt),
+    built.prompt.match(/Task \d+ — REMOVE[^.]*/)?.[0] ?? "no REMOVE line");
   check("the prompt forbids filling the vacated space",
     /Do NOT put any replacement furniture/.test(built.prompt));
   // Regression: preservation labels that already carry "the" (the TV unit's

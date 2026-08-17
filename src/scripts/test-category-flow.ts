@@ -358,8 +358,12 @@ section("10. Result still opens at the top");
     /useLayoutEffect\(\(\) => \{[\s\S]{0,400}scrollTop = 0/.test(studio));
   check("it still re-applies on the next frame",
     /requestAnimationFrame\([\s\S]{0,120}scrollTop = 0/.test(studio));
-  check("it still keys off the result epoch",
-    /\}, \[step, resultEpoch\]\);/.test(studio));
+  // The reset now keys off one derived screen identity covering every screen,
+  // not `step` alone — see test-scroll-restoration.ts. The epoch still feeds
+  // it, so a new result still opens at the top.
+  check("it still keys off a view identity carrying the result epoch",
+    /\}, \[viewKey\]\);/.test(studio) &&
+      /const viewKey = `\$\{screenKey\}\/\$\{resultEpoch\}`/.test(studio));
 }
 
 console.log(`\n${"=".repeat(60)}`);

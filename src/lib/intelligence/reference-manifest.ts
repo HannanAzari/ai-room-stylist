@@ -54,8 +54,18 @@ export const MAX_TOTAL_REFERENCE_BYTES = 12 * 1024 * 1024;
 export type ReferenceManifestEntry = {
   productId: string;
   productName: string;
-  /** Plan task this reference supports; null if the product has no task. */
+  /**
+   * The FIRST plan task this reference supports; null if it has none. Kept for
+   * debug/eval readers that show one task per row — `taskIds` is the complete
+   * answer and the one the label is built from.
+   */
   taskId: number | null;
+  /**
+   * Every plan task this reference supports. More than one when the same
+   * product fills several tasks (two identical sofas), which is precisely the
+   * case a single-task field used to lose.
+   */
+  taskIds: number[];
   selectedOrComplementary: "selected" | "complementary";
   viewType: string;
   /** Ordinal of this view for its product: 1 = primary view. */
@@ -79,42 +89,101 @@ export type ReferenceManifest = {
   transmittedBytes: number;
 };
 
-/** Map every product in the plan to its task id and selected/complementary role. */
+/**
+ * Map every product in the plan to EVERY task it serves, plus its role.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY THIS IS A LIST AND NOT A SINGLE TASK ID
+ * ---------------------------------------------------------------------------
+ * This was the "I asked for two sofas and only one changed" bug.
+ *
+ * One product can legitimately serve several tasks — a room getting two
+ * identical 3-seaters produces two REPLACE tasks bound to the same product id.
+ * This index used to store one task per product, so the second `set` silently
+ * overwrote the first, and the single reference image that product got was
+ * labelled "TASK 2 PRODUCT REFERENCE ... the product in task 2".
+ *
+ * Nothing downstream could recover from that. The prompt still said "Task 1 —
+ * ... IDENTITY (must match the reference image for task 1)", but no image
+ * claimed task 1; and the provider's own instructions say to use each image
+ * ONLY for the task named above it and never to reuse one across tasks. So the
+ * model was explicitly told it had no authorised reference for task 1, did the
+ * one task it had an image for, and left the other sofa alone — exactly the
+ * reported symptom, with the product shelf still showing ×2.
+ *
+ * Keeping every task id means one shared image is labelled for all of them,
+ * and the count of instances the image is expected to produce is stated
+ * outright.
+ */
 function buildProductTaskIndex(plan?: ReplacementPlan) {
   const index = new Map<
     string,
-    { taskId: number; source: "selected" | "complementary" }
+    { taskIds: number[]; source: "selected" | "complementary" }
   >();
   if (!plan) return index;
 
+  const add = (
+    productId: string,
+    taskId: number,
+    source: "selected" | "complementary"
+  ) => {
+    const existing = index.get(productId);
+    if (existing) {
+      if (!existing.taskIds.includes(taskId)) existing.taskIds.push(taskId);
+      // A product used by any selected task is a selected product, even if it
+      // also happens to appear as a complementary one.
+      if (source === "selected") existing.source = "selected";
+      return;
+    }
+    index.set(productId, { taskIds: [taskId], source });
+  };
+
   for (const task of plan.replacements) {
-    index.set(task.productId, { taskId: task.taskId, source: "selected" });
+    add(task.productId, task.taskId, "selected");
   }
   for (const task of plan.additions) {
-    index.set(task.productId, { taskId: task.taskId, source: task.source });
+    add(task.productId, task.taskId, task.source);
   }
+  for (const entry of index.values()) entry.taskIds.sort((a, b) => a - b);
   return index;
 }
 
+/** "task 3", "tasks 1 and 2", "tasks 1, 2 and 4". */
+export function formatTaskList(taskIds: number[]): string {
+  if (taskIds.length === 1) return `task ${taskIds[0]}`;
+  const head = taskIds.slice(0, -1).join(", ");
+  return `tasks ${head} and ${taskIds[taskIds.length - 1]}`;
+}
+
 function buildLabel(entry: {
-  taskId: number | null;
+  taskIds: number[];
   productName: string;
   source: "selected" | "complementary";
   viewType: string;
   viewIndex: number;
 }): string {
-  const task =
-    entry.taskId !== null
-      ? `TASK ${entry.taskId} PRODUCT REFERENCE`
-      : "COMPLEMENTARY PRODUCT REFERENCE";
   const view =
     entry.viewIndex > 1 ? ` / VIEW ${entry.viewIndex} (${entry.viewType})` : "";
-  const correspondence =
-    entry.taskId !== null
-      ? ` This image is the exact appearance of the product in task ${entry.taskId}.`
-      : " This image is the exact appearance of this complementary product.";
 
-  return `${task}${view} — ${entry.productName}.${correspondence}`;
+  if (entry.taskIds.length === 0) {
+    return `COMPLEMENTARY PRODUCT REFERENCE${view} — ${entry.productName}. This image is the exact appearance of this complementary product.`;
+  }
+
+  const taskList = formatTaskList(entry.taskIds);
+  const heading =
+    entry.taskIds.length === 1
+      ? `TASK ${entry.taskIds[0]} PRODUCT REFERENCE`
+      : `TASKS ${entry.taskIds.join(" AND ")} PRODUCT REFERENCE`;
+
+  // When one image covers several tasks the model must be told, in the same
+  // breath, that this means several separate pieces of furniture — otherwise
+  // "one image, one product" reads as "one object in the finished room".
+  const shared =
+    entry.taskIds.length > 1
+      ? ` This ONE image serves ${entry.taskIds.length} separate tasks: the finished room must contain ${entry.taskIds.length} separate, physically distinct pieces matching it, one for each of ${taskList}. Use it for every one of those tasks.`
+      : "";
+
+  return `${heading}${view} — ${entry.productName}. This image is the exact appearance of the product in ${taskList}.${shared}`;
 }
 
 /**
@@ -174,9 +243,10 @@ export function buildReferenceManifest(input: {
     )
       ? "selected"
       : (task?.source ?? "complementary");
-    const taskId = task?.taskId ?? null;
+    const taskIds = task?.taskIds ?? [];
+    const taskId = taskIds[0] ?? null;
     const label = buildLabel({
-      taskId,
+      taskIds,
       productName: reference.productName,
       source,
       viewType: reference.view,
@@ -196,6 +266,7 @@ export function buildReferenceManifest(input: {
       productId: reference.productId,
       productName: reference.productName,
       taskId,
+      taskIds,
       selectedOrComplementary: source,
       viewType: reference.view,
       viewIndex,

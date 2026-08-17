@@ -25,7 +25,7 @@ import { buildScaleInstructions } from "@/lib/prompts";
 import { formatIdentity, type ProductProfile } from "./product-profile";
 import type { GenerationStage, ReplacementPlan } from "./replacement-planner";
 import type { BoundingBox } from "./scene-graph";
-import { canonicalCategoryLabel } from "./scene-taxonomy";
+import { canonicalCategoryLabel, type CanonicalCategory } from "./scene-taxonomy";
 import type { RoomAnalysis } from "./room-analysis";
 import type { SceneGraph } from "./scene-graph";
 
@@ -131,23 +131,87 @@ function formatReplacementTasks(plan: ReplacementPlan): {
 } {
   const numbered: { taskId: number; line: string }[] = [];
 
+  /**
+   * What happens to the OTHER objects of a task's category.
+   *
+   * When more than one object of a category is in play the prompt has to say
+   * something about the siblings, and there is exactly one correct thing to
+   * say — which depends on what is actually happening to them. The old wording
+   * assumed siblings were always being preserved ("every other sofa must remain
+   * exactly as photographed"), which is right when one of two sofas is
+   * replaced and flatly contradicts the plan when BOTH are: it told the model
+   * to leave alone the very sofa the next task orders it to replace. Faced
+   * with two contradictory instructions about the same object, doing nothing
+   * to it is a perfectly reasonable resolution — and "only one sofa changed"
+   * is what that looks like in the render.
+   */
+  function siblingClause(task: {
+    taskId: number;
+    existingCanonicalCategory: CanonicalCategory;
+    existingInstanceLabel: string;
+  }): string {
+    const category = task.existingCanonicalCategory;
+    const sharedNoun = canonicalCategoryLabel(category);
+    const siblingReplacements = plan.replacements.filter(
+      (other) =>
+        other.existingCanonicalCategory === category &&
+        other.taskId !== task.taskId
+    );
+    const siblingRemovals = plan.removals.filter(
+      (other) =>
+        other.existingCanonicalCategory === category &&
+        other.taskId !== task.taskId
+    );
+    const preservedSiblings = plan.dispositions.filter(
+      (entry) =>
+        entry.canonicalCategory === category && entry.disposition === "preserve"
+    );
+
+    const handled = [...siblingReplacements, ...siblingRemovals];
+    if (handled.length === 0 && preservedSiblings.length === 0) return "";
+
+    const parts: string[] = [
+      ` This room contains more than one ${sharedNoun}. THIS task changes ONLY ${task.existingInstanceLabel}.`,
+    ];
+
+    if (handled.length > 0) {
+      const list = handled
+        .map((other) => `${other.existingInstanceLabel} (task ${other.taskId})`)
+        .join(", ");
+      // Naming the sibling tasks turns "don't touch the others" into "the
+      // others have their own tasks — do those too", which is the instruction
+      // a multi-sofa replacement actually needs.
+      parts.push(
+        `The other ${sharedNoun}(s) in this room are NOT to be left alone: ${list} ${handled.length === 1 ? "has its own numbered task" : "have their own numbered tasks"}, which you must also carry out. Every ${sharedNoun} named in a task must end up changed — do not carry out one and skip the others.`
+      );
+    }
+
+    if (preservedSiblings.length > 0) {
+      parts.push(
+        `Any ${sharedNoun} NOT named in a numbered task must remain exactly as photographed.`
+      );
+    }
+
+    return parts.join(" ");
+  }
+
   for (const task of plan.replacements) {
     const colour = task.existingColor ? ` (${task.existingColor})` : "";
     const where = task.location ? `, currently ${task.location}` : "";
     // Target the specific instance. When the room holds more than one object of
-    // this category, name it spatially and say explicitly that the others stay.
-    const sharedNoun = canonicalCategoryLabel(task.existingCanonicalCategory);
+    // this category, name it spatially and say explicitly what happens to the
+    // others — which is not always "they stay".
     const region = formatRegion(task.boundingBox);
     const regionClause = region ? ` [${region}]` : "";
     const target = task.existingSharesCategory
       ? `${task.existingInstanceLabel}${colour}${where}${regionClause} — and ONLY that one — completely`
       : `the existing ${task.existingCategory}${colour}${where}${regionClause} completely`;
     const othersWarning = task.existingSharesCategory
-      ? ` This room contains more than one ${sharedNoun}: change ONLY ${task.existingInstanceLabel}. Every other ${sharedNoun} must remain exactly as photographed.`
+      ? siblingClause(task)
       : "";
     numbered.push({
       taskId: task.taskId,
-      line: `Task ${task.taskId} — Remove ${target}, then replace it with the ${task.productTitle}. Place it ${task.placement}.${othersWarning}\n    IDENTITY (must match the reference image for task ${task.taskId}) — ${formatIdentity(task.identity)}.\n    This must be a genuine replacement: the new product's shape and silhouette must differ from the removed item wherever the reference image differs. Recolouring or restyling the original object is NOT acceptable.`,
+      line: `Task ${task.taskId} — Remove ${target}, then replace it with the ${task.productTitle}. Place it ${task.placement}.${othersWarning}\n    IDENTITY (must match the reference image labelled for task ${task.taskId}) — ${formatIdentity(task.identity)}.\n    This must be a genuine replacement: the new product's shape and silhouette must differ from the removed item wherever the reference image differs. Recolouring or restyling the original object is NOT acceptable.`,
     });
   }
 
@@ -169,12 +233,11 @@ function formatReplacementTasks(plan: ReplacementPlan): {
   // furniture.
   for (const task of plan.removals) {
     const where = task.location ? `, currently ${task.location}` : "";
-    const sharedNoun = canonicalCategoryLabel(task.existingCanonicalCategory);
     const target = task.existingSharesCategory
       ? `${task.existingInstanceLabel}${where} — and ONLY that one`
       : `the existing ${task.existingCategory}${where}`;
     const othersWarning = task.existingSharesCategory
-      ? ` This room contains more than one ${sharedNoun}: remove ONLY ${task.existingInstanceLabel}. Every other ${sharedNoun} must remain exactly as photographed unless it has its own numbered task.`
+      ? siblingClause(task)
       : "";
     numbered.push({
       taskId: task.taskId,
@@ -189,6 +252,47 @@ function formatReplacementTasks(plan: ReplacementPlan): {
   numbered.sort((a, b) => a.taskId - b.taskId);
 
   return { tasks: numbered.map((entry) => entry.line), count: numbered.length };
+}
+
+/**
+ * "This one product must appear N times, as N separate pieces."
+ *
+ * A room getting two matching 3-seaters produces two tasks bound to the SAME
+ * product, sharing ONE reference image. Everything else in the prompt is
+ * per-task, so nothing stated the multiplicity outright — and "here is a sofa,
+ * here are two tasks that mention it" is easy to satisfy with one sofa. The
+ * count is stated as a fact about the finished room, which is the form the
+ * reviewer's `product-instance-count-mismatch` check also measures, so the
+ * prompt and the gate are asking the same question.
+ *
+ * Silent for the ordinary case where every product appears once.
+ */
+function formatDuplicateProductTasks(plan: ReplacementPlan): string[] {
+  const byProduct = new Map<
+    string,
+    { title: string; taskIds: number[] }
+  >();
+
+  const record = (productId: string, title: string, taskId: number) => {
+    const existing = byProduct.get(productId);
+    if (existing) existing.taskIds.push(taskId);
+    else byProduct.set(productId, { title, taskIds: [taskId] });
+  };
+
+  for (const task of plan.replacements) {
+    record(task.productId, task.productTitle, task.taskId);
+  }
+  for (const task of plan.additions.filter((a) => a.source === "selected")) {
+    record(task.productId, task.productTitle, task.taskId);
+  }
+
+  return [...byProduct.values()]
+    .filter((entry) => entry.taskIds.length > 1)
+    .map((entry) => {
+      const sorted = [...entry.taskIds].sort((a, b) => a - b);
+      const list = `${sorted.slice(0, -1).join(", ")} and ${sorted[sorted.length - 1]}`;
+      return `- The ${entry.title} is used ${sorted.length} times, by tasks ${list}. The finished room must contain ${sorted.length} SEPARATE, physically distinct ${entry.title} pieces — one per task, each in its own position. They share one reference image because they are the same model; that is NOT permission to render only one of them. Rendering ${sorted.length - 1} fewer than asked for is a failure.`;
+    });
 }
 
 /**
@@ -375,10 +479,19 @@ export function buildIntelligentRoomPrompt(
   const planSection =
     count > 0
       ? [
-          "REPLACEMENT PLAN — execute EXACTLY these tasks, in order, and NOTHING else:",
+          `REPLACEMENT PLAN — execute EXACTLY these ${count} task(s), in order, and NOTHING else. ALL ${count} must be carried out; completing some and skipping others is a failure, even if the result looks plausible:`,
           ...tasks,
         ].join("\n")
       : "No product changes were requested — keep the room exactly as it appears in the uploaded photo, changing nothing.";
+
+  const duplicateTasks = plan ? formatDuplicateProductTasks(plan) : [];
+  const duplicateSection =
+    duplicateTasks.length > 0
+      ? [
+          "REPEATED PRODUCTS — the same model is required more than once:",
+          ...duplicateTasks,
+        ].join("\n")
+      : "";
 
   // `referenceViewCount` MUST be the number of images actually transmitted (the
   // reference manifest's transmitted count), never the number loaded from disk.
@@ -408,6 +521,10 @@ export function buildIntelligentRoomPrompt(
     "- Never invent furniture that is not in the plan.",
     "- Never leave a REMOVE task's item in place — it must be genuinely gone, not recoloured or pushed aside.",
     "- Never fill a REMOVE task's space with a new object of any kind.",
+    // The failure this whole sprint exists for, stated as a prohibition as
+    // well as an instruction: partial execution is not a safe fallback.
+    "- Never carry out only some of the numbered tasks. If two tasks replace two different pieces of furniture, BOTH pieces must change; leaving one of them as photographed is a failure, not a conservative choice.",
+    "- Never merge two tasks into one object. Two tasks means two separate pieces of furniture in the finished room, even when they use the same product.",
     "- Generate ONLY the requested replacements, placements and removals.",
   ].join("\n");
 
@@ -419,6 +536,7 @@ export function buildIntelligentRoomPrompt(
     buildArchitectureLock(input.sceneGraph),
     secondPassSection,
     planSection,
+    duplicateSection,
     preservationSection,
     referenceSection,
     buildConceptSection(aiConceptMode, plan),
