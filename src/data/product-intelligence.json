@@ -1,0 +1,4065 @@
+{
+  "datasetVersion": "1.0.0",
+  "importedAt": "2026-08-18T04:42:14.840Z",
+  "source": "koala-product-enrichment/data/product-intelligence",
+  "productCount": 55,
+  "products": {
+    "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top": {
+      "id": "archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top",
+      "visual": {
+        "colourFamily": "warm off-white / cream with brass and a white stone top",
+        "silhouette": "soft, curved-edge",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "finely fluted painted timber against polished veined stone and brushed brass",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "fine vertical fluting around the full drum",
+          "recessed brass drawer pulls",
+          "brass collar under the top and a brass base ring",
+          "two drawers",
+          "grey-veined white stone top"
+        ],
+        "roomCompatibility": [
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Stone Bedside Tables",
+        "canonicalCategory": "Bedside Tables",
+        "configuration": "",
+        "colour": "Cream",
+        "description": "The Archie Cream Oval Bedside Table is defined by its softly rounded silhouette and refined proportions. Topped with a smooth sintered stone surface, the tabletop feels cool, durable, and quietly elegant offering a resilient platform for bedside essentials."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/bed-sides/archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/bed-sides/archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/bed-sides/archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top/01-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/bed-sides/archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/bed-sides/archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/bed-sides/archie-cream-wooden-oval-bedside-table-with-white-sintered-stone-top/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "costanza-mocha-walnut-brown-wooden-dresser": {
+      "id": "costanza-mocha-walnut-brown-wooden-dresser",
+      "visual": {
+        "colourFamily": "warm mid-brown walnut",
+        "silhouette": "wide low rectilinear six-drawer chest with a plinth base",
+        "shape": "",
+        "baseLegs": "solid recessed timber plinth base, no legs",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "richly figured walnut veneer with a satin finish and an inlaid arch motif across the drawer fronts",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "inlaid arch motif spanning the drawer fronts",
+          "slim two-tone handles with brass ends and a dark bar",
+          "six drawers in two banks",
+          "recessed plinth base"
+        ],
+        "roomCompatibility": [
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Wooden Dressers",
+        "canonicalCategory": "Dressers & Tallboys",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Costanza Wooden Dresser combines timeless elegance with the rich warmth of walnut. Individually crafted stylish handles exudes sophistication."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/bed-sides/costanza-mocha-walnut-brown-wooden-dresser/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/bed-sides/costanza-mocha-walnut-brown-wooden-dresser/04-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/bed-sides/costanza-mocha-walnut-brown-wooden-dresser/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/bed-sides/costanza-mocha-walnut-brown-wooden-dresser/02-lifestyle.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/bed-sides/costanza-mocha-walnut-brown-wooden-dresser/03-lifestyle.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/bed-sides/costanza-mocha-walnut-brown-wooden-dresser/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg": {
+      "id": "sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg",
+      "visual": {
+        "colourFamily": "mid walnut brown with warm brass and a white stone top",
+        "silhouette": "long low chest with fully rounded drum ends under a matching curved stone top; sits on a recessed plinth rather than on exposed legs",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "straight-grained walnut veneer with vertical brushed brass inlay strips, under polished veined stone",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "fully rounded drum ends",
+          "vertical brushed brass inlay strips dividing the drawer banks",
+          "curved stone top following the plan",
+          "handle-free push-open drawers"
+        ],
+        "roomCompatibility": [
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Wooden Dressers",
+        "canonicalCategory": "Dressers & Tallboys",
+        "configuration": "",
+        "colour": "White",
+        "description": "The Sir Lionell Dresser features a white sintered stone top, curved silhouette, and walnut brown wooden base. Its smooth-glide drawers and brass-toned handles provide practical storage with refined, modern style."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/bed-sides/sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/bed-sides/sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/bed-sides/sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/bed-sides/sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/bed-sides/sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/bed-sides/sir-lionell-gliding-white-sintered-stone-dresser-walnut-brown-wooden-leg/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "estelle-velvet-mustard-velveteen-fabric-queen-bed": {
+      "id": "estelle-velvet-mustard-velveteen-fabric-queen-bed",
+      "visual": {
+        "colourFamily": "amber / golden mustard",
+        "silhouette": "low platform base with a tall curved dome-shaped headboard",
+        "shape": "",
+        "baseLegs": "solid upholstered plinth base with a small recessed foot, no visible legs",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "short dense velveteen pile with a strong sheen that shifts with the light",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "tall curved dome-shaped headboard",
+          "fully upholstered plinth base",
+          "rounded corners throughout",
+          "high-sheen velvet"
+        ],
+        "roomCompatibility": [
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Queen Beds",
+        "canonicalCategory": "Beds",
+        "configuration": "queen bed",
+        "colour": "Yellow",
+        "description": "The Estelle Queen Bed stands out with its bold curved headboard, offering a striking focal point for your bedroom. Upholstered in stunning mustard fabric, it brings a unique textured finish that adds warmth and character to your space."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/beds/estelle-velvet-mustard-velveteen-fabric-queen-bed/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/beds/estelle-velvet-mustard-velveteen-fabric-queen-bed/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1067,
+          "height": 1067
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/estelle-velvet-mustard-velveteen-fabric-queen-bed/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/estelle-velvet-mustard-velveteen-fabric-queen-bed/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "martina-soft-beige-vegan-leather-queen-bed": {
+      "id": "martina-soft-beige-vegan-leather-queen-bed",
+      "visual": {
+        "colourFamily": "warm beige",
+        "silhouette": "low platform with a padded bolster roll wrapping the head and both sides",
+        "shape": "",
+        "baseLegs": "low concealed base, upholstery runs to the floor",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "smooth matte vegan leather, softly ruched across the headboard panel",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "continuous padded bolster roll around the head and sides",
+          "vertically ruched headboard panel",
+          "enclosed three-sided surround",
+          "sprung slat base"
+        ],
+        "roomCompatibility": [
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Queen Beds",
+        "canonicalCategory": "Beds",
+        "configuration": "queen bed",
+        "colour": "Beige",
+        "description": "The Martina Bed makes a bold statement with its sculptural silhouette and unique texture. Wrapped in soft beige vegan leather, its gathered upholstery adds a sense of movement to the plush frame."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/beds/martina-soft-beige-vegan-leather-queen-bed/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/beds/martina-soft-beige-vegan-leather-queen-bed/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/beds/martina-soft-beige-vegan-leather-queen-bed/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/beds/martina-soft-beige-vegan-leather-queen-bed/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/martina-soft-beige-vegan-leather-queen-bed/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/martina-soft-beige-vegan-leather-queen-bed/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame": {
+      "id": "ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame",
+      "visual": {
+        "colourFamily": "warm off-white with mid-brown walnut",
+        "silhouette": "low rounded platform with a walnut-framed upholstered headboard",
+        "shape": "",
+        "baseLegs": "upholstered plinth base on a stepped, reeded walnut foot rail",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "soft looped bouclé inset into smooth satin walnut",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "walnut frame wrapping the headboard like a picture surround",
+          "stepped reeded foot rail",
+          "softly rounded base corners",
+          "bouclé headboard insert"
+        ],
+        "roomCompatibility": [
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Queen Beds",
+        "canonicalCategory": "Beds",
+        "configuration": "queen bed",
+        "colour": "Beige",
+        "description": "The Ophelia Queen Bed pairs mid beige fabric with a smoky walnut bed frame, creating a calm contrast that feels warm and grounded. Rounded edges and a fully upholstered headboard soften the silhouette."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/beds/ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame/02-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/beds/ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/beds/ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/beds/ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame/03-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/beds/ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/ophelia-mid-beige-fabric-queen-bed-with-smoky-walnut-bed-frame/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "summerton-stone-white-fabric-queen-bed-toffee-brown-ash": {
+      "id": "summerton-stone-white-fabric-queen-bed-toffee-brown-ash",
+      "visual": {
+        "colourFamily": "warm off-white on mid-brown timber",
+        "silhouette": "low rectilinear base with a tall wide vertically channelled headboard",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "dense looped bouclé with a nubbly pile against smooth timber",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "tall vertically channelled headboard wider than the base",
+          "recessed timber plinth under the upholstered base",
+          "sprung slat base",
+          "bouclé upholstery"
+        ],
+        "roomCompatibility": [
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "White Bed Frame",
+        "canonicalCategory": "Beds",
+        "configuration": "queen bed",
+        "colour": "White",
+        "description": "null"
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/beds/summerton-stone-white-fabric-queen-bed-toffee-brown-ash/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/beds/summerton-stone-white-fabric-queen-bed-toffee-brown-ash/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/summerton-stone-white-fabric-queen-bed-toffee-brown-ash/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/summerton-stone-white-fabric-queen-bed-toffee-brown-ash/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/beds/summerton-stone-white-fabric-queen-bed-toffee-brown-ash/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1000,
+          "height": 1000
+        }
+      ]
+    },
+    "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs": {
+      "id": "ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+      "visual": {
+        "colourFamily": "warm beige on dark brown wood",
+        "silhouette": "compact rounded tub on splayed tapered legs",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "low integrated scoop arm flowing from the back into the seat",
+        "backStyle": "curved wraparound tub back with a slight flare at the shoulders",
+        "texture": "smooth matte vegan leather with a single piped seam around the seat",
+        "visualWeight": "light",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "wraparound tub back with flared shoulders",
+          "piped seam around the seat",
+          "slim tapered splayed wooden legs"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Beige Dining Chairs",
+        "canonicalCategory": "Dining Chairs",
+        "configuration": "",
+        "colour": "Beige",
+        "description": "The Ballina Dining Chair promises modernity with comfort at its core. It brings clarity and structure to the table, with its gently cushioned seat and curved back delivering supportive ease in a clean, considered form."
+      },
+      "views": [
+        {
+          "view": "45-degree",
+          "url": "/products/chairs/ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/chairs/ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/chairs/ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/chairs/ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "rear",
+          "url": "/products/chairs/ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/03-rear.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "unclassified",
+          "url": "/products/chairs/ballina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/main.jpg",
+          "usefulness": 0,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs": {
+      "id": "gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs",
+      "visual": {
+        "colourFamily": "warm beige on mid-brown timber",
+        "silhouette": "light, open and mid-century in feel — mostly exposed timber frame",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "slim open wooden arm curving down from the back rail to the seat frame",
+        "backStyle": "open frame back with a single curved solid timber crest rail and a cut-out below",
+        "texture": "smooth matte vegan leather seat against satin timber grain",
+        "visualWeight": "light",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "open back frame with a curved crest rail and cut-out",
+          "exposed timber arms",
+          "upholstered seat pad only",
+          "round tapered legs"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Beige Dining Chairs",
+        "canonicalCategory": "Dining Chairs",
+        "configuration": "",
+        "colour": "Beige",
+        "description": "The Gloria Sand Beige Vegan Leather Dining Chair features a slim smoky ash wood frame that brings warmth and elegance to the dining space. Its cushioned vegan leather seat offers comfortable support for everyday meals and gatherings."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/chairs/gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs/01-hero.webp",
+          "usefulness": 1,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/chairs/gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/chairs/gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/chairs/gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/chairs/gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "unclassified",
+          "url": "/products/chairs/gloria-sand-beige-vegan-leather-dining-chair-smoky-ash-legs/main.jpg",
+          "usefulness": 0,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs": {
+      "id": "maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+      "visual": {
+        "colourFamily": "warm beige on dark brown wood",
+        "silhouette": "upright and tapered, with a tall narrow back over a wide seat",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "very low cropped arm that stops well short of the front of the seat",
+        "backStyle": "tall curved shield-shaped back, higher and narrower than the seat",
+        "texture": "smooth matte vegan leather with a fine seam down the back",
+        "visualWeight": "light",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "tall shield-shaped back",
+          "cropped low arms",
+          "angled splayed rear legs",
+          "exposed timber joint at the seat corner"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Beige Dining Chairs",
+        "canonicalCategory": "Dining Chairs",
+        "configuration": "",
+        "colour": "Beige",
+        "description": "Wrapped in smooth sand beige vegan leather, the Maggie Dining Chair brings a light, contemporary warmth to the dining space. Its gently curved back and contoured seat create a composed, supportive silhouette that makes every day dining feel intentional and at ease."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/chairs/maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/chairs/maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/chairs/maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/chairs/maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/chairs/maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "rear",
+          "url": "/products/chairs/maggie-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/02-rear.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs": {
+      "id": "romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs",
+      "visual": {
+        "colourFamily": "warm beige on dark brown wood",
+        "silhouette": "wide low tub shell on an exposed angular timber frame",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "low rounded arm integrated into the tub shell, sitting on the timber side rail",
+        "backStyle": "low curved wraparound tub back with a pronounced dip at the centre",
+        "texture": "smooth matte vegan leather against satin dark timber",
+        "visualWeight": "medium",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "upholstered shell visibly seated on an exposed timber frame",
+          "dipped centre back",
+          "angular splayed legs with a visible side rail"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Beige Dining Chairs",
+        "canonicalCategory": "Dining Chairs",
+        "configuration": "",
+        "colour": "Beige",
+        "description": "The Romina Dining Chair reflects modern restraint with comfort thoughtfully built in. Its softly contoured seat and supportive back create a composed silhouette that feels refined while offering an assured, comfortable sit."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/chairs/romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/chairs/romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/chairs/romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/chairs/romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/chairs/romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "rear",
+          "url": "/products/chairs/romina-sand-beige-vegan-leather-dining-chair-ebony-brown-ash-legs/02-rear.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "aspen-white-sintered-stone-coffee-table-matte-black-legs": {
+      "id": "aspen-white-sintered-stone-coffee-table-matte-black-legs",
+      "visual": {
+        "colourFamily": "white and near-black",
+        "silhouette": "two offset tiers — a rounded-rectangle stone slab plus a smaller floating glass shelf",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "polished veined white stone against matte black and clear glass",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "asymmetric two-tier top with a floating glass shelf",
+          "pierced ribbon-loop matte black base",
+          "grey-veined white stone top",
+          "rounded-rectangle top profile"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room"
+        ]
+      },
+      "official": {
+        "subcategory": "Unique Coffee Tables",
+        "canonicalCategory": "Coffee Tables",
+        "configuration": "",
+        "colour": "Black",
+        "description": "The Aspen White Sintered Stone Coffee Table beautifully combines glass and sintered stone in a sleek, layered design. The glass surface adds an airy elegance, floating above the solid white stone base."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/03-front.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/aspen-white-sintered-stone-coffee-table-matte-black-legs/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top": {
+      "id": "san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top",
+      "visual": {
+        "colourFamily": "mid walnut brown with a warm off-white top",
+        "silhouette": "low cylindrical drum, wider than it is tall",
+        "shape": "",
+        "baseLegs": "solid fluted drum plinth on a recessed brushed brass base ring, no legs",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "vertically fluted walnut against a matte travertine-look stone top",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "vertical fluting around the full drum",
+          "recessed brushed brass base ring",
+          "travertine-look stone top with a soft matte finish",
+          "available as a nesting pair"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room"
+        ]
+      },
+      "official": {
+        "subcategory": "Round Coffee Tables",
+        "canonicalCategory": "Coffee Tables",
+        "configuration": "",
+        "colour": "Brown ",
+        "description": "The San Pierre Walnut Veneer Coffee Table is a masterpiece of design, marrying the modern aesthetic of veneer and brass with a round sintered stone tabletop finished in high travertine."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/05-lifestyle.webp",
+          "usefulness": 0.6,
+          "width": 1129,
+          "height": 1129
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/san-pierre-walnut-veneer-low-round-coffee-table-with-travertine-finish-sintered-stone-top/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs": {
+      "id": "sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs",
+      "visual": {
+        "colourFamily": "white with warm gold veining on mid walnut brown",
+        "silhouette": "low oval slab on paired blade legs",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "polished stone with gold-grey veining against straight-grained walnut and brushed brass",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "paired flat blade legs with a vertical brushed brass inlay between each pair",
+          "oval stone top with gold veining",
+          "low gliding profile"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room"
+        ]
+      },
+      "official": {
+        "subcategory": "Round Coffee Tables",
+        "canonicalCategory": "Coffee Tables",
+        "configuration": "",
+        "colour": "White",
+        "description": "The Sir Lionell Gliding Coffee Table features a round white sintered stone top with delicate veining, supported by walnut brown wooden legs. Its open-space design offers a refined balance of style and functionality, while brass accents add a modern touch. A blend of minimalist design and luxurious materials makes this coffee table a subtle yet striking addition to any living space."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/coffee-tables/sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/coffee-tables/sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/sir-lionell-gliding-white-sintered-stone-coffee-table-walnut-brown-wooden-legs/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm": {
+      "id": "terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm",
+      "visual": {
+        "colourFamily": "light natural blonde wood",
+        "silhouette": "rounded-triangle top on a low cylindrical fluted drum",
+        "shape": "",
+        "baseLegs": "fluted cylindrical drum pedestal, no legs",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "light ash veneer with a strong straight grain and vertical fluting on the drum",
+        "visualWeight": "medium",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "rounded-triangle top rather than round or square",
+          "vertical fluting on the drum pedestal",
+          "light ash veneer",
+          "sold as part of a nesting pair"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room"
+        ]
+      },
+      "official": {
+        "subcategory": "Unique Coffee Tables",
+        "canonicalCategory": "Coffee Tables",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Terra Linea Coffee Table brings a fresh rhythm to the living space, breaking away from the expected and making the room feel more considered. Finished in light ash veneer, the softly curved triangle top creates natural flow, giving you more surface to use while keeping the layout open."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/coffee-tables/terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm/01-hero.webp",
+          "usefulness": 1,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/coffee-tables/terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm/02-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "unclassified",
+          "url": "/products/coffee-tables/terra-linea-light-brown-ash-veneer-high-triangular-coffee-table-90cm/main.jpg",
+          "usefulness": 0,
+          "width": 850,
+          "height": 680
+        }
+      ]
+    },
+    "thames-calacatta-oro-white-sintered-stone-square-coffee-table": {
+      "id": "thames-calacatta-oro-white-sintered-stone-square-coffee-table",
+      "visual": {
+        "colourFamily": "white with warm gold veining and brass",
+        "silhouette": "thick square stone slab floating on a recessed plinth",
+        "shape": "",
+        "baseLegs": "recessed brushed brass plinth set well inboard, making the slab appear to float",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "polished stone with gold and grey veining against vertically brushed brass",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "deep mitred slab edge",
+          "calacatta oro gold veining",
+          "recessed brushed brass plinth creating a floating effect"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room"
+        ]
+      },
+      "official": {
+        "subcategory": "Square Coffee Tables",
+        "canonicalCategory": "Coffee Tables",
+        "configuration": "",
+        "colour": "White",
+        "description": "The Thames Calacatta Oro White Sintered Stone Coffee Table embodies contemporary luxury with its pristine white top and warm gold veining, mimicking Calacatta Oro marble. Each piece showcases a timeless pattern inspired by the artistry of the earth's minerals."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/coffee-tables/thames-calacatta-oro-white-sintered-stone-square-coffee-table/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/thames-calacatta-oro-white-sintered-stone-square-coffee-table/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/coffee-tables/thames-calacatta-oro-white-sintered-stone-square-coffee-table/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/coffee-tables/thames-calacatta-oro-white-sintered-stone-square-coffee-table/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1800,
+          "height": 1800
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/thames-calacatta-oro-white-sintered-stone-square-coffee-table/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/thames-calacatta-oro-white-sintered-stone-square-coffee-table/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top": {
+      "id": "vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top",
+      "visual": {
+        "colourFamily": "white with warm bronze",
+        "silhouette": "low rectangular slab on a sculptural folded-plate base",
+        "shape": "",
+        "baseLegs": "folded angular brushed-bronze metal plate base, origami-like, spanning the width",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "high-gloss white stone with grey veining against matte brushed metal",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "folded origami-like bronze plate base",
+          "grey-veined white marble-look stone top",
+          "thin slab top profile"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room"
+        ]
+      },
+      "official": {
+        "subcategory": "Rectangle Coffee Tables",
+        "canonicalCategory": "Coffee Tables",
+        "configuration": "",
+        "colour": "White",
+        "description": "The Vania Coffee Table showcases a statuario white sintered stone tabletop smooth, resilient, and rich in elegance. Its generous surface offers ample space for serving, styling, or everyday use in the heart of your living room."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/coffee-tables/vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/coffee-tables/vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top/02-front.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/coffee-tables/vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top/03-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/coffee-tables/vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/coffee-tables/vania-brushed-bronze-coffee-table-with-statuario-white-sintered-stone-top/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "crimson-silence-painting-180x180cm": {
+      "id": "crimson-silence-painting-180x180cm",
+      "visual": {
+        "colourFamily": "warm neutral — cream, sand, ochre and charcoal, with no red at all; the product name is evocative rather than descriptive — the colour it implies is not in the artwork",
+        "silhouette": "clean-lined",
+        "shape": "square canvas in a slim frame",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "heavy impasto oil with visible palette-knife ridges and scraped passages",
+        "visualWeight": "medium",
+        "styleFamily": "abstract contemporary art",
+        "notableFeatures": [
+          "gestural abstract in cream, sand and ochre",
+          "charcoal and olive accents",
+          "heavy palette-knife impasto",
+          "slim pale timber frame"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "hallway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Abstract Wall Art",
+        "canonicalCategory": "Wall-Art",
+        "configuration": "",
+        "colour": "Beige",
+        "description": "The Crimson Silence Painting is a 180 x 180 cm abstract artwork featuring layered ivory, beige, taupe, charcoal, and crimson tones. Its soft expressive composition adds warmth, scale, and a calm modern presence to interior spaces."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/decor/crimson-silence-painting-180x180cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/crimson-silence-painting-180x180cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/crimson-silence-painting-180x180cm/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/crimson-silence-painting-180x180cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/crimson-silence-painting-180x180cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/crimson-silence-painting-180x180cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "millaray-iii-antique-gold-arch-mirror-120-cm": {
+      "id": "millaray-iii-antique-gold-arch-mirror-120-cm",
+      "visual": {
+        "colourFamily": "antique gold",
+        "silhouette": "soft, curved-edge",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "twisted rope-effect metal with an antiqued satin gold finish",
+        "visualWeight": "light",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "arched crown with straight sides",
+          "twisted rope-effect frame",
+          "antiqued rather than bright gold",
+          "rear hanging rail"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "hallway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Arch Mirrors",
+        "canonicalCategory": "Mirrors",
+        "configuration": "",
+        "colour": "Gold",
+        "description": "The Millaray III Antique Gold Arch Mirror 120 cm features a softly curved arch frame finished in antique gold. Its reflective surface brightens and opens smaller spaces with understated elegance."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/01-hero.webp",
+          "usefulness": 1,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 850,
+          "height": 680
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/02-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "rear",
+          "url": "/products/decor/millaray-iii-antique-gold-arch-mirror-120-cm/05-rear.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "millaray-iii-antique-gold-round-mirror": {
+      "id": "millaray-iii-antique-gold-round-mirror",
+      "visual": {
+        "colourFamily": "antique gold",
+        "silhouette": "soft, curved-edge",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "twisted rope-effect metal with an antiqued satin gold finish",
+        "visualWeight": "light",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "twisted rope-effect frame",
+          "antiqued rather than bright gold",
+          "slim frame depth",
+          "rear hanging rail for landscape or portrait mounting"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "hallway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Round Mirrors",
+        "canonicalCategory": "Mirrors",
+        "configuration": "",
+        "colour": "Gold",
+        "description": "The Millaray III Mirror takes on a round form, its antique gold frame tracing a continuous, balanced line. The slim edge carries a soft metallic warmth, giving the piece a quiet presence that feels both stylish and easy to place."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/decor/millaray-iii-antique-gold-round-mirror/01-hero.webp",
+          "usefulness": 1,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/millaray-iii-antique-gold-round-mirror/02-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/millaray-iii-antique-gold-round-mirror/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/millaray-iii-antique-gold-round-mirror/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "rear",
+          "url": "/products/decor/millaray-iii-antique-gold-round-mirror/05-rear.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "unclassified",
+          "url": "/products/decor/millaray-iii-antique-gold-round-mirror/main.jpg",
+          "usefulness": 0,
+          "width": 850,
+          "height": 680
+        }
+      ]
+    },
+    "muted-vermilion-painting-80x120cm": {
+      "id": "muted-vermilion-painting-80x120cm",
+      "visual": {
+        "colourFamily": "cool neutral — grey-blue, slate and cream, with no vermilion or red present; the product name is evocative rather than descriptive — the colour it implies is not in the artwork",
+        "silhouette": "clean-lined",
+        "shape": "portrait-oriented rectangular canvas in a slim frame",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "thin scraped and washed layers with fine drips over a lightly textured ground",
+        "visualWeight": "light",
+        "styleFamily": "abstract contemporary art",
+        "notableFeatures": [
+          "soft horizontal banding suggesting a landscape horizon",
+          "cool grey-blue and slate palette",
+          "thin scraped washes with fine drips",
+          "slim pale timber frame"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "hallway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Abstract Wall Art",
+        "canonicalCategory": "Wall-Art",
+        "configuration": "",
+        "colour": "Grey",
+        "description": "The Muted Vermilion Painting blends soft ivory, mist grey, weathered stone. Its layered abstract strokes feel calm and atmospheric, like shifting light over water or sky."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/decor/muted-vermilion-painting-80x120cm/04-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/decor/muted-vermilion-painting-80x120cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/decor/muted-vermilion-painting-80x120cm/05-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/muted-vermilion-painting-80x120cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/muted-vermilion-painting-80x120cm/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/muted-vermilion-painting-80x120cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "ochre-memory-painting-180x180cm": {
+      "id": "ochre-memory-painting-180x180cm",
+      "visual": {
+        "colourFamily": "warm neutral with muted teal — cream and sand ground, ochre and black accents",
+        "silhouette": "clean-lined",
+        "shape": "square canvas in a slim frame",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "thick impasto oil with palette-knife ridges over a scraped ground",
+        "visualWeight": "medium",
+        "styleFamily": "abstract contemporary art",
+        "notableFeatures": [
+          "muted teal-grey accents alongside the ochre",
+          "strong black gestural marks",
+          "heavy impasto ridges",
+          "slim pale timber frame"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "hallway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Abstract Wall Art",
+        "canonicalCategory": "Wall-Art",
+        "configuration": "",
+        "colour": "Multicolour",
+        "description": "Ochre Memory moves through warm layers of sand, clay, softened ochre, and pale stone, lifted by cooler sweeps of muted blue, olive, and charcoal. Its abstract composition feels expressive and fluid, with each mark adding depth, movement, and quiet energy."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/decor/ochre-memory-painting-180x180cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/ochre-memory-painting-180x180cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/ochre-memory-painting-180x180cm/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/ochre-memory-painting-180x180cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/ochre-memory-painting-180x180cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/ochre-memory-painting-180x180cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "rust-on-pulse-painting-230x140cm": {
+      "id": "rust-on-pulse-painting-230x140cm",
+      "visual": {
+        "colourFamily": "dark olive and grey-green with off-white line work, with no rust or orange present; the product name is evocative rather than descriptive — the colour it implies is not in the artwork",
+        "silhouette": "clean-lined",
+        "shape": "portrait-oriented rectangular canvas in a slim black frame",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "heavily textured mineral ground with thick raised white line work",
+        "visualWeight": "heavy",
+        "styleFamily": "abstract contemporary art",
+        "notableFeatures": [
+          "bold off-white calligraphic line work over a dark ground",
+          "heavily textured mineral-like surface",
+          "slim black frame",
+          "often hung as a pair"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "hallway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Abstract Wall Art",
+        "canonicalCategory": "Wall-Art",
+        "configuration": "",
+        "colour": "Green",
+        "description": "null"
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/decor/rust-on-pulse-painting-230x140cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/decor/rust-on-pulse-painting-230x140cm/05-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/rust-on-pulse-painting-230x140cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/rust-on-pulse-painting-230x140cm/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/rust-on-pulse-painting-230x140cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/rust-on-pulse-painting-230x140cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "static-trace-painting-120x200cm": {
+      "id": "static-trace-painting-120x200cm",
+      "visual": {
+        "colourFamily": "warm neutral — sand and cream ground with charcoal lines",
+        "silhouette": "clean-lined",
+        "shape": "portrait-oriented rectangular canvas in a slim frame",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "thick plaster-like impasto ground with fine charcoal line work drawn over it",
+        "visualWeight": "medium",
+        "styleFamily": "abstract contemporary art",
+        "notableFeatures": [
+          "continuous looping charcoal line drawn over the ground",
+          "heavy plaster-like textured surface",
+          "warm sand and cream palette",
+          "slim pale timber frame"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "hallway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Framed Wall Art",
+        "canonicalCategory": "Wall-Art",
+        "configuration": "",
+        "colour": "Beige",
+        "description": "The Static Trace Painting moves across a soft canvas of warm ivory, sand, and pale stone, where sweeping charcoal lines rise and intersect with quiet confidence."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/decor/static-trace-painting-120x200cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/decor/static-trace-painting-120x200cm/05-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/decor/static-trace-painting-120x200cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/static-trace-painting-120x200cm/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/static-trace-painting-120x200cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/decor/static-trace-painting-120x200cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm": {
+      "id": "grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm",
+      "visual": {
+        "colourFamily": "white and near-black",
+        "silhouette": "thin rectangular stone slab on an open geometric frame",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "polished grey-veined white stone against matte black powder-coated metal",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "open interlocking rectangular frame base",
+          "matte black powder-coated finish",
+          "thin slab top with a squared edge",
+          "statuario grey veining"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Rectangle Dining Table",
+        "canonicalCategory": "Dining Tables",
+        "configuration": "",
+        "colour": "White",
+        "description": "The Grayson Dining Table commands attention with a statuario white sintered stone top. It's shaped for spacious dining, seating 8 to 10 with ease for both everyday meals and more considered gatherings."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/dining-tables/grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/dining-tables/grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/grayson-black-rectangular-dining-table-with-statuario-white-sintered-stone-top-240x105cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "ophelia-ii-smoky-walnut-veneer-curved-dining-table": {
+      "id": "ophelia-ii-smoky-walnut-veneer-curved-dining-table",
+      "visual": {
+        "colourFamily": "warm mid-brown / smoky walnut",
+        "silhouette": "rounded-corner rectangular top on two heavy reeded plinth legs",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "smooth walnut veneer top against deeply horizontally reeded leg drums",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "horizontal reeding wrapping both plinth legs",
+          "softly rounded top corners",
+          "thick chamfered top edge"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Rectangle Dining Table",
+        "canonicalCategory": "Dining Tables",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Ophelia II Dining Table is finished in smoky walnut veneer, showcasing rich timber tones and flowing grain across its curved top. Soft rounded edges and deep walnut warmth give the piece a calm, luxurious presence."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/dining-tables/ophelia-ii-smoky-walnut-veneer-curved-dining-table/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/dining-tables/ophelia-ii-smoky-walnut-veneer-curved-dining-table/02-front.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/ophelia-ii-smoky-walnut-veneer-curved-dining-table/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/dining-tables/ophelia-ii-smoky-walnut-veneer-curved-dining-table/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/ophelia-ii-smoky-walnut-veneer-curved-dining-table/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/ophelia-ii-smoky-walnut-veneer-curved-dining-table/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "sierra-walnut-brown-dining-table-wooden-top-240x120cm": {
+      "id": "sierra-walnut-brown-dining-table-wooden-top-240x120cm",
+      "visual": {
+        "colourFamily": "warm mid-brown walnut",
+        "silhouette": "soft rounded-rectangle top on organic, pebble-shaped pedestal legs",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "smooth satin walnut veneer with a strong flowing grain",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "organic pebble-shaped pedestal legs rather than straight columns",
+          "softly rounded top corners",
+          "brass Koala Living badge on the pedestal"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Rectangle Dining Table",
+        "canonicalCategory": "Dining Tables",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Sierra Dining Table is crafted in walnut brown wood, its surface showing a soft grain that brings warmth and quiet variation across the 240 cm top. Rounded edges soften the rectangular form, giving the piece a smooth, grounded presence."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/dining-tables/sierra-walnut-brown-dining-table-wooden-top-240x120cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/dining-tables/sierra-walnut-brown-dining-table-wooden-top-240x120cm/02-front.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/sierra-walnut-brown-dining-table-wooden-top-240x120cm/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/dining-tables/sierra-walnut-brown-dining-table-wooden-top-240x120cm/03-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/dining-tables/sierra-walnut-brown-dining-table-wooden-top-240x120cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/sierra-walnut-brown-dining-table-wooden-top-240x120cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm": {
+      "id": "terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm",
+      "visual": {
+        "colourFamily": "warm mid-brown / amber-stained ash",
+        "silhouette": "rounded-rectangle top on two fluted plinth legs; in elevation the legs read as rounded rectangles rather than sharp triangles",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "straight-grained ash veneer with dense vertical fluting on both legs",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "dense vertical fluting wrapping both plinth legs",
+          "softly rounded top corners",
+          "deep top overhang beyond the legs"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Rectangle Dining Table",
+        "canonicalCategory": "Dining Tables",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Terra Linea Dining Table sets the room with quiet confidence. Finished in amber brown ash veneer, the surface carries rich grain detail and a deeper warmth that settles naturally into the space. It offers a generous setting for long lunches, shared dinners, and gatherings that unfold slowly."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/dining-tables/terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm/02-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/dining-tables/terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm/01-45-degree.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/terra-linea-amber-brown-ash-veneer-two-triangular-leg-rectangular-dining-table-240cm-x-120cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm": {
+      "id": "terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm",
+      "visual": {
+        "colourFamily": "light natural blonde wood",
+        "silhouette": "rounded-rectangle top on one wide oval fluted pedestal",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "straight-grained blonde ash veneer with dense vertical fluting on the pedestal",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "single wide oval fluted pedestal rather than two legs",
+          "dense vertical fluting",
+          "softly rounded top corners",
+          "generous top overhang"
+        ],
+        "roomCompatibility": [
+          "dining room",
+          "open-plan kitchen-dining"
+        ]
+      },
+      "official": {
+        "subcategory": "Rectangle Dining Table",
+        "canonicalCategory": "Dining Tables",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Terra Linea Light Ash Veneer Dining Table features a wide 240 cm by 120 cm tabletop in a warm light ash finish. A single reeded pedestal base adds sculptural texture and provides seating for up to eight people."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/dining-tables/terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm/02-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/dining-tables/terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/dining-tables/terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm/05-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/dining-tables/terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/dining-tables/terra-linea-light-brown-ash-veneer-single-leg-rectangular-dining-table-240cm-x-120cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "alina-wooden-metal-floor-lamp": {
+      "id": "alina-wooden-metal-floor-lamp",
+      "visual": {
+        "colourFamily": "warm mid-brown with amber glass",
+        "silhouette": "tall and slender with a disc-like shade cap",
+        "shape": "slim vertical column under a wide shallow domed shade",
+        "baseLegs": "solid round flat timber disc base",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "smooth satin walnut-toned timber against translucent amber glass",
+        "visualWeight": "light",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "wide shallow domed amber glass shade",
+          "internal opal diffuser disc visible through the glass",
+          "slim round timber stem",
+          "flat disc base with a discreet cable exit"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "entryway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "Lamps",
+        "canonicalCategory": "Lighting",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Alina Floor Lamp is defined by a slender, vertical silhouette that feels clean, refined, and quietly architectural. Topped with a translucent clear glass shade."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/lighting/alina-wooden-metal-floor-lamp/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/lighting/alina-wooden-metal-floor-lamp/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/alina-wooden-metal-floor-lamp/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/alina-wooden-metal-floor-lamp/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/alina-wooden-metal-floor-lamp/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/alina-wooden-metal-floor-lamp/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "emmeline-chandelier": {
+      "id": "emmeline-chandelier",
+      "visual": {
+        "colourFamily": "clear to pale amber glass with warm brass",
+        "silhouette": "overlapping layers of tapered glass petals hung from concentric brass rings",
+        "shape": "shallow tiered dome, wide and low rather than tall",
+        "baseLegs": "chain suspension from a ceiling canopy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "rippled semi-translucent glass with a frosted, ice-like surface against brushed brass",
+        "visualWeight": "medium",
+        "styleFamily": "sculptural statement lighting",
+        "notableFeatures": [
+          "tapered petal-shaped glass drops in overlapping tiers",
+          "concentric brushed brass ring frame",
+          "rippled ice-like glass texture",
+          "warm glow through the petals when lit"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "entryway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "Chandeliers",
+        "configuration": "",
+        "colour": "Brass",
+        "description": "The Emmeline Chandelier is formed with cascading textured glass pieces resembling unfolding orchid petals gathered in a circular frame. Each sculpted panel catches the light with softness and movement."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/lighting/emmeline-chandelier/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/lighting/emmeline-chandelier/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/lighting/emmeline-chandelier/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/emmeline-chandelier/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/emmeline-chandelier/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/emmeline-chandelier/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "lunara-chandelier": {
+      "id": "lunara-chandelier",
+      "visual": {
+        "colourFamily": "clear glass with warm brass",
+        "silhouette": "horizontal row of upright rounded-rectangle glass panels on a slim brass spine",
+        "shape": "long linear bar, rectangular in plan",
+        "baseLegs": "twin chain suspension from two ceiling points",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "textured seeded clear glass with a visible ripple, against brushed brass",
+        "visualWeight": "light",
+        "styleFamily": "sculptural statement lighting",
+        "notableFeatures": [
+          "linear bar format suited to a long dining table",
+          "upright seeded-glass panels in two rows",
+          "exposed bulbs between the panels",
+          "twin-chain suspension"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "entryway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "Chandeliers",
+        "configuration": "",
+        "colour": "Brass",
+        "description": "The Lunara Chandelier pairs matte brass ironwork with textured glass panels, creating a composition that feels both refined and architectural."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/lighting/lunara-chandelier/01-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/lighting/lunara-chandelier/02-front.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/lighting/lunara-chandelier/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/lunara-chandelier/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/lunara-chandelier/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/lunara-chandelier/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "margo-cocoa-brown-wooden-floor-lamp": {
+      "id": "margo-cocoa-brown-wooden-floor-lamp",
+      "visual": {
+        "colourFamily": "warm mid-brown",
+        "silhouette": "slender and sculptural, like a lantern on a tapered post",
+        "shape": "tall slim cone tapering upward to a short cylindrical shade",
+        "baseLegs": "solid tapered timber base, widest at the floor",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "smooth satin timber with a visible straight grain, against a softly pleated fabric shade",
+        "visualWeight": "light",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "tapered conical timber column",
+          "short pleated drum shade",
+          "discontinued colourway"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "entryway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "",
+        "configuration": "",
+        "colour": "",
+        "description": ""
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/lighting/margo-cocoa-brown-wooden-floor-lamp/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "solene-chandelier-amber-glass": {
+      "id": "solene-chandelier-amber-glass",
+      "visual": {
+        "colourFamily": "amber / gold",
+        "silhouette": "dense layered cascade of hanging prisms",
+        "shape": "tiered conical dome, widest at the top and stepping inward toward the base",
+        "baseLegs": "chain suspension from a ceiling canopy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "faceted translucent amber glass against brushed brass",
+        "visualWeight": "heavy",
+        "styleFamily": "sculptural statement lighting",
+        "notableFeatures": [
+          "multiple stepped tiers of faceted amber glass prisms",
+          "brushed brass spoked frame",
+          "chain suspension",
+          "visible exposed bulbs within the prisms"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "entryway",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "Chandeliers",
+        "configuration": "",
+        "colour": "Brass",
+        "description": "The Solene Chandelier features layered amber glass pieces set around a brass-toned frame for a warm, sculptural look. Its tiered form and golden diffused glow create an elegant focal point for dining rooms, lounges, and refined living spaces."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/lighting/solene-chandelier-amber-glass/01-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/lighting/solene-chandelier-amber-glass/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/lighting/solene-chandelier-amber-glass/02-front.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/solene-chandelier-amber-glass/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/solene-chandelier-amber-glass/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/lighting/solene-chandelier-amber-glass/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "arges-stone-green-floor-rug-large-250cm-x-350cm": {
+      "id": "arges-stone-green-floor-rug-large-250cm-x-350cm",
+      "visual": {
+        "colourFamily": "muted sage / olive green",
+        "silhouette": "clean-lined",
+        "shape": "rectangular",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "short dense cut pile with a subtle horizontal striation and a soft sheen that shifts with direction",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "heathered tonal variation rather than a flat colour",
+          "subtle directional sheen",
+          "clean bound edge",
+          "no border pattern"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "Large Rugs",
+        "configuration": "",
+        "colour": "Green",
+        "description": "The Arges Stone Green Floor Rug carries a muted green tone with a softly layered texture that shifts gently across the surface."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/02-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/arges-stone-green-floor-rug-large-250cm-x-350cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "dixon-string-floor-rug-extra-large-300cm-x-350cm": {
+      "id": "dixon-string-floor-rug-extra-large-300cm-x-350cm",
+      "visual": {
+        "colourFamily": "greige — warm grey with beige undertones",
+        "silhouette": "clean-lined",
+        "shape": "rectangular",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "flatwoven natural fibre with raised horizontal string-like ridges and visible slubs",
+        "visualWeight": "light",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "raised horizontal string ridges across the field",
+          "irregular darker slubs in the yarn",
+          "flatweave with almost no pile height",
+          "tonal, pattern-free field"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "Extra Large Rugs",
+        "configuration": "",
+        "colour": "Multicolour",
+        "description": "The Dixon String Floor Rug features a soft blend of light grey and stone tones, layered with fine linear detailing that runs gently across the surface."
+      },
+      "views": [
+        {
+          "view": "lifestyle",
+          "url": "/products/rugs/dixon-string-floor-rug-extra-large-300cm-x-350cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/dixon-string-floor-rug-extra-large-300cm-x-350cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/dixon-string-floor-rug-extra-large-300cm-x-350cm/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/dixon-string-floor-rug-extra-large-300cm-x-350cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/dixon-string-floor-rug-extra-large-300cm-x-350cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/dixon-string-floor-rug-extra-large-300cm-x-350cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "estonia-ivory-beige-floor-rug-large-250cm-x-350cm": {
+      "id": "estonia-ivory-beige-floor-rug-large-250cm-x-350cm",
+      "visual": {
+        "colourFamily": "warm off-white / ivory",
+        "silhouette": "clean-lined",
+        "shape": "rectangular",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "plush cut pile with carved relief channels forming a raised geometric pattern",
+        "visualWeight": "light",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "tone-on-tone pattern carved into the pile rather than woven in colour",
+          "angular geometric blocks of directional ridges",
+          "deep plush pile",
+          "no colour contrast in the pattern"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "Large Rugs",
+        "configuration": "",
+        "colour": "Beige",
+        "description": "The Estonia Ivory Beige Floor Rug brings together soft ivory and beige tones in a layered, tonal composition that feels light. Its pattern moves between fine linear markings and gentle geometric forms."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/rugs/estonia-ivory-beige-floor-rug-large-250cm-x-350cm/02-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/rugs/estonia-ivory-beige-floor-rug-large-250cm-x-350cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/estonia-ivory-beige-floor-rug-large-250cm-x-350cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/estonia-ivory-beige-floor-rug-large-250cm-x-350cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/estonia-ivory-beige-floor-rug-large-250cm-x-350cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/estonia-ivory-beige-floor-rug-large-250cm-x-350cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "messina-nomad-floor-rug-medium-200cm-x-300cm": {
+      "id": "messina-nomad-floor-rug-medium-200cm-x-300cm",
+      "visual": {
+        "colourFamily": "greige — warm grey with beige and darker flecks",
+        "silhouette": "clean-lined",
+        "shape": "rectangular",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "dense looped pile with a fine ribbed grain and a tweedy flecked yarn",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "angular maze-like geometric motif formed by changing pile direction",
+          "tweedy flecked yarn with darker slubs",
+          "tone-on-tone pattern with no colour contrast",
+          "looped rather than cut pile"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "dining room",
+          "bedroom"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "Medium Rugs",
+        "configuration": "",
+        "colour": "Multicolour",
+        "description": "The Messina Nomad Floor Rug is defined by a modern mix of soft neutrals, with layered tones of grey, stone, and cream."
+      },
+      "views": [
+        {
+          "view": "lifestyle",
+          "url": "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/rugs/messina-nomad-floor-rug-medium-200cm-x-300cm/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform": {
+      "id": "bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform",
+      "visual": {
+        "colourFamily": "warm off-white with mid-brown walnut base",
+        "silhouette": "very low pebble-form modules on a wide wooden plinth",
+        "shape": "straight-fronted",
+        "baseLegs": "solid walnut-toned wooden plinth that projects beyond the seat as a side platform",
+        "armStyle": "armless; rounded cushion ends stand in for arms",
+        "backStyle": "low loose bolster-style back cushions, well inboard of the seat edge",
+        "texture": "soft looped bouclé-like weave against smooth wood grain",
+        "visualWeight": "heavy",
+        "styleFamily": "warm organic modern",
+        "notableFeatures": [
+          "projecting walnut side platform that doubles as a surface",
+          "rounded pebble-form seat modules",
+          "inlaid groove around the platform edge",
+          "armless modular configuration"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "3 Seater Sofa",
+        "canonicalCategory": "Fabric Sofas",
+        "configuration": "3-piece modular with left terminal + side platform",
+        "colour": "Cream",
+        "description": "The Bellagio Modular Sofa is wrapped in stone cream woven fabric, offering a light, refined tone with a soft, tactile texture. Its three-piece composition flows into a left terminal, where gentle curves and the extended side platform."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/02-hero.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/bellagio-stone-cream-woven-fabric-3-pieces-modular-sofa-with-left-terminal-and-side-platform/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "calma-pearl-beige-fabric-2-pieces-modular-sofa": {
+      "id": "calma-pearl-beige-fabric-2-pieces-modular-sofa",
+      "visual": {
+        "colourFamily": "warm off-white / pearl",
+        "silhouette": "chunky and cubic with softly rounded corners",
+        "shape": "straight-fronted",
+        "baseLegs": "dark walnut-toned curved wooden runner feet at the corners",
+        "armStyle": "thick rounded slab arm, only slightly above the seat",
+        "backStyle": "low squared-off back level with the arms, no loose cushions",
+        "texture": "dense looped bouclé with a pronounced nubbly pile",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "curved dark wood runner feet",
+          "chunky squared modules with rounded corners",
+          "brass Koala Living badge on the outer arm",
+          "bouclé upholstery"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "2 Seater Sofa",
+        "canonicalCategory": "Fabric Sofas",
+        "configuration": "2-piece modular",
+        "colour": "Beige",
+        "description": "The Calma Modular Sofa is wrapped in pearl beige fabric that brings a soft, tactile richness. Oversized foam forms build the silhouette, giving each curve a generous, cloud like presence."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/calma-pearl-beige-fabric-2-pieces-modular-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/calma-pearl-beige-fabric-2-pieces-modular-sofa/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/calma-pearl-beige-fabric-2-pieces-modular-sofa/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/calma-pearl-beige-fabric-2-pieces-modular-sofa/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/sofas/calma-pearl-beige-fabric-2-pieces-modular-sofa/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/calma-pearl-beige-fabric-2-pieces-modular-sofa/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1000,
+          "height": 1000
+        }
+      ]
+    },
+    "celia-mid-beige-2-seater-woven-fabric-sofa": {
+      "id": "celia-mid-beige-2-seater-woven-fabric-sofa",
+      "visual": {
+        "colourFamily": "warm beige",
+        "silhouette": "soft and rounded with a scooped, tub-like front",
+        "shape": "straight-fronted",
+        "baseLegs": "dark-stained curved wooden blade feet set inboard at the corners",
+        "armStyle": "rounded barrel arm curving down into the seat, higher than the back at the front",
+        "backStyle": "low curved back with small loose scatter cushions",
+        "texture": "dense looped bouclé with a soft nubbly pile",
+        "visualWeight": "medium",
+        "styleFamily": "warm organic modern",
+        "notableFeatures": [
+          "curved dark wood blade feet",
+          "scooped tub-like arm-to-seat sweep",
+          "brass Koala Living badge",
+          "bouclé upholstery"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "2 Seater Sofa",
+        "canonicalCategory": "Fabric Sofas",
+        "configuration": "2-seater",
+        "colour": "Beige",
+        "description": "The Celia 2-Seater Sofa features a soft, textured woven fabric that combines comfort with durability. Its neutral mid-beige color complements any room, while the smooth, curved design creates a welcoming atmosphere."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/celia-mid-beige-2-seater-woven-fabric-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/celia-mid-beige-2-seater-woven-fabric-sofa/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/celia-mid-beige-2-seater-woven-fabric-sofa/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/celia-mid-beige-2-seater-woven-fabric-sofa/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/celia-mid-beige-2-seater-woven-fabric-sofa/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/celia-mid-beige-2-seater-woven-fabric-sofa/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "elva-green-pastel-nubuck-leather-3-seater-sofa": {
+      "id": "elva-green-pastel-nubuck-leather-3-seater-sofa",
+      "visual": {
+        "colourFamily": "muted sage green",
+        "silhouette": "plump and pillowy, built from rounded tubular segments",
+        "shape": "straight-fronted",
+        "baseLegs": "low concealed plinth base, no visible legs",
+        "armStyle": "low cylindrical bolster arm, well below the back height",
+        "backStyle": "low puffy back with loose square scatter cushions and a vertical strap detail at the rear",
+        "texture": "matte brushed nubuck with a soft suede-like surface and no sheen",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "bulbous tubular seat and back segments",
+          "cylindrical bolster arms",
+          "vertical strap detail on the outer back",
+          "matte nubuck finish"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "3 Seater Leather Sofa",
+        "canonicalCategory": "Leather Sofas",
+        "configuration": "3-seater",
+        "colour": "Green",
+        "description": "The Elva 3-Seater is shaped with a deeply plush silhouette that feels instantly inviting. Upholstered in green pastel leather, its softly tufted surface adds depth and texture, giving the sofa a relaxed elegance."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/elva-green-pastel-nubuck-leather-3-seater-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/elva-green-pastel-nubuck-leather-3-seater-sofa/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/elva-green-pastel-nubuck-leather-3-seater-sofa/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/elva-green-pastel-nubuck-leather-3-seater-sofa/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/elva-green-pastel-nubuck-leather-3-seater-sofa/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/elva-green-pastel-nubuck-leather-3-seater-sofa/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "gabriella-mid-beige-3-seater-woven-fabric-sofa": {
+      "id": "gabriella-mid-beige-3-seater-woven-fabric-sofa",
+      "visual": {
+        "colourFamily": "warm beige",
+        "silhouette": "plump and rounded, built from thick vertical padded channels",
+        "shape": "straight-fronted",
+        "baseLegs": "low concealed base, frame sits close to the floor",
+        "armStyle": "large rounded barrel arm continuous with the channelled back",
+        "backStyle": "deep vertical channel tufting wrapping from seat over the back",
+        "texture": "dense looped bouclé with a pronounced nubbly pile",
+        "visualWeight": "heavy",
+        "styleFamily": "warm organic modern",
+        "notableFeatures": [
+          "deep vertical channel tufting wrapping seat, arms and back",
+          "rounded barrel arms merging into the back",
+          "bouclé upholstery"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "3 Seater Sofa",
+        "canonicalCategory": "Fabric Sofas",
+        "configuration": "3-seater",
+        "colour": "Beige",
+        "description": "The Gabriella 3-Seater Sofa is upholstered in mid beige woven fabric that brings a soft, textured warmth to the room. Its ribbed channel form gives the sofa a sculpted look, with rounded lines that feel calm, full, and inviting."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/gabriella-mid-beige-3-seater-woven-fabric-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/gabriella-mid-beige-3-seater-woven-fabric-sofa/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/gabriella-mid-beige-3-seater-woven-fabric-sofa/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/gabriella-mid-beige-3-seater-woven-fabric-sofa/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/gabriella-mid-beige-3-seater-woven-fabric-sofa/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/gabriella-mid-beige-3-seater-woven-fabric-sofa/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "gabriella-vintage-mustard-3-seater-woven-fabric-sofa": {
+      "id": "gabriella-vintage-mustard-3-seater-woven-fabric-sofa",
+      "visual": {
+        "colourFamily": "amber / golden mustard",
+        "silhouette": "plump and rounded, built from thick vertical padded channels",
+        "shape": "straight-fronted",
+        "baseLegs": "low concealed base, frame sits close to the floor",
+        "armStyle": "large rounded barrel arm continuous with the channelled back",
+        "backStyle": "deep vertical channel tufting wrapping from seat over the back",
+        "texture": "dense looped bouclé with a nubbly pile",
+        "visualWeight": "heavy",
+        "styleFamily": "warm organic modern",
+        "notableFeatures": [
+          "deep vertical channel tufting",
+          "rounded barrel arms merging into the back",
+          "discontinued colourway of the Gabriella shell"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "",
+        "canonicalCategory": "",
+        "configuration": "",
+        "colour": "",
+        "description": ""
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/gabriella-vintage-mustard-3-seater-woven-fabric-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs": {
+      "id": "kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs",
+      "visual": {
+        "colourFamily": "warm off-white / pearl",
+        "silhouette": "curved, tub-like and enveloping",
+        "shape": "straight-fronted",
+        "baseLegs": "",
+        "armStyle": "rolled scroll arm continuous with the back, chesterfield-style",
+        "backStyle": "deep diamond button-tufted back, curved in plan, level with the arms",
+        "texture": "looped bouclé with a pronounced nubbly pile",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "deep diamond button tufting across back and arms",
+          "champagne gold curved plinth feet",
+          "chesterfield silhouette with arms level with the back",
+          "bouclé upholstery"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "3 Seater Sofa",
+        "canonicalCategory": "Fabric Sofas",
+        "configuration": "3-seater",
+        "colour": "Beige",
+        "description": "The Kelly 3-Seater Sofa showcases exquisite deep tufting that brings texture, depth, and a sense of timelessness. Its sculpted curves flow gracefully from arm to back, creating a beautifully balanced silhouette that feels both classic and contemporary."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs/03-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/sofas/kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/kelly-pearl-beige-fabric-3-seater-sofa-champagne-gold-legs/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "kensley-almond-cream-leather-2-seater-dual-electric-recliner": {
+      "id": "kensley-almond-cream-leather-2-seater-dual-electric-recliner",
+      "visual": {
+        "colourFamily": "warm off-white / almond",
+        "silhouette": "low, deep and boxy with softly rounded edges",
+        "shape": "straight-fronted",
+        "baseLegs": "low concealed plinth base, no visible legs",
+        "armStyle": "wide flat-topped track arm, same height as the back",
+        "backStyle": "channel-tufted cushioned back with an adjustable headrest section",
+        "texture": "smooth matte leather with soft vertical channel quilting",
+        "visualWeight": "heavy",
+        "styleFamily": "contemporary comfort",
+        "notableFeatures": [
+          "vertical channel quilting on seat and back",
+          "discreet round control button on the outer arm",
+          "extending footrest",
+          "adjustable headrest"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "2 Seater Leather Sofa",
+        "canonicalCategory": "Leather Sofas",
+        "configuration": "2-seater, dual electric recliner",
+        "colour": "Cream",
+        "description": "The Kensley 2-Seater Recliner offers a smooth and refined seating experience. Wrapped in supple leather, its almond cream tone brings warmth and sophistication to any space."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/kensley-almond-cream-leather-2-seater-dual-electric-recliner/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/kensley-almond-cream-leather-2-seater-dual-electric-recliner/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/kensley-almond-cream-leather-2-seater-dual-electric-recliner/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/kensley-almond-cream-leather-2-seater-dual-electric-recliner/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/kensley-almond-cream-leather-2-seater-dual-electric-recliner/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/kensley-almond-cream-leather-2-seater-dual-electric-recliner/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "lennox-almond-cream-leather-3-seater-sofa": {
+      "id": "lennox-almond-cream-leather-3-seater-sofa",
+      "visual": {
+        "colourFamily": "warm off-white / almond",
+        "silhouette": "low, long and rectilinear, visually lightened by the raised base",
+        "shape": "straight-fronted",
+        "baseLegs": "black metal blade legs on a recessed black rail, lifting the frame clear of the floor",
+        "armStyle": "slim low square track arm, much lower than the raised headrests",
+        "backStyle": "low back with twin fold-up ratchet headrests on exposed chrome hinges",
+        "texture": "smooth matte leather with a fine pebbled grain",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "fold-up ratchet headrests on exposed chrome hinges",
+          "black metal blade legs on a recessed rail",
+          "Koala Living badge on the outer arm"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "3 Seater Leather Sofa",
+        "canonicalCategory": "Leather Sofas",
+        "configuration": "3-seater",
+        "colour": "Cream ",
+        "description": "The Lennox Almond Cream Leather 3-Seater Sofa brings modern luxury to your living room with its comfortable seats and contemporary features, highlighted by its genuine leather upholstery."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/05-lifestyle.webp",
+          "usefulness": 0,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/01-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/02-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/lennox-almond-cream-leather-3-seater-sofa/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa": {
+      "id": "marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa",
+      "visual": {
+        "colourFamily": "warm off-white / champagne",
+        "silhouette": "soft and rounded, built from plump curved volumes",
+        "shape": "straight-fronted",
+        "baseLegs": "low concealed base, frame sits close to the floor",
+        "armStyle": "large rounded barrel arm curving continuously into the back",
+        "backStyle": "low rounded back level with the arms, with loose scatter cushions",
+        "texture": "smooth semi-aniline leather with a soft matte sheen and visible seam stitching",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "rounded barrel arms merging into the back",
+          "contrast top-stitched seams following the curves",
+          "plump low-slung seat cushions"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "3 Seater Leather Sofa",
+        "canonicalCategory": "Leather Sofas",
+        "configuration": "3-piece modular",
+        "colour": "Beige",
+        "description": "The Marvie Modular Sofa sits low and generous, wrapped in champagne leather that gives the room a soft, refined warmth. Its foam-filled shape feels full and relaxed, with rounded arms, cushioned panels, and subtle tufting giving the sofa its own distinct character."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/sofas/marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/marvie-champagne-beige-semi-aniline-leather-3-pieces-modular-sofa/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "pierce-shadow-white-woven-fabric-corner-electric-recliner": {
+      "id": "pierce-shadow-white-woven-fabric-corner-electric-recliner",
+      "visual": {
+        "colourFamily": "warm off-white",
+        "silhouette": "genuine L-shaped sectional, low and rectilinear with squared modules",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "low square track arm, noticeably below the back height",
+        "backStyle": "segmented square back with individually adjustable ratchet headrests",
+        "texture": "flat woven fabric with a visible slubby cross-weave",
+        "visualWeight": "heavy",
+        "styleFamily": "contemporary comfort",
+        "notableFeatures": [
+          "L-shaped corner configuration",
+          "oval chrome-ringed recline control on the outer arm",
+          "adjustable ratchet headrests",
+          "extending powered footrests",
+          "raised dark wooden legs"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "Fabric Chaise Lounge",
+        "canonicalCategory": "Fabric Sofas",
+        "configuration": "corner, electric recliner",
+        "colour": "White",
+        "description": "The Pierce Shadow White Woven Fabric Corner Electric Recliner effortlessly blends modern design with exceptional comfort. Its fine curves and angles create a stylish look, enhanced by the elegant shadow white woven fabric and brown wooden legs. Seating up to seven, this recliner features two reclining seats with adjustable headrests and footrests, all controlled by discreet buttons for personalized comfort. A built-in USB port keeps your devices charged while you relax, making the Pierce Recliner a perfect combination of style, functionality, and luxury."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/pierce-shadow-white-woven-fabric-corner-electric-recliner/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/pierce-shadow-white-woven-fabric-corner-electric-recliner/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/sofas/pierce-shadow-white-woven-fabric-corner-electric-recliner/01-lifestyle.jpg",
+          "usefulness": 0.7,
+          "width": 500,
+          "height": 500
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/pierce-shadow-white-woven-fabric-corner-electric-recliner/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/pierce-shadow-white-woven-fabric-corner-electric-recliner/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/pierce-shadow-white-woven-fabric-corner-electric-recliner/05-detail.webp",
+          "usefulness": 0,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "portia-vintage-tan-leather-4-seater-sofa": {
+      "id": "portia-vintage-tan-leather-4-seater-sofa",
+      "visual": {
+        "colourFamily": "tan / warm mid-brown",
+        "silhouette": "long, low and rectilinear with a boxy profile",
+        "shape": "straight-fronted",
+        "baseLegs": "light oak-toned wooden plinth base set back beneath the frame",
+        "armStyle": "wide flat-topped track arm, flush with the back height",
+        "backStyle": "vertical channel-tufted back, straight and low",
+        "texture": "lightly distressed vintage-finish leather with visible grain",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "deep vertical channel quilting across seat, back and arms",
+          "contrasting light wood plinth base",
+          "distressed vintage leather finish"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "Tan Leather Sofas",
+        "canonicalCategory": "Leather Sofas",
+        "configuration": "4-seater",
+        "colour": "Brown",
+        "description": "The Portia Vintage 4-Seater Sofa makes a bold statement with its deep vertical channeling. Upholstered in vintage tan leather, it develops character over time while offering a rich, lived-in feel."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/portia-vintage-tan-leather-4-seater-sofa/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/portia-vintage-tan-leather-4-seater-sofa/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/portia-vintage-tan-leather-4-seater-sofa/05-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/sofas/portia-vintage-tan-leather-4-seater-sofa/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/sofas/portia-vintage-tan-leather-4-seater-sofa/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/portia-vintage-tan-leather-4-seater-sofa/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal": {
+      "id": "soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal",
+      "visual": {
+        "colourFamily": "warm off-white / powder",
+        "silhouette": "low curved crescent, serpentine rather than L-shaped",
+        "shape": "",
+        "baseLegs": "low concealed base, appears to float just above the floor",
+        "armStyle": "armless modules with rounded bolster ends at each terminal",
+        "backStyle": "low curved back with loose square scatter cushions",
+        "texture": "soft slubby chenille weave with a visible nap",
+        "visualWeight": "heavy",
+        "styleFamily": "warm organic modern",
+        "notableFeatures": [
+          "curved crescent plan, not an L-shape",
+          "rounded bolster terminals at both ends",
+          "armless modular seats",
+          "loose scatter back cushions"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "lounge room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "Modular Sofa",
+        "canonicalCategory": "Fabric Sofas",
+        "configuration": "4-piece modular with left terminal + right terminal, corner",
+        "colour": "White",
+        "description": "The Soluna Modular Sofa is wrapped in powder white chenille that softens every line, letting the silhouette move as one uninterrupted gesture. Each module blends seamlessly into the next."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/sofas/soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/sofas/soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/sofas/soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/sofas/soluna-powder-white-chenille-fabric-4-pieces-modular-corner-sofa-with-left-and-right-terminal/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top": {
+      "id": "grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top",
+      "visual": {
+        "colourFamily": "white with warm bronze",
+        "silhouette": "long thin stone slab carried on four square bronze piers",
+        "shape": "",
+        "baseLegs": "",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "polished grey-veined white stone against mottled brushed bronze",
+        "visualWeight": "medium",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "four square brushed-bronze pier legs with a mottled patina",
+          "open storage-free slab design",
+          "statuario grey veining",
+          "thin slab profile"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "Stone Entertainment Units",
+        "canonicalCategory": "Entertainment Units",
+        "configuration": "",
+        "colour": "White",
+        "description": "The Grayson Entertainment Unit is anchored by a beautiful white sintered stone top. Its brushed bronze legs create a strong geometric base, with central supports that can shift position to suit your space."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/tv-units/grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "front",
+          "url": "/products/tv-units/grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top/04-front.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/tv-units/grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/tv-units/grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top/03-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/tv-units/grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/tv-units/grayson-brushed-bronze-entertainment-unit-with-statuario-white-sintered-stone-top/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "jamil-ash-oak-veneer-entertainment-unit": {
+      "id": "jamil-ash-oak-veneer-entertainment-unit",
+      "visual": {
+        "colourFamily": "light natural blonde wood",
+        "silhouette": "long low cabinet with a stepped, offset front and fully rounded ends",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "pale ash-oak veneer with a soft straight grain and a matte finish",
+        "visualWeight": "heavy",
+        "styleFamily": "warm contemporary",
+        "notableFeatures": [
+          "stepped offset front with modules at two depths",
+          "fully rounded drum ends",
+          "concealed push-open doors with no handles",
+          "slim metal feet"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "Wooden Entertainment Units",
+        "canonicalCategory": "Entertainment Units",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Jamil Entertainment Unit uses Sectional Cadence to guide the eye and the function of the piece—creating balance across media, sound, and everyday use without visual clutter."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/tv-units/jamil-ash-oak-veneer-entertainment-unit/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "sierra-walnut-brown-entertainment-unit-sintered-stone-top": {
+      "id": "sierra-walnut-brown-entertainment-unit-sintered-stone-top",
+      "visual": {
+        "colourFamily": "warm mid-brown walnut with a warm off-white top",
+        "silhouette": "long low cabinet with fully rounded ends and a curved stone top",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "richly figured walnut veneer against a matte travertine-look stone top",
+        "visualWeight": "heavy",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "fully rounded drum ends",
+          "stone top following the curved plan",
+          "short rounded timber feet",
+          "cable management port in the rear panel",
+          "handle-free push-open doors"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "Wooden Entertainment Units",
+        "canonicalCategory": "Entertainment Units",
+        "configuration": "",
+        "colour": "Brown",
+        "description": "The Sierra Entertainment Unit is crowned with a sintered stone top that adds both durability and presence. Its elongated form creates a strong foundation for screens and décor."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/tv-units/sierra-walnut-brown-entertainment-unit-sintered-stone-top/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/tv-units/sierra-walnut-brown-entertainment-unit-sintered-stone-top/03-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/tv-units/sierra-walnut-brown-entertainment-unit-sintered-stone-top/04-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/tv-units/sierra-walnut-brown-entertainment-unit-sintered-stone-top/02-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "lifestyle",
+          "url": "/products/tv-units/sierra-walnut-brown-entertainment-unit-sintered-stone-top/01-lifestyle.webp",
+          "usefulness": 0.7,
+          "width": 1000,
+          "height": 1000
+        },
+        {
+          "view": "detail",
+          "url": "/products/tv-units/sierra-walnut-brown-entertainment-unit-sintered-stone-top/05-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    },
+    "tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit": {
+      "id": "tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit",
+      "visual": {
+        "colourFamily": "champagne gold with clear glass",
+        "silhouette": "open rectilinear metal frame with stepped end towers and a low central run",
+        "shape": "",
+        "baseLegs": "not stated in official copy",
+        "armStyle": "",
+        "backStyle": "",
+        "texture": "brushed metal with a fine directional grain against clear glass",
+        "visualWeight": "light",
+        "styleFamily": "modern luxury",
+        "notableFeatures": [
+          "fully open frame with no solid panels",
+          "clear glass shelves throughout",
+          "stepped taller towers at each end",
+          "slim square-section brushed metal frame"
+        ],
+        "roomCompatibility": [
+          "living room",
+          "media room"
+        ]
+      },
+      "official": {
+        "subcategory": "Glass Entertainment Units",
+        "canonicalCategory": "Entertainment Units",
+        "configuration": "",
+        "colour": "",
+        "description": "Tinsley Brushed Champagne Gold Stainless Steel Entertainment Unit offers a sleek, open design with a refined champagne gold finish. Its spacious shelves provide ample storage for TVs, speakers, and multimedia devices. The slender stainless-steel frame adds a modern touch to any living space. A stylish and functional addition to contemporary interiors."
+      },
+      "views": [
+        {
+          "view": "hero",
+          "url": "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/main.jpg",
+          "usefulness": 0.8,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/02-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "45-degree",
+          "url": "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/05-45-degree.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "side",
+          "url": "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/01-side.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/03-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        },
+        {
+          "view": "detail",
+          "url": "/products/tv-units/tinsley-brushed-champagne-gold-stainless-steel-entertainment-unit/04-detail.webp",
+          "usefulness": 0.6,
+          "width": 1600,
+          "height": 1600
+        }
+      ]
+    }
+  }
+}
