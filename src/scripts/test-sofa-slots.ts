@@ -32,6 +32,7 @@
  * Section 4 is the exact QA scenario from the sprint brief.
  */
 import { readFileSync } from "node:fs";
+import { supportsInputFidelity } from "@/features/room-stylist/services/image-providers/gpt-image-capabilities";
 import {
   buildSeatingPlan,
   describeSeatingProducts,
@@ -557,6 +558,15 @@ section("6. Provider boundary — the room edit is behind one interface");
     "src/features/room-stylist/services/image-providers/gpt-image.ts",
     "utf8"
   );
+  /**
+   * The provider source with comments stripped. `input_fidelity` is discussed
+   * at length in this file's header, and a count of real call-site occurrences
+   * must not be thrown off by prose describing the very bug being guarded.
+   */
+  const GPT_CODE = GPT.replace(/\/\*[\s\S]*?\*\//g, "").replace(
+    /^\s*\/\/.*$/gm,
+    ""
+  );
 
   check("the route no longer calls a vendor's generator directly",
     !/generateGeminiImage\(/.test(ROUTE),
@@ -589,10 +599,76 @@ section("6. Provider boundary — the room edit is behind one interface");
     /images\.edit\(/.test(GPT));
   check("the room photo is the first image (the canvas)",
     /image: \[roomImage, \.\.\.references/.test(GPT));
-  check("input fidelity is high, so the room stays recognisable",
-    /input_fidelity: "high"/.test(GPT));
   check("the model id is gpt-image-2",
     /DEFAULT_GPT_IMAGE_MODEL = "gpt-image-2"/.test(GPT));
+
+  // -------------------------------------------------------------------------
+  // input_fidelity — a live 400 from the real API:
+  //   "The model 'gpt-image-2' does not support the 'input_fidelity' parameter."
+  // GPT Image 2 processes image inputs at high fidelity on its own, and 400s on
+  // the parameter's mere PRESENCE. gpt-image-1/1.5 still need it asked for, so
+  // this is a per-model decision, not a blanket removal.
+  // -------------------------------------------------------------------------
+  check("gpt-image-2 is NOT sent input_fidelity",
+    !supportsInputFidelity("gpt-image-2"),
+    "the live API rejects the parameter outright");
+  check("the dated gpt-image-2 snapshot is not sent it either",
+    !supportsInputFidelity("gpt-image-2-2026-04-21"));
+  check("gpt-image-1 still gets it",
+    supportsInputFidelity("gpt-image-1"),
+    "removing it everywhere would silently degrade the older models");
+  check("gpt-image-1.5 still gets it",
+    supportsInputFidelity("gpt-image-1.5"));
+  check("gpt-image-1-mini does not (it is not a gpt-image-1 prefix match)",
+    !supportsInputFidelity("gpt-image-1-mini"),
+    "prefix matching would wrongly include it");
+  check("an unknown//custom model id defaults to NOT sending it",
+    !supportsInputFidelity("some-future-model") &&
+      !supportsInputFidelity(""),
+    "an unrecognised GPT_IMAGE_MODEL must not be able to cause a hard 400");
+  check("surrounding whitespace does not defeat the check",
+    supportsInputFidelity("  gpt-image-1  "));
+
+  // The parameter must be ABSENT, not present-and-undefined.
+  check("the request omits the key entirely rather than passing undefined",
+    /\.\.\.\(supportsInputFidelity\(configuration\.model\)/.test(GPT_CODE) &&
+      !/input_fidelity:\s*undefined/.test(GPT_CODE),
+    "a serialised `input_fidelity: undefined` would still trip the 400");
+  check("input_fidelity is written exactly once in the code, in that spread",
+    (GPT_CODE.match(/input_fidelity:/g) || []).length === 1,
+    `${(GPT_CODE.match(/input_fidelity:/g) || []).length} occurrences`);
+  check("it is never sent unconditionally",
+    !/^\s*input_fidelity: "high",\s*$/m.test(GPT_CODE),
+    "the unguarded literal is what produced the live 400");
+
+  // Model the request builder the provider uses, and prove the shape.
+  const editParams = (model: string) => ({
+    model,
+    image: ["<room>", "<ref>"],
+    prompt: "…",
+    size: "1536x1024",
+    quality: "high",
+    ...(supportsInputFidelity(model) ? { input_fidelity: "high" as const } : {}),
+    n: 1,
+  });
+  const gpt2 = editParams("gpt-image-2");
+  check("a built gpt-image-2 request has no input_fidelity field",
+    !("input_fidelity" in gpt2),
+    `keys: ${Object.keys(gpt2).join(", ")}`);
+  check("...and JSON-serialising it does not reintroduce the field",
+    !JSON.stringify(gpt2).includes("input_fidelity"));
+  check("a built gpt-image-1 request still carries input_fidelity: high",
+    editParams("gpt-image-1").input_fidelity === "high");
+
+  // Everything the fix was required to leave alone.
+  check("model stays gpt-image-2", gpt2.model === "gpt-image-2");
+  check("the room photo is still image 1", gpt2.image[0] === "<room>");
+  check("landscape size is unchanged", gpt2.size === "1536x1024");
+  check("quality setting is unchanged", gpt2.quality === "high");
+  check("the landscape default is still 1536x1024 in the provider",
+    /GPT_IMAGE_SIZE\?\.trim\(\) \|\| "1536x1024"/.test(GPT));
+  check("the quality default is still high in the provider",
+    /GPT_IMAGE_QUALITY\?\.trim\(\) \|\| "high"/.test(GPT));
   check("manifest-budgeted references are never re-truncated",
     /labelledProductImages && labelledProductImages\.length > 0/.test(GPT));
 

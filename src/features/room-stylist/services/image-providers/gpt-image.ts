@@ -28,13 +28,19 @@
  *    silently is exactly how a product ends up in the wrong task, so the index
  *    is built from the same manifest labels and states the ordering explicitly.
  *
- * 3. `input_fidelity: "high"` is what keeps the customer's room recognisable —
- *    the whole product depends on the output still being a photo of THEIR room.
+ * 3. High-fidelity treatment of the input images is what keeps the customer's
+ *    room recognisable — the whole product depends on the output still being a
+ *    photo of THEIR room. On gpt-image-1/1.5 that had to be asked for with
+ *    `input_fidelity: "high"`. GPT Image 2 does it automatically and REJECTS
+ *    the parameter outright (400: "does not support the 'input_fidelity'
+ *    parameter"), so it is sent only to the models that document it — see
+ *    MODELS_SUPPORTING_INPUT_FIDELITY.
  *
  * The room photo counts toward the 16-image limit, so references are capped at
  * 15; in practice the reference manifest's own budget (5) binds first.
  */
 import { openai } from "@/lib/openai";
+import { supportsInputFidelity } from "./gpt-image-capabilities";
 import type {
   GeneratedImageResult,
   ImageProviderInput,
@@ -185,9 +191,13 @@ export async function generateGptImage({
         prompt: buildGptImagePrompt(prompt, references),
         size: configuration.size as "1024x1024",
         quality: configuration.quality as "high",
-        // Without this the model redraws the room in the right general shape
-        // rather than preserving the customer's actual one.
-        input_fidelity: "high",
+        // Spread, not a literal: the key must be ABSENT for GPT Image 2, which
+        // 400s on its mere presence. `input_fidelity: undefined` would still
+        // serialise the field on some transports, so the property is never
+        // created in the first place.
+        ...(supportsInputFidelity(configuration.model)
+          ? { input_fidelity: "high" as const }
+          : {}),
         n: 1,
       });
 
@@ -216,3 +226,5 @@ export async function generateGptImage({
     ? lastError
     : new Error("GPT Image generation failed.");
 }
+
+export { supportsInputFidelity } from "./gpt-image-capabilities";
