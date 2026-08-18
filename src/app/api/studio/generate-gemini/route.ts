@@ -1,4 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import {
+  createJobId,
+  getJobStore,
+  newJob,
+} from "@/features/room-stylist/services/generation-jobs/job-store";
 import { getRoomEditProvider } from "@/features/room-stylist/services/image-providers/room-edit-provider";
 import type { GeneratedImageResult } from "@/features/room-stylist/services/image-providers/types";
 import {
@@ -68,9 +73,28 @@ import {
   type ReviewStatus,
 } from "@/lib/intelligence/quality-reviewer";
 
-// Up to 2 generation attempts per stage; regenerate once if the first fails the
-// contract. Kept small to bound latency/cost.
-const MAX_GENERATION_ATTEMPTS = 2;
+/**
+ * Generation attempts per stage.
+ *
+ * Was a hard 2 — one render plus one retry if the first failed the contract.
+ * With two stages that is a worst case of FOUR sequential GPT Image renders,
+ * each with a Gemini review after it, and that is most of the 2-3 minute wait
+ * customers were reporting. The retry only pays for itself when the reviewer
+ * actually catches something, so the default is now a single attempt and the
+ * retry is opt-in per environment.
+ *
+ * Raise GENERATION_ATTEMPTS_PER_STAGE to 2 to restore the previous behaviour.
+ * Values below 1 are ignored — zero attempts would render nothing at all.
+ */
+function getMaxGenerationAttempts(): number {
+  const configured = Number.parseInt(
+    process.env.GENERATION_ATTEMPTS_PER_STAGE?.trim() || "",
+    10
+  );
+  if (!Number.isFinite(configured) || configured < 1) return 1;
+  // Bounded so a stray env value cannot uncap latency or spend.
+  return Math.min(configured, 3);
+}
 /**
  * Hard ceiling on image generations for one request, across all stages and
  * retries. Two stages x two attempts is the worst case, so this caps a
@@ -297,8 +321,16 @@ function getStudioAnalysisApiKey() {
   return apiKey;
 }
 
-async function handleGeneration(req: Request) {
-  const formData = await req.formData();
+async function handleGeneration(
+  req: Request,
+  /**
+   * The async path must read the body BEFORE the response is sent — a request
+   * body cannot be read from inside `after` — so it hands the parsed form in
+   * rather than re-reading a consumed stream.
+   */
+  options: { preloadedFormData?: FormData } = {}
+) {
+  const formData = options.preloadedFormData ?? (await req.formData());
   const image = formData.get("image");
   const style = formData.get("style");
   const roomType = formData.get("roomType");
@@ -622,7 +654,8 @@ async function handleGeneration(req: Request) {
 
     const stageAttempts: typeof attempts = [];
 
-    for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
+    const maxGenerationAttempts = getMaxGenerationAttempts();
+    for (let attempt = 0; attempt < maxGenerationAttempts; attempt += 1) {
       if (generationsUsed >= MAX_TOTAL_IMAGE_GENERATIONS) {
         console.warn("[studio-gemini] generation budget exhausted", {
           stage,
@@ -989,6 +1022,70 @@ ${buildScaleInstructions()}
   });
 }
 
+/**
+ * Maximum wall-clock for this route.
+ *
+ * A render is 2-3 minutes and `after` runs inside the SAME function invocation,
+ * so the background work is bounded by this too. Without it the platform
+ * default would kill the job partway through and the customer would poll a
+ * record that never leaves "running".
+ */
+export const maxDuration = 300;
+
+/**
+ * Start a generation as a background job and return its id immediately.
+ *
+ * `after` runs the callback once the response has been sent, within this
+ * invocation's maxDuration — so the customer gets a job id in milliseconds
+ * while the render continues server-side. The job record is what makes the
+ * result survive a refresh: without it, the in-flight request dies with the
+ * page and a paid-for render is lost.
+ */
+async function startGenerationJob(req: Request) {
+  const store = getJobStore();
+  const jobId = createJobId();
+  await store.create(newJob(jobId));
+
+  // The FormData must be read here, before the response is sent — the request
+  // body is not readable from inside `after`.
+  const formData = await req.formData();
+
+  after(async () => {
+    try {
+      await store.update(jobId, { status: "running", stage: "analysing" });
+      const response = await handleGeneration(req, { preloadedFormData: formData });
+      const body = await response.json();
+
+      if (!response.ok) {
+        await store.update(jobId, {
+          status: "failed",
+          error:
+            typeof body?.error === "string"
+              ? body.error
+              : "Room image generation failed. Please try again.",
+        });
+        return;
+      }
+      await store.update(jobId, { status: "succeeded", result: body });
+    } catch (error) {
+      console.error("[studio-gemini] background job failed", { jobId, error });
+      await store.update(jobId, {
+        status: "failed",
+        error:
+          getErrorText(error) ||
+          "Room image generation failed. Please try again.",
+      });
+    }
+  });
+
+  return NextResponse.json({
+    jobId,
+    status: "queued",
+    // The client uses this to decide whether to promise restore-on-refresh.
+    durable: store.isDurable,
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -998,6 +1095,12 @@ export async function POST(req: Request) {
     }
 
     if (contentType.includes("multipart/form-data")) {
+      // Opt-in async path. The synchronous path is kept intact so the existing
+      // client, and the Surprise Me flow, are unaffected until they opt in.
+      const url = new URL(req.url);
+      if (url.searchParams.get("async") === "1") {
+        return await startGenerationJob(req);
+      }
       return await handleGeneration(req);
     }
 

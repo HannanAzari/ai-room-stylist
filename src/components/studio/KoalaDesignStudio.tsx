@@ -117,6 +117,14 @@ import {
   fetchStudioGemini,
   STUDIO_GEMINI_ROUTE,
 } from "./studio-gemini-api";
+import {
+  forgetPendingJob,
+  formatElapsed,
+  nowMs,
+  pollGenerationJob,
+  readPendingJob,
+  rememberPendingJob,
+} from "@/features/room-stylist/services/generation-jobs/client";
 
 const CACHE_KEY = "ai-room-stylist:studio:last-result";
 const SHARE_MESSAGE =
@@ -1496,6 +1504,18 @@ export function KoalaDesignStudio() {
     string[]
   >([]);
   const [toastMessage, setToastMessage] = useState("");
+  /**
+   * Wall-clock since the current generation started, so the processing screen
+   * shows real elapsed time instead of an unmoving spinner. A render is 2-3
+   * minutes; a progress bar we cannot measure would be a fiction, but the time
+   * actually spent is true and is what makes the wait feel accounted for.
+   */
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
+    null
+  );
+  const [generationElapsedMs, setGenerationElapsedMs] = useState(0);
+  /** Set when a job from a previous page load is being picked back up. */
+  const [resumedGeneration, setResumedGeneration] = useState(false);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const resultSwipeStartXRef = useRef<number | null>(null);
@@ -2008,6 +2028,90 @@ export function KoalaDesignStudio() {
    * Safari it also lands after any in-flight momentum scroll has been cancelled
    * by the DOM swap, which a single synchronous write can miss.
    */
+  /**
+   * Tick the elapsed clock while a generation is in flight.
+   *
+   * One second is plenty — this drives a human-readable "1m 20s", not an
+   * animation — and the interval is torn down as soon as the wait ends so it
+   * never keeps running behind the result page.
+   */
+  useEffect(() => {
+    if (!loading || generationStartedAt === null) return;
+
+    const update = () =>
+      setGenerationElapsedMs(nowMs() - generationStartedAt);
+    update();
+    const interval = window.setInterval(update, 1000);
+    return () => window.clearInterval(interval);
+  }, [loading, generationStartedAt]);
+
+  /**
+   * Pick a generation back up if the page was reloaded while one was running.
+   *
+   * Without this the customer returns to a blank capture screen while a render
+   * they have already paid for finishes into nothing. `readPendingJob` only
+   * returns jobs that are recent AND durable, so this can never strand anyone
+   * on a processing screen waiting for a job that cannot be found.
+   */
+  useEffect(() => {
+    const pending = readPendingJob();
+    if (!pending) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      // Yield before touching state. An async body runs synchronously up to its
+      // first await, so setting state here without this is still an
+      // effect-synchronous setState and triggers a cascading render. The resume
+      // screen does not need to appear a frame sooner.
+      await Promise.resolve();
+      if (cancelled) return;
+      setLoading(true);
+      setResumedGeneration(true);
+      setGenerationStartedAt(pending.startedAt);
+
+      const finalStatus = await pollGenerationJob({ jobId: pending.jobId });
+      if (cancelled) return;
+      forgetPendingJob();
+      setLoading(false);
+      setResumedGeneration(false);
+
+      if (finalStatus.status !== "succeeded") {
+        setError(
+          finalStatus.error ||
+            "We lost track of that generation. Please try again."
+        );
+        return;
+      }
+
+      const data = (finalStatus.result ?? {}) as {
+        images?: unknown;
+        imageBase64?: string;
+        products?: Product[];
+      };
+      const concepts = normalizeStudioGeminiConcepts(
+        data.images,
+        data.imageBase64
+      );
+      if (concepts.length === 0) {
+        setError(
+          "That generation finished without an image. Please try again."
+        );
+        return;
+      }
+      setGeneratedConcepts(concepts);
+      setProducts(data.products || []);
+      setSelectedConceptIndex(0);
+      setResultEpoch((epoch) => epoch + 1);
+      setStep(4);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Runs once on mount: resuming is a page-load concern, not a state one.
+  }, []);
+
   useLayoutEffect(() => {
     const element = scrollContainerRef.current;
     if (!element) return;
@@ -2496,7 +2600,14 @@ export function KoalaDesignStudio() {
     }
 
     setError("");
+    // Captured once and reused for both the elapsed clock and the remembered
+    // job, so the processing screen and the resume record cannot disagree
+    // about when this render began.
+    const generationStart = nowMs();
     setLoading(true);
+    setGenerationStartedAt(generationStart);
+    setGenerationElapsedMs(0);
+    setResumedGeneration(false);
     setAddedRecommendationIds([]);
     resetLoadingIndex();
     trackGenerateStarted({
@@ -2567,19 +2678,68 @@ export function KoalaDesignStudio() {
       }
       appendRoomMeasurements(formData);
 
-      const response = await fetchStudioGemini(STUDIO_GEMINI_ROUTE, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json().catch(() => ({}));
+      /**
+       * Async generation.
+       *
+       * The request returns a job id in milliseconds and the render continues
+       * server-side, so a refresh — or iOS Safari discarding a backgrounded
+       * tab, which it does readily — no longer throws away a render the
+       * customer has already waited minutes for.
+       */
+      const startResponse = await fetchStudioGemini(
+        `${STUDIO_GEMINI_ROUTE}?async=1`,
+        { method: "POST", body: formData }
+      );
+      const startData = await startResponse.json().catch(() => ({}));
 
-      if (!response.ok) {
+      if (!startResponse.ok || typeof startData.jobId !== "string") {
         const reason =
-          typeof data.error === "string" ? data.error : "Generation failed.";
+          typeof startData.error === "string"
+            ? startData.error
+            : "Generation failed to start.";
         setError(reason);
         void logAiEvaluation(undefined, null, reason);
         return;
       }
+
+      // Remembered BEFORE polling begins, so a refresh one second later can
+      // still find the job. Only a durable job is remembered — see
+      // readPendingJob: offering to resume one that cannot be found would
+      // strand the customer on a screen that never resolves.
+      if (startData.durable === true) {
+        rememberPendingJob({
+          jobId: startData.jobId,
+          startedAt: generationStart,
+          durable: true,
+          roomType,
+          designMode: mode,
+        });
+      }
+
+      const finalStatus = await pollGenerationJob({ jobId: startData.jobId });
+      forgetPendingJob();
+
+      if (finalStatus.status !== "succeeded") {
+        const reason =
+          finalStatus.error ||
+          (finalStatus.status === "unknown"
+            ? "We lost track of this generation. Please try again."
+            : "Generation failed.");
+        setError(reason);
+        void logAiEvaluation(undefined, null, reason);
+        return;
+      }
+
+      // Shaped exactly as the synchronous response body was, so everything
+      // downstream of here is untouched by the async change.
+      const data = (finalStatus.result ?? {}) as {
+        images?: unknown;
+        imageBase64?: string;
+        products?: Product[];
+        aiDebug?: Record<string, unknown>;
+        productQuantities?: unknown;
+        [key: string]: unknown;
+      };
 
       const nextConcepts = normalizeStudioGeminiConcepts(
         data.images,
@@ -3504,10 +3664,29 @@ export function KoalaDesignStudio() {
               ))}
             </div>
 
-            <p className="mt-5 text-xs text-[#9C9C94]">
-              Step {Math.min(loadingIndex + 1, loadingMessages.length)} of{" "}
-              {loadingMessages.length}
+            {/*
+              Honest waiting copy. A render is 2-3 minutes, so a step counter
+              that finishes long before the image does reads as a stall. The
+              elapsed time is true, keeps moving, and sets the expectation the
+              wait actually needs.
+            */}
+            <p className="mt-5 text-sm font-medium text-[#F5F3EE]">
+              {refining
+                ? "Updating your room"
+                : resumedGeneration
+                  ? "Still creating your Koala look"
+                  : "Creating your Koala look"}
             </p>
+            <p className="mt-1 text-xs leading-5 text-[#9C9C94]">
+              {resumedGeneration
+                ? "We picked this back up where you left off — it can take a couple of minutes."
+                : "This can take a couple of minutes."}
+            </p>
+            {generationStartedAt !== null && (
+              <p className="mt-2 text-[11px] tabular-nums tracking-[0.14em] text-[#6f6d67]">
+                {formatElapsed(generationElapsedMs)} elapsed
+              </p>
+            )}
           </div>
         </div>
       )}
