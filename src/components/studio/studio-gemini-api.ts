@@ -27,8 +27,22 @@ export function assertStudioGeminiProvider(provider: unknown) {
   }
 }
 
+/**
+ * The route's PATH, ignoring any query string.
+ *
+ * The guard compares this rather than the whole string. Its job is to stop the
+ * studio calling a DIFFERENT endpoint; a query parameter on the studio's own
+ * endpoint is still the studio's own endpoint. Exact string equality conflated
+ * the two, so `?async=1` — the same route, asking it to run as a background
+ * job — was rejected as if it were a stray legacy call, and Generate failed
+ * before any request left the browser.
+ */
+function routePath(route: string): string {
+  return route.split(/[?#]/)[0];
+}
+
 export async function fetchStudioGemini(route: string, init: RequestInit) {
-  if (route !== STUDIO_GEMINI_ROUTE) {
+  if (routePath(route) !== STUDIO_GEMINI_ROUTE) {
     throw new Error(STUDIO_ROUTE_ERROR);
   }
 
