@@ -154,6 +154,47 @@ export function createMemoryStore(): JobStore {
   };
 }
 
+/**
+ * Is the in-memory store allowed to back real generation jobs?
+ *
+ * Local development only, and opt-in. On serverless the Map lives in ONE
+ * instance: the POST that creates a job and the GET that polls it routinely
+ * land on different instances, so the poll finds nothing — while the render
+ * itself continues to completion on the original instance and is billed. The
+ * customer pays and sees "we lost track of this generation".
+ *
+ * So an in-memory store must never silently back production. It is available
+ * only when explicitly enabled AND not in production.
+ */
+export function inMemoryJobsAllowed(): boolean {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.ALLOW_IN_MEMORY_GENERATION_JOBS?.toLowerCase() === "true"
+  );
+}
+
+/**
+ * Can this environment run async generation jobs at all?
+ *
+ * The single question the studio route asks before handing out a job id. A job
+ * id that cannot be recovered is worse than no job id: it costs a render and
+ * returns nothing.
+ */
+export function supportsDurableGenerationJobs(): boolean {
+  return kvCredentials().configured || inMemoryJobsAllowed();
+}
+
+/** Configuration state for diagnostics. Never exposes secret values. */
+export function generationJobCapability() {
+  const { configured } = kvCredentials();
+  return {
+    kvConfigured: configured,
+    inMemoryAllowed: inMemoryJobsAllowed(),
+    asyncAvailable: supportsDurableGenerationJobs(),
+    backend: configured ? "kv-rest" : inMemoryJobsAllowed() ? "memory" : "none",
+  };
+}
+
 let cachedStore: JobStore | null = null;
 
 export function getJobStore(): JobStore {

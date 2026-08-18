@@ -1,8 +1,10 @@
 import { NextResponse, after } from "next/server";
 import {
   createJobId,
+  generationJobCapability,
   getJobStore,
   newJob,
+  supportsDurableGenerationJobs,
 } from "@/features/room-stylist/services/generation-jobs/job-store";
 import { getRoomEditProvider } from "@/features/room-stylist/services/image-providers/room-edit-provider";
 import type { GeneratedImageResult } from "@/features/room-stylist/services/image-providers/types";
@@ -1057,13 +1059,36 @@ export const maxDuration = 300;
  * page and a paid-for render is lost.
  */
 async function startGenerationJob(req: Request) {
+  // The FormData is read up front: it is needed either way, and a request body
+  // cannot be read from inside `after`.
+  const formData = await req.formData();
+
+  /**
+   * Refuse to go async without durable storage.
+   *
+   * This is the "we lost track of this generation" bug. With the in-memory
+   * store the POST creates the job on one serverless instance and the status
+   * GET lands on another, which finds nothing — while `after` on the original
+   * instance runs the render to completion and it is BILLED. The customer pays
+   * for an image they never receive, and the error invites them to try again
+   * and pay twice.
+   *
+   * So a job id is only ever handed out when it can genuinely be recovered.
+   * Otherwise this request does the work synchronously and returns the ordinary
+   * generation body — the path that worked before async existed. One request
+   * either way: no wasted render, and no possibility of double-charging.
+   */
+  if (!supportsDurableGenerationJobs()) {
+    console.warn(
+      "[studio-gemini] async generation unavailable; using the synchronous path",
+      generationJobCapability()
+    );
+    return handleGeneration(req, { preloadedFormData: formData });
+  }
+
   const store = getJobStore();
   const jobId = createJobId();
   await store.create(newJob(jobId));
-
-  // The FormData must be read here, before the response is sent — the request
-  // body is not readable from inside `after`.
-  const formData = await req.formData();
 
   after(async () => {
     try {

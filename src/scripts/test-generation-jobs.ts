@@ -306,8 +306,12 @@ async function run() {
       /return NextResponse\.json\(\{\s*jobId,/.test(ROUTE));
     check("the render continues after the response via after()",
       /after\(async \(\) => \{/.test(ROUTE));
+    // Ordering, not proximity: the durability check now sits between these two,
+    // so a fixed-width window would break on an unrelated edit.
     check("the form body is read BEFORE the response is sent",
-      /const formData = await req\.formData\(\);[\s\S]{0,200}after\(/.test(ROUTE),
+      ROUTE.indexOf("const formData = await req.formData();") > -1 &&
+        ROUTE.indexOf("const formData = await req.formData();") <
+          ROUTE.indexOf("after(async () => {"),
       "a request body cannot be read from inside after()");
     check("maxDuration covers a 2-3 minute render",
       /export const maxDuration = 300;/.test(ROUTE));

@@ -122,7 +122,12 @@ export function readPendingJob(now = Date.now()): PendingJob | null {
     return null;
   }
   if (job.durable !== true) {
-    // Honest rather than hopeful — see the doc comment above.
+    /**
+     * Belt and braces. The server no longer hands out a job id at all without
+     * durable storage, so a non-durable record should not exist — but one
+     * written by an older build must not resurrect a processing screen for a
+     * job that can never be found.
+     */
     forgetPendingJob();
     return null;
   }

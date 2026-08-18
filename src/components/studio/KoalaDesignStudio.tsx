@@ -2692,7 +2692,7 @@ export function KoalaDesignStudio() {
       );
       const startData = await startResponse.json().catch(() => ({}));
 
-      if (!startResponse.ok || typeof startData.jobId !== "string") {
+      if (!startResponse.ok) {
         const reason =
           typeof startData.error === "string"
             ? startData.error
@@ -2702,37 +2702,19 @@ export function KoalaDesignStudio() {
         return;
       }
 
-      // Remembered BEFORE polling begins, so a refresh one second later can
-      // still find the job. Only a durable job is remembered — see
-      // readPendingJob: offering to resume one that cannot be found would
-      // strand the customer on a screen that never resolves.
-      if (startData.durable === true) {
-        rememberPendingJob({
-          jobId: startData.jobId,
-          startedAt: generationStart,
-          durable: true,
-          roomType,
-          designMode: mode,
-        });
-      }
+      /**
+       * Async only when the SERVER handed out a job id.
+       *
+       * Without durable storage the route does the work synchronously and
+       * returns the ordinary generation body from this very request, so there
+       * is nothing to poll. Deciding this from the response rather than from a
+       * client-side guess means the browser can never poll for a job that was
+       * never created — the shape of the reply is the contract.
+       */
+      const jobId =
+        typeof startData.jobId === "string" ? startData.jobId : null;
 
-      const finalStatus = await pollGenerationJob({ jobId: startData.jobId });
-      forgetPendingJob();
-
-      if (finalStatus.status !== "succeeded") {
-        const reason =
-          finalStatus.error ||
-          (finalStatus.status === "unknown"
-            ? "We lost track of this generation. Please try again."
-            : "Generation failed.");
-        setError(reason);
-        void logAiEvaluation(undefined, null, reason);
-        return;
-      }
-
-      // Shaped exactly as the synchronous response body was, so everything
-      // downstream of here is untouched by the async change.
-      const data = (finalStatus.result ?? {}) as {
+      let data: {
         images?: unknown;
         imageBase64?: string;
         products?: Product[];
@@ -2741,6 +2723,41 @@ export function KoalaDesignStudio() {
         [key: string]: unknown;
       };
 
+      if (jobId) {
+        // Remembered BEFORE polling begins, so a refresh one second later can
+        // still find the job. Only a durable job is remembered — see
+        // readPendingJob: offering to resume one that cannot be found would
+        // strand the customer on a screen that never resolves.
+        if (startData.durable === true) {
+          rememberPendingJob({
+            jobId,
+            startedAt: generationStart,
+            durable: true,
+            roomType,
+            designMode: mode,
+          });
+        }
+
+        const finalStatus = await pollGenerationJob({ jobId });
+        forgetPendingJob();
+
+        if (finalStatus.status !== "succeeded") {
+          const reason =
+            finalStatus.error ||
+            (finalStatus.status === "unknown"
+              ? "We lost track of this generation. Please try again."
+              : "Generation failed.");
+          setError(reason);
+          void logAiEvaluation(undefined, null, reason);
+          return;
+        }
+        data = (finalStatus.result ?? {}) as typeof data;
+      } else {
+        // Synchronous fallback: this response IS the result.
+        data = startData as typeof data;
+      }
+
+      // From here down nothing knows or cares which path produced the body.
       const nextConcepts = normalizeStudioGeminiConcepts(
         data.images,
         data.imageBase64

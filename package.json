@@ -29,7 +29,8 @@
     "test:generation-jobs": "tsx src/scripts/test-generation-jobs.ts",
     "import:intelligence": "tsx src/scripts/import-product-intelligence.ts",
     "test:enriched": "tsx src/scripts/test-enriched-grounding.ts",
-    "test:route-guard": "tsx src/scripts/test-studio-route-guard.ts"
+    "test:route-guard": "tsx src/scripts/test-studio-route-guard.ts",
+    "test:job-durability": "tsx src/scripts/test-job-durability.ts"
   },
   "dependencies": {
     "next": "16.2.6",
