@@ -597,8 +597,19 @@ section("6. Provider boundary — the room edit is behind one interface");
 
   check("GPT Image uses the real edit endpoint, not text-to-image",
     /images\.edit\(/.test(GPT));
+  // The room stays image 1 after normalisation — the prompt's numbered index
+  // and the manifest's task binding both depend on this exact order.
   check("the room photo is the first image (the canvas)",
-    /image: \[roomImage, \.\.\.references/.test(GPT));
+    /image: \[\s*normalisedRoom\.file,\s*\.\.\.normalisedReferences/.test(GPT_CODE));
+  check("every input is normalised before the request is built",
+    /normaliseImageForGptImage\(roomImage/.test(GPT_CODE) &&
+      /normaliseImageForGptImage\(reference\.file/.test(GPT_CODE),
+    "images.edit rejects non-RGB / unsupported inputs with a 400");
+  check("the room is normalised as input 1, references from 2",
+    /inputNumber: 1,\s*role: "room"/.test(GPT_CODE) &&
+      /inputNumber: position \+ 2/.test(GPT_CODE));
+  check("the normalised inputs are logged behind ENABLE_AI_DEBUG only",
+    /ENABLE_AI_DEBUG\?\.toLowerCase\(\) !== "true"\) return;/.test(GPT_CODE));
   check("the model id is gpt-image-2",
     /DEFAULT_GPT_IMAGE_MODEL = "gpt-image-2"/.test(GPT));
 

@@ -38,9 +38,20 @@
  *
  * The room photo counts toward the 16-image limit, so references are capped at
  * 15; in practice the reference manifest's own budget (5) binds first.
+ *
+ * 4. Every image is normalised before the call — see image-normalisation.ts.
+ *    `images.edit` is a real multipart upload with a narrow contract (8-bit
+ *    RGB/RGBA JPEG/PNG/WebP), where the Gemini path base64'd whatever bytes it
+ *    was handed. A phone photo that Gemini renders happily can be CMYK,
+ *    greyscale, 16-bit, wide-gamut or HEIC while still calling itself
+ *    image/jpeg, and the endpoint answers "Invalid image file or mode".
  */
 import { openai } from "@/lib/openai";
 import { supportsInputFidelity } from "./gpt-image-capabilities";
+import {
+  normaliseImageForGptImage,
+  type NormalisedImageReport,
+} from "./image-normalisation";
 import type {
   GeneratedImageResult,
   ImageProviderInput,
@@ -139,6 +150,43 @@ EDITING PRIORITIES:
 - Carry out EVERY numbered task. Partial completion is a failure even if the result looks plausible.`;
 }
 
+/**
+ * Metadata-only debug line for each image in the request.
+ *
+ * Deliberately never touches pixel data — only shapes, sizes and formats — so
+ * it is safe to leave on. Gated behind ENABLE_AI_DEBUG, the flag the rest of
+ * the AI tooling already uses. This is what identifies "image 1" if the
+ * endpoint rejects the request again.
+ */
+function logNormalisedInputs(reports: NormalisedImageReport[]) {
+  if (process.env.ENABLE_AI_DEBUG?.toLowerCase() !== "true") return;
+
+  console.log("[gpt-image] normalised request inputs", {
+    imageCount: reports.length,
+    totalNormalisedBytes: reports.reduce((sum, r) => sum + r.normalisedBytes, 0),
+    inputs: reports.map((report) => ({
+      image: report.inputNumber,
+      role: report.role,
+      claimedMime: report.originalMimeType,
+      fileName: report.originalFileName,
+      detectedFormat: report.detectedFormat,
+      dimensions:
+        report.width && report.height ? `${report.width}x${report.height}` : null,
+      colourSpace: report.colourSpace,
+      channels: report.channels,
+      depth: report.depth,
+      hasAlpha: report.hasAlpha,
+      originalBytes: report.originalBytes,
+      normalisedFormat: report.normalisedFormat,
+      normalisedBytes: report.normalisedBytes,
+      converted: report.converted,
+      ...(report.downscaledTo
+        ? { downscaledTo: `${report.downscaledTo.width}x${report.downscaledTo.height}` }
+        : {}),
+    })),
+  });
+}
+
 /** Is this an error the provider is likely to recover from on a retry? */
 function isTransientError(error: unknown): boolean {
   const status = (error as { status?: number } | null)?.status;
@@ -170,6 +218,36 @@ export async function generateGptImage({
           .slice(0, MAX_LEGACY_PRODUCT_IMAGES)
           .map((file) => ({ label: "", file }));
 
+  /**
+   * Normalise EVERY input before the request is built.
+   *
+   * Image 1 is the room, so it is normalised first and keeps position 0 — the
+   * prompt's numbered index and the manifest's task binding both depend on this
+   * order being preserved exactly.
+   */
+  const normalisedRoom = await normaliseImageForGptImage(roomImage, {
+    inputNumber: 1,
+    role: "room",
+  });
+  const normalisedReferences = [];
+  for (const [position, reference] of references.entries()) {
+    normalisedReferences.push(
+      await normaliseImageForGptImage(reference.file, {
+        inputNumber: position + 2,
+        // The manifest label names the product and its task; the product id is
+        // the stable part, so the log stays readable.
+        role: reference.label
+          ? reference.label.slice(0, 80)
+          : `product reference ${position + 1}`,
+      })
+    );
+  }
+
+  logNormalisedInputs([
+    normalisedRoom.report,
+    ...normalisedReferences.map((entry) => entry.report),
+  ]);
+
   const client = suppliedApiKey ? openai.withOptions({ apiKey }) : openai;
 
   /**
@@ -187,7 +265,10 @@ export async function generateGptImage({
         model: configuration.model,
         // Image 1 is the room being edited; the references follow, in the
         // order the prompt's index describes.
-        image: [roomImage, ...references.map((reference) => reference.file)],
+        image: [
+          normalisedRoom.file,
+          ...normalisedReferences.map((entry) => entry.file),
+        ],
         prompt: buildGptImagePrompt(prompt, references),
         size: configuration.size as "1024x1024",
         quality: configuration.quality as "high",
