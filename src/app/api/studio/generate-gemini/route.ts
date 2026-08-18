@@ -45,6 +45,10 @@ import {
   type ReplacementPlan,
 } from "@/lib/intelligence/replacement-planner";
 import {
+  buildGroundingDebugPacket,
+  logGroundingDebugPacket,
+} from "@/lib/intelligence/grounding-debug";
+import {
   buildRenderDiagnostics,
   logRenderDiagnostics,
 } from "@/lib/intelligence/render-diagnostics";
@@ -547,6 +551,17 @@ async function handleGeneration(
         ? MAX_TRANSMITTED_REFERENCES_GPT_IMAGE
         : MAX_TRANSMITTED_REFERENCES,
   });
+  /**
+   * What the renderer is actually being told, per product: which metadata
+   * fields carried a value, which reference images went with them, and how
+   * those map to tasks. Logged once per generation, before any paid call.
+   */
+  const groundingDebug = buildGroundingDebugPacket({
+    plan: replacementPlan,
+    manifest: referenceManifest,
+  });
+  logGroundingDebugPacket(groundingDebug);
+
   // A selected product with no transmitted reference is a real degradation:
   // surface it rather than letting it pass unnoticed.
   const uncoveredSelected = referenceManifest.uncoveredSelectedProductIds;

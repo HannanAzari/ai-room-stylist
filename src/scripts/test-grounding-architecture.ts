@@ -235,12 +235,20 @@ section("Product identity grounding");
       identity.configuration.includes("left terminal"),
     identity.configuration
   );
+  // These now come from the enrichment vision pass rather than being inferred
+  // from the product NAME, so they are more specific than the old derived
+  // strings: "warm off-white ..." for the cream family, "looped bouclé weave"
+  // for fabric. The concept is asserted, not the old wording.
   check(
-    "colour family is derived",
-    identity.colourFamily.includes("cream"),
+    "colour family names a warm neutral",
+    /cream|off-white|pearl|beige|ivory|neutral/i.test(identity.colourFamily),
     identity.colourFamily
   );
-  check("material is populated", identity.material.includes("fabric"), identity.material);
+  check(
+    "material describes the upholstery",
+    /fabric|weave|woven|bouclé|boucle|textile/i.test(identity.material),
+    identity.material
+  );
   check("base/legs is populated", identity.legsBase.length > 0, identity.legsBase);
   check("shape is populated", identity.shape.length > 0, identity.shape);
   check(
@@ -254,7 +262,9 @@ section("Product identity grounding");
   );
   check(
     "a stone-top table records that trait",
-    tableProfile.identity.notableTraits.some((t) => t.includes("stone-look")),
+    tableProfile.identity.notableTraits.some((t) =>
+      /stone|travertine|marble|sintered/i.test(t)
+    ),
     tableProfile.identity.notableTraits.join("; ")
   );
   check(

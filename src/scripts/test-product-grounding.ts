@@ -262,6 +262,7 @@ section("6. Reference budget follows the renderer, not the old Gemini cap");
     productId: `product-${i + 1}`,
     productName: `Product ${i + 1}`,
     view: "main",
+    url: `/products/test/product-${i + 1}/main.jpg`,
     file: new File([new Uint8Array([1, 2, 3])], "main.jpg", { type: "image/jpeg" }),
     mimeType: "image/jpeg",
     bytes: 120_000,
@@ -290,6 +291,7 @@ section("7. Render diagnostics — required vs observed");
   const manifest = buildReferenceManifest({
     loaded: [sofaA, sofaB, coffeeTable].map((p) => ({
       productId: p.id, productName: p.name, view: "main",
+      url: `/products/${p.category}/${p.id}/main.jpg`,
       file: new File([new Uint8Array([1])], "main.jpg", { type: "image/jpeg" }),
       mimeType: "image/jpeg", bytes: 100,
     })),

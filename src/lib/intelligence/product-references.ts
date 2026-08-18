@@ -8,6 +8,10 @@
  * feed or scraper adds them — no code change required.
  */
 import type { Product } from "@/lib/products";
+import {
+  getEnrichedProduct,
+  selectReferenceViews,
+} from "./product-intelligence";
 
 // Priority order — front-facing and angled views help the model most; detail
 // and close-ups refine material/texture fidelity.
@@ -62,6 +66,25 @@ function productImageBase(product: Product): string | null {
 export function getProductReferenceViewUrls(product: Product): ProductViewUrl[] {
   const seen = new Set<string>();
   const results: ProductViewUrl[] = [];
+
+  /**
+   * Enriched views win outright when the product has them.
+   *
+   * They are already classified (hero / 45-degree / detail / ...) and scored by
+   * the enrichment vision pass, where everything below infers a view type from
+   * the FILENAME. That inference is why the enrichment images had to be renamed
+   * on import — and it is why these are returned pre-ordered rather than being
+   * fed back through `viewRank`, which only understands filenames.
+   */
+  const enriched = getEnrichedProduct(product.id);
+  if (enriched && enriched.views.length > 0) {
+    for (const view of selectReferenceViews(enriched.views)) {
+      if (seen.has(view.url)) continue;
+      seen.add(view.url);
+      results.push({ view: view.view, url: view.url });
+    }
+    return results;
+  }
 
   const push = (view: string, url: string) => {
     const clean = url.trim();

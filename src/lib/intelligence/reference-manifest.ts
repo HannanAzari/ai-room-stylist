@@ -83,6 +83,8 @@ export type ReferenceManifestEntry = {
   taskIds: number[];
   selectedOrComplementary: "selected" | "complementary";
   viewType: string;
+  /** Public path of the image, so a debug packet can name exactly what was sent. */
+  url: string;
   /** Ordinal of this view for its product: 1 = primary view. */
   viewIndex: number;
   transmitted: boolean;
@@ -284,6 +286,7 @@ export function buildReferenceManifest(input: {
       taskIds,
       selectedOrComplementary: source,
       viewType: reference.view,
+      url: reference.url,
       viewIndex,
       transmitted,
       reason: transmitted

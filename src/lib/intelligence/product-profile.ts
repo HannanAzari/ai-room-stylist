@@ -11,6 +11,7 @@
  * fly and never written back into products.json.
  */
 import { getAllProducts, type Product } from "@/lib/products";
+import { getEnrichedProduct } from "./product-intelligence";
 
 export type ReplacementRule = {
   // What existing element in the room this product should replace/occupy.
@@ -482,20 +483,46 @@ export function buildProductProfile(
 
   const materialPhraseForIdentity =
     materials.length > 0 ? materials.join(" and ") : texture || "premium materials";
+  /**
+   * Enriched identity, where it exists.
+   *
+   * Everything derived above is inferred from the product NAME and its colour /
+   * material tags — the best this app could do on its own. The enrichment pass
+   * looked at the actual photographs, so its fields are both more specific and
+   * more accurate ("thick rounded slab arm, only slightly above the seat" vs a
+   * silhouette guessed from the title).
+   *
+   * Field by field rather than wholesale: a product missing one enriched field
+   * keeps the derived value for that field instead of losing it, so a partial
+   * record is strictly better than none and never worse.
+   */
+  const enriched = getEnrichedProduct(product.id);
+  const preferEnriched = (enrichedValue: string, derived: string) =>
+    enrichedValue.trim() || derived;
+
   const identity: ProductIdentity = {
     category: categoryLabel,
-    silhouette,
-    configuration: deriveConfiguration(product.name, category),
-    material: materialPhraseForIdentity,
-    colourFamily: deriveColourFamily(colours, product.name),
-    legsBase,
-    shape,
-    notableTraits: deriveNotableTraits(
-      product.name,
-      materials,
-      shape,
-      legsBase
+    silhouette: preferEnriched(enriched?.visual.silhouette ?? "", silhouette),
+    configuration: preferEnriched(
+      // The official subcategory ("2 Seater Sofa") is a catalogue fact; the
+      // name-derived configuration is a guess. Prefer the fact.
+      enriched?.official.configuration || enriched?.official.subcategory || "",
+      deriveConfiguration(product.name, category)
     ),
+    material: preferEnriched(
+      enriched?.visual.texture ?? "",
+      materialPhraseForIdentity
+    ),
+    colourFamily: preferEnriched(
+      enriched?.visual.colourFamily ?? "",
+      deriveColourFamily(colours, product.name)
+    ),
+    legsBase: preferEnriched(enriched?.visual.baseLegs ?? "", legsBase),
+    shape: preferEnriched(enriched?.visual.shape ?? "", shape),
+    notableTraits:
+      enriched && enriched.visual.notableFeatures.length > 0
+        ? enriched.visual.notableFeatures
+        : deriveNotableTraits(product.name, materials, shape, legsBase),
   };
 
   return {

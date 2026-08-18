@@ -85,6 +85,8 @@ export type LoadedProductReference = {
   productName: string;
   /** Reference view name, e.g. "main", "side". */
   view: string;
+  /** Public path this was loaded from — carried through for debug traceability. */
+  url: string;
   file: File;
   mimeType: string;
   bytes: number;
@@ -197,6 +199,7 @@ export async function loadProductReferenceImages(
         productId: product.id,
         productName: product.name,
         view,
+        url,
         mimeType,
         bytes: fileBuffer.length,
         file: new File(

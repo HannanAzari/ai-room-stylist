@@ -34,6 +34,7 @@
 import type { ProductIdentity } from "./product-profile";
 import type { ReplacementPlan } from "./replacement-planner";
 import { canonicalCategoryLabel } from "./scene-taxonomy";
+import { getEnrichedProduct } from "./product-intelligence";
 
 /** One product, bound to one physical slot in the finished room. */
 export type ProductGroundingPacket = {
@@ -65,6 +66,17 @@ export type ProductGroundingPacket = {
   silhouette: string;
   legsBase: string;
   notableTraits: string[];
+  /**
+   * Enrichment-only fields. Empty when the product has no enriched record, and
+   * omitted from the rendered block in that case rather than printed blank —
+   * a field with nothing after the colon reads as missing data to a renderer.
+   */
+  armStyle: string;
+  backStyle: string;
+  texture: string;
+  visualWeight: string;
+  /** Official catalogue subcategory, e.g. "2 Seater Sofa". */
+  subcategory: string;
   /**
    * How this slot relates to the other slots of the same category:
    *   - "only": the single piece of its category
@@ -132,6 +144,7 @@ export function buildProductGroundingPackets(
       }
 
       const identity: ProductIdentity = task.identity;
+      const enriched = getEnrichedProduct(task.productId);
 
       packets.push({
         taskId: task.taskId,
@@ -153,6 +166,11 @@ export function buildProductGroundingPackets(
         silhouette: identity.silhouette ?? "",
         legsBase: identity.legsBase ?? "",
         notableTraits: identity.notableTraits ?? [],
+        armStyle: enriched?.visual.armStyle ?? "",
+        backStyle: enriched?.visual.backStyle ?? "",
+        texture: enriched?.visual.texture ?? "",
+        visualWeight: enriched?.visual.visualWeight ?? "",
+        subcategory: enriched?.official.subcategory ?? "",
         pairing,
         pairedTaskIds,
       });
@@ -199,10 +217,14 @@ export function formatProductGroundingSection(
       field("product name", packet.productName),
       field("category", packet.categoryLabel),
       field("configuration", packet.configuration),
+      field("catalogue type", packet.subcategory),
       field("colour", packet.colour),
-      field("material", packet.material),
+      field("material / texture", packet.material),
       field("shape", packet.shape),
       field("silhouette", packet.silhouette),
+      field("visual weight", packet.visualWeight),
+      field("arms", packet.armStyle),
+      field("back", packet.backStyle),
       field("base / legs", packet.legsBase),
       packet.notableTraits.length > 0
         ? `  identifying details: ${packet.notableTraits.join("; ")}`
