@@ -48,6 +48,21 @@ import type { ReplacementPlan } from "./replacement-planner";
  */
 export const MAX_TRANSMITTED_REFERENCES = 5;
 
+/**
+ * Budget for the GPT Image edit path.
+ *
+ * The value above was sized for Gemini's inline-payload limits. `images.edit`
+ * accepts 16 images and the room photo takes one of them, so capping product
+ * references at 5 was starving the renderer of the very grounding this sprint
+ * is trying to strengthen: a customer choosing two sofas, a coffee table, a
+ * rug, a TV unit and a lamp lost the sixth product's reference entirely.
+ *
+ * 12 rather than 15, so the room photo and a couple of spare slots are never
+ * at risk. The byte ceiling still applies independently and binds first for
+ * unusually heavy catalogue images.
+ */
+export const MAX_TRANSMITTED_REFERENCES_GPT_IMAGE = 12;
+
 /** Byte ceiling for all product references combined (room photo excluded). */
 export const MAX_TOTAL_REFERENCE_BYTES = 12 * 1024 * 1024;
 

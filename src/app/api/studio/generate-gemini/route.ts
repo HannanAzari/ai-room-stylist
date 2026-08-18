@@ -39,7 +39,15 @@ import {
   splitPlanByStage,
   type ReplacementPlan,
 } from "@/lib/intelligence/replacement-planner";
-import { buildReferenceManifest } from "@/lib/intelligence/reference-manifest";
+import {
+  buildRenderDiagnostics,
+  logRenderDiagnostics,
+} from "@/lib/intelligence/render-diagnostics";
+import {
+  buildReferenceManifest,
+  MAX_TRANSMITTED_REFERENCES,
+  MAX_TRANSMITTED_REFERENCES_GPT_IMAGE,
+} from "@/lib/intelligence/reference-manifest";
 import {
   contractToReplacementPlan,
   contractProductIds,
@@ -492,10 +500,20 @@ async function handleGeneration(req: Request) {
   // with a label binding each image to its plan task. The prompt and the
   // payload are both derived from this one structure so they cannot disagree
   // about how many references exist or which product each depicts.
+  /**
+   * The reference budget depends on which renderer will consume it: the GPT
+   * Image edit endpoint takes 16 images, where the Gemini inline path is far
+   * more constrained. Passing the renderer's own budget here is what stops a
+   * six-product room from silently losing a product's only reference.
+   */
   const referenceManifest = buildReferenceManifest({
     loaded: referenceLoad.loaded,
     plan: replacementPlan,
     selectedProductIds: orderedSelectedIds,
+    maxReferences:
+      renderer.id === "gpt-image"
+        ? MAX_TRANSMITTED_REFERENCES_GPT_IMAGE
+        : MAX_TRANSMITTED_REFERENCES,
   });
   // A selected product with no transmitted reference is a real degradation:
   // surface it rather than letting it pass unnoticed.
@@ -647,12 +665,34 @@ async function handleGeneration(req: Request) {
         });
       }
 
+      /**
+       * One flat required-vs-observed record per attempt.
+       *
+       * The retry decision still belongs to `reviewRecommendsRegeneration`
+       * below — this only reports, so the auto-retry that comes next can
+       * branch on `contractSatisfied` instead of re-deriving it.
+       */
+      const diagnostics = buildRenderDiagnostics({
+        attempt: attempt + 1,
+        provider: renderer.id,
+        plan: isLastStage ? replacementPlan : stagePlan,
+        manifest: referenceManifest,
+        review: outcome.review,
+        recommendation: outcome.review
+          ? reviewRecommendsRegeneration(outcome.review)
+            ? "regenerate"
+            : "accept"
+          : undefined,
+      });
+      logRenderDiagnostics(diagnostics);
+
       const record = {
         image: generatedImage,
         review: outcome.review,
         reviewStatus: outcome.status,
         reviewUnavailableReason:
           outcome.status === "review-unavailable" ? outcome.reason : null,
+        diagnostics,
       };
       stageAttempts.push(record);
       attempts.push(record);

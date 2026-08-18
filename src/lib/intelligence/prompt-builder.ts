@@ -23,6 +23,11 @@
 import type { RoomMeasurements } from "@/lib/prompts";
 import { buildScaleInstructions } from "@/lib/prompts";
 import { formatIdentity, type ProductProfile } from "./product-profile";
+import {
+  buildProductGroundingPackets,
+  formatProductGroundingSection,
+  formatSlotSummary,
+} from "./product-grounding";
 import type { GenerationStage, ReplacementPlan } from "./replacement-planner";
 import type { BoundingBox } from "./scene-graph";
 import { canonicalCategoryLabel, type CanonicalCategory } from "./scene-taxonomy";
@@ -484,6 +489,27 @@ export function buildIntelligentRoomPrompt(
         ].join("\n")
       : "No product changes were requested — keep the room exactly as it appears in the uploaded photo, changing nothing.";
 
+  /**
+   * Structured grounding, one block per task.
+   *
+   * Sits directly after the numbered plan and before the reference note, so the
+   * renderer reads "here is what to do", then "here is exactly what each
+   * product is and which slot it fills", then "here are the images".
+   */
+  const groundingPackets = plan ? buildProductGroundingPackets(plan) : [];
+  const groundingSection = formatProductGroundingSection(groundingPackets);
+
+  /**
+   * Slot counts, including the case the prompt never covered: two DIFFERENT
+   * models chosen for two slots. "Same model twice" was stated; "two different
+   * models" was not, so two identical sofas satisfied every instruction given.
+   */
+  const slotSummaryLines = formatSlotSummary(groundingPackets);
+  const slotSummarySection =
+    slotSummaryLines.length > 0
+      ? ["EXACT COUNTS — the finished room:", ...slotSummaryLines.map((line) => `- ${line}`)].join("\n")
+      : "";
+
   const duplicateTasks = plan ? formatDuplicateProductTasks(plan) : [];
   const duplicateSection =
     duplicateTasks.length > 0
@@ -498,7 +524,7 @@ export function buildIntelligentRoomPrompt(
   // Claiming more references than were sent taught the model to expect images
   // that never arrived.
   const referenceSection = input.referenceViewCount
-    ? `PRODUCT REFERENCES — you are given ${input.referenceViewCount} product reference image(s). Each one is introduced by a text line naming its task and product. Treat the image as the EXACT appearance of that product: reproduce its shape, colour, material, finish and proportions faithfully. Do not reinterpret or restyle it, and do not swap products between tasks.`
+    ? `PRODUCT REFERENCES — you are given ${input.referenceViewCount} product reference image(s). Each one is introduced by a text line naming its task and product. Treat the image as the EXACT appearance of that product: reproduce its shape, colour, material, finish and proportions faithfully. Do not reinterpret or restyle it, and do not swap products between tasks. These reference images are the REQUIRED OUTCOME, not loose inspiration — a piece that is merely "in the same style" as the reference is a failed render.`
     : "";
 
   const preservationTasks = plan ? formatPreservationTasks(plan) : [];
@@ -525,6 +551,8 @@ export function buildIntelligentRoomPrompt(
     // well as an instruction: partial execution is not a safe fallback.
     "- Never carry out only some of the numbered tasks. If two tasks replace two different pieces of furniture, BOTH pieces must change; leaving one of them as photographed is a failure, not a conservative choice.",
     "- Never merge two tasks into one object. Two tasks means two separate pieces of furniture in the finished room, even when they use the same product.",
+    "- Never draw two identical pieces where the plan names two DIFFERENT products. If the grounding blocks give two tasks different product names, the finished room must show two visibly different pieces.",
+    "- Never treat a selected product as a style hint. The finished piece must be recognisably the product in its reference image, not something in the same genre.",
     "- Generate ONLY the requested replacements, placements and removals.",
   ].join("\n");
 
@@ -536,6 +564,8 @@ export function buildIntelligentRoomPrompt(
     buildArchitectureLock(input.sceneGraph),
     secondPassSection,
     planSection,
+    groundingSection,
+    slotSummarySection,
     duplicateSection,
     preservationSection,
     referenceSection,
