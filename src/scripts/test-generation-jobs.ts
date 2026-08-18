@@ -327,15 +327,38 @@ async function run() {
 
     check("generation attempts are configurable",
       /GENERATION_ATTEMPTS_PER_STAGE/.test(ROUTE));
-    // Default is now 2, but the loop BREAKS as soon as the reviewer is
-    // satisfied — so a good first render still costs exactly one. The second
-    // attempt exists only to fix a fidelity failure the reviewer caught.
-    check("...and default to one render plus a single fidelity retry",
-      /if \(!Number\.isFinite\(configured\) \|\| configured < 1\) return 2;/.test(ROUTE),
-      "one retry, deliberately not a chain");
-    check("the loop still exits early when the review passes",
+    check("...and default to a single attempt",
+      /if \(!Number\.isFinite\(configured\) \|\| configured < 1\) return 1;/.test(ROUTE),
+      "the retry loop was most of the 2-3 minute wait");
+
+    /**
+     * The default is 1, but the fidelity-retry CAPABILITY must remain — setting
+     * GENERATION_ATTEMPTS_PER_STAGE=2 has to enable exactly one retry when the
+     * reviewer asks for it. Defaulting to 1 by deleting the retry would pass a
+     * naive "default is 1" check while silently removing the thing this exists
+     * for, so both halves are asserted.
+     */
+    check("a configured value above 1 is honoured",
+      /return Math\.min\(configured, 3\);/.test(ROUTE),
+      "GENERATION_ATTEMPTS_PER_STAGE=2 must still enable one retry");
+    check("the retry loop is still present",
+      /for \(let attempt = 0; attempt < maxGenerationAttempts; attempt \+= 1\)/.test(ROUTE));
+    check("a re-render happens only when the reviewer asks for one",
       /if \(!reviewRecommendsRegeneration\(outcome\.review\)\) break;/.test(ROUTE),
-      "otherwise every generation would cost two renders");
+      "otherwise a raised cap would cost two renders every time");
+
+    // Behavioural model of the resolver, including the env override.
+    const attemptsFor = (raw: string | undefined) => {
+      const configured = Number.parseInt(raw?.trim() || "", 10);
+      if (!Number.isFinite(configured) || configured < 1) return 1;
+      return Math.min(configured, 3);
+    };
+    check("unset -> 1", attemptsFor(undefined) === 1);
+    check("\"1\" -> 1", attemptsFor("1") === 1);
+    check("\"2\" -> 2 (one fidelity retry)", attemptsFor("2") === 2);
+    check("garbage -> 1", attemptsFor("banana") === 1);
+    check("\"0\" -> 1", attemptsFor("0") === 1);
+    check("\"99\" -> 3 (ceiling)", attemptsFor("99") === 3);
     check("...and are bounded so a stray value cannot uncap spend",
       /Math\.min\(configured, 3\)/.test(ROUTE));
   }

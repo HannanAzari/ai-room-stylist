@@ -86,24 +86,25 @@ import {
  * With two stages that is a worst case of FOUR sequential GPT Image renders,
  * each with a Gemini review after it, and that is most of the 2-3 minute wait
  * customers were reporting. The retry only pays for itself when the reviewer
- * actually catches something, so the default is now a single attempt and the
- * retry is opt-in per environment.
+ * actually catches something, so the default is a single attempt and the retry
+ * is opt-in per environment.
  *
- * The default is 2, but this is NOT two renders per generation: the loop breaks
- * as soon as the reviewer is satisfied, so a good first render still costs
- * exactly one. The second attempt exists only for the case this sprint is
- * about — the reviewer catching a fidelity failure such as a missing glass
- * extension — and buys one chance to fix it. Deliberately one, not a chain.
+ * The fidelity-retry CAPABILITY is fully in place: the loop below re-renders
+ * whenever the reviewer recommends it, including for the signature-trait
+ * failures this sprint added. Setting GENERATION_ATTEMPTS_PER_STAGE=2 enables
+ * exactly one such retry — and still costs one render when the first passes,
+ * because the loop breaks as soon as the reviewer is satisfied. Only the
+ * DEFAULT is 1, so latency and spend stay opt-in rather than automatic.
  *
- * Set GENERATION_ATTEMPTS_PER_STAGE=1 to disable the fidelity retry entirely.
- * Values below 1 are ignored — zero attempts would render nothing at all.
+ * Values below 1 are ignored — zero attempts would render nothing at all — and
+ * the ceiling of 3 stops a stray value uncapping cost.
  */
 function getMaxGenerationAttempts(): number {
   const configured = Number.parseInt(
     process.env.GENERATION_ATTEMPTS_PER_STAGE?.trim() || "",
     10
   );
-  if (!Number.isFinite(configured) || configured < 1) return 2;
+  if (!Number.isFinite(configured) || configured < 1) return 1;
   // Bounded so a stray env value cannot uncap latency or spend.
   return Math.min(configured, 3);
 }
