@@ -153,7 +153,15 @@ export type CriticalFailureKind =
    * an aggregate score, so "requested 2, only 1 rendered" cannot be masked by
    * an otherwise good-looking image.
    */
-  | "product-instance-count-mismatch";
+  | "product-instance-count-mismatch"
+  /**
+   * A signature visual trait of the product is missing or simplified — the
+   * glass extension gone from a stone-and-glass table, a sculptural loop base
+   * rendered as ordinary legs. Distinct from product-identity-mismatch, which
+   * is the model's overall judgement: this names the specific component that
+   * was lost, so the failure is actionable rather than a verdict.
+   */
+  | "signature-trait-missing";
 
 export type CriticalFailure = {
   kind: CriticalFailureKind;
@@ -186,6 +194,25 @@ export type TaskReviewResult = {
    * the right category in roughly the right style?
    */
   identityMatches: boolean;
+  /**
+   * Does the rendered object show EVERY signature visual trait the prompt
+   * listed as non-negotiable? Separate from `identityMatches` because a piece
+   * can read as the right product overall while quietly dropping the one
+   * component that makes it that product.
+   */
+  signatureTraitsPresent: boolean;
+  /**
+   * Named traits/components the reviewer could not see. Populated only when
+   * `signatureTraitsPresent` is false, and quoted verbatim into the failure so
+   * the reason is specific ("no glass extension") rather than a score.
+   */
+  missingSignatureTraits: string[];
+  /**
+   * For multi-material products: were ALL the stated materials visible? A
+   * stone-and-glass table rendered entirely in stone fails here even when the
+   * silhouette is right.
+   */
+  allMaterialsPresent: boolean;
   /** The model's short explanation for this task's verdict (debug-visible). */
   reasoning: string;
   /** Free-text observations from the model. */
@@ -366,6 +393,34 @@ export function deriveCriticalFailures(
         ...at,
         kind: "product-identity-mismatch",
         detail: `Task ${task.taskId}: the rendered object is the right category but does not match the product's identity (configuration, material, colour family, base or notable traits).`,
+      });
+    }
+    /**
+     * A dropped signature trait is its own failure, named specifically.
+     *
+     * Raised independently of `identityMatches` on purpose: the reported
+     * symptom was a table that read as broadly correct while losing the glass
+     * extension and the sculptural base, and a single overall verdict is
+     * exactly what let that pass. Only raised when the reviewer actually
+     * assessed the task, so a product with no signature traits stated cannot
+     * fail on one.
+     */
+    if (!task.signatureTraitsPresent && task.productPresent) {
+      const missing = task.missingSignatureTraits.filter(Boolean);
+      failures.push({
+        ...at,
+        kind: "signature-trait-missing",
+        detail:
+          missing.length > 0
+            ? `Task ${task.taskId}: the render is missing signature traits of this product — ${missing.join("; ")}.`
+            : `Task ${task.taskId}: the render does not show all of this product's signature visual traits.`,
+      });
+    }
+    if (!task.allMaterialsPresent && task.productPresent) {
+      failures.push({
+        ...at,
+        kind: "signature-trait-missing",
+        detail: `Task ${task.taskId}: this product combines several materials and at least one is not visible in the render.`,
       });
     }
   }
@@ -619,6 +674,9 @@ PART A — per-task compliance. For EVERY task listed in the plan below, answer 
   noDuplicate               — does the product appear exactly once (no cloned or repeated copy)?
   placementCorrect          — is it in the TARGET REGION the task specified? Each task states the region as a percentage of the frame. Answer false if the product appears somewhere else, or if a DIFFERENT instance was changed instead of the one named.
   scaleCorrect              — is its physical size plausible relative to the room and other furniture?
+  signatureTraitsPresent    — the task's SIGNATURE VISUAL TRAITS list states the non-negotiable features of this product. Answer TRUE only if EVERY listed trait is visible in the render. Answer FALSE if any one has been dropped or simplified — a sculptural loop base rendered as ordinary legs, a floating glass shelf omitted, a two-tier top flattened into one slab. A beautiful, plausible piece that is missing a listed trait is still FALSE.
+  missingSignatureTraits    — when signatureTraitsPresent is false, quote the exact traits you could not see, copied from the SIGNATURE VISUAL TRAITS list. Empty array when it is true.
+  allMaterialsPresent       — when the task names a MULTI-MATERIAL PRODUCT, answer TRUE only if every material listed is visibly present. A stone-and-glass table rendered entirely in stone is FALSE even if the shape is correct. TRUE when the product is single-material.
   identityMatches           — compare the rendered object against the task's IDENTITY line field by field: configuration (seat count / modular layout / size), material, colour family, base/legs, shape and the listed identifying details. Answer TRUE only if it is recognisably THAT product. Answer FALSE if it is merely a similar item in the same style — for example the right category and colour but the wrong seat count, the wrong base, or missing a stated identifying detail.
   reasoning                 — one or two sentences explaining your verdict for this task, naming what you actually saw.
   issues                    — short strings describing anything wrong with this task.
@@ -640,6 +698,7 @@ Return ONLY JSON with EXACTLY this shape:
     { "taskId": number, "productId": string, "productPresent": boolean, "categoryCorrect": boolean,
       "originalRemovedOrReplaced": boolean, "genuineReplacement": boolean, "noDuplicate": boolean,
       "placementCorrect": boolean, "scaleCorrect": boolean, "identityMatches": boolean,
+      "signatureTraitsPresent": boolean, "missingSignatureTraits": string[], "allMaterialsPresent": boolean,
       "reasoning": string, "issues": string[] }
   ],
   "globalChecks": {
@@ -680,6 +739,15 @@ function parseTaskResults(value: unknown): TaskReviewResult[] {
         placementCorrect: asBool(item.placementCorrect),
         scaleCorrect: asBool(item.scaleCorrect),
         identityMatches: asBool(item.identityMatches),
+        // Fail safe: an absent or unparseable answer counts as NOT present,
+        // matching how every other boolean here is treated.
+        signatureTraitsPresent: asBool(item.signatureTraitsPresent),
+        missingSignatureTraits: Array.isArray(item.missingSignatureTraits)
+          ? item.missingSignatureTraits.filter(
+              (trait: unknown): trait is string => typeof trait === "string"
+            )
+          : [],
+        allMaterialsPresent: asBool(item.allMaterialsPresent),
         reasoning: typeof item.reasoning === "string" ? item.reasoning.trim() : "",
         issues: asIssueList(item.issues),
       };
@@ -752,6 +820,9 @@ function reconcileTaskResults(
         placementCorrect: false,
         scaleCorrect: false,
         identityMatches: false,
+        signatureTraitsPresent: false,
+        missingSignatureTraits: [],
+        allMaterialsPresent: false,
         reasoning:
           "The reviewer returned no result for this task, so compliance could not be confirmed.",
         issues: ["The reviewer did not report on this task."],

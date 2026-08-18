@@ -327,9 +327,15 @@ async function run() {
 
     check("generation attempts are configurable",
       /GENERATION_ATTEMPTS_PER_STAGE/.test(ROUTE));
-    check("...and default to a single attempt",
-      /if \(!Number\.isFinite\(configured\) \|\| configured < 1\) return 1;/.test(ROUTE),
-      "the retry loop was most of the 2-3 minute wait");
+    // Default is now 2, but the loop BREAKS as soon as the reviewer is
+    // satisfied — so a good first render still costs exactly one. The second
+    // attempt exists only to fix a fidelity failure the reviewer caught.
+    check("...and default to one render plus a single fidelity retry",
+      /if \(!Number\.isFinite\(configured\) \|\| configured < 1\) return 2;/.test(ROUTE),
+      "one retry, deliberately not a chain");
+    check("the loop still exits early when the review passes",
+      /if \(!reviewRecommendsRegeneration\(outcome\.review\)\) break;/.test(ROUTE),
+      "otherwise every generation would cost two renders");
     check("...and are bounded so a stray value cannot uncap spend",
       /Math\.min\(configured, 3\)/.test(ROUTE));
   }

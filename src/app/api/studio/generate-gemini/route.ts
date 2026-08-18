@@ -89,7 +89,13 @@ import {
  * actually catches something, so the default is now a single attempt and the
  * retry is opt-in per environment.
  *
- * Raise GENERATION_ATTEMPTS_PER_STAGE to 2 to restore the previous behaviour.
+ * The default is 2, but this is NOT two renders per generation: the loop breaks
+ * as soon as the reviewer is satisfied, so a good first render still costs
+ * exactly one. The second attempt exists only for the case this sprint is
+ * about — the reviewer catching a fidelity failure such as a missing glass
+ * extension — and buys one chance to fix it. Deliberately one, not a chain.
+ *
+ * Set GENERATION_ATTEMPTS_PER_STAGE=1 to disable the fidelity retry entirely.
  * Values below 1 are ignored — zero attempts would render nothing at all.
  */
 function getMaxGenerationAttempts(): number {
@@ -97,7 +103,7 @@ function getMaxGenerationAttempts(): number {
     process.env.GENERATION_ATTEMPTS_PER_STAGE?.trim() || "",
     10
   );
-  if (!Number.isFinite(configured) || configured < 1) return 1;
+  if (!Number.isFinite(configured) || configured < 1) return 2;
   // Bounded so a stray env value cannot uncap latency or spend.
   return Math.min(configured, 3);
 }

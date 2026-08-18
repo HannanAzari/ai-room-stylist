@@ -35,6 +35,12 @@ import type { ProductIdentity } from "./product-profile";
 import type { ReplacementPlan } from "./replacement-planner";
 import { canonicalCategoryLabel } from "./scene-taxonomy";
 import { getEnrichedProduct } from "./product-intelligence";
+import {
+  buildSignatureTraits,
+  formatSignatureTraits,
+  resolveBaseDescription,
+  type SignatureTraits,
+} from "./signature-traits";
 
 /** One product, bound to one physical slot in the finished room. */
 export type ProductGroundingPacket = {
@@ -77,6 +83,8 @@ export type ProductGroundingPacket = {
   visualWeight: string;
   /** Official catalogue subcategory, e.g. "2 Seater Sofa". */
   subcategory: string;
+  /** The non-negotiable identity of this product. */
+  signature: SignatureTraits;
   /**
    * How this slot relates to the other slots of the same category:
    *   - "only": the single piece of its category
@@ -145,6 +153,7 @@ export function buildProductGroundingPackets(
 
       const identity: ProductIdentity = task.identity;
       const enriched = getEnrichedProduct(task.productId);
+      const signature = buildSignatureTraits(task.productId, identity);
 
       packets.push({
         taskId: task.taskId,
@@ -164,13 +173,16 @@ export function buildProductGroundingPackets(
         material: identity.material ?? "",
         shape: identity.shape ?? "",
         silhouette: identity.silhouette ?? "",
-        legsBase: identity.legsBase ?? "",
+        // A name-derived base must never contradict a trait that actually
+        // describes the base — see resolveBaseDescription.
+        legsBase: resolveBaseDescription(identity.legsBase ?? "", signature),
         notableTraits: identity.notableTraits ?? [],
         armStyle: enriched?.visual.armStyle ?? "",
         backStyle: enriched?.visual.backStyle ?? "",
         texture: enriched?.visual.texture ?? "",
         visualWeight: enriched?.visual.visualWeight ?? "",
         subcategory: enriched?.official.subcategory ?? "",
+        signature,
         pairing,
         pairedTaskIds,
       });
@@ -232,6 +244,9 @@ export function formatProductGroundingSection(
       field("replaces", packet.targetInstanceLabel),
       field("position in room", packet.targetLocation),
       field("placement role", packet.placementRole),
+      // The requirement half of the block: everything above describes the
+      // product, this states what cannot be lost.
+      ...formatSignatureTraits(packet.signature),
       pairingLine ?? "",
     ]).join("\n");
   });

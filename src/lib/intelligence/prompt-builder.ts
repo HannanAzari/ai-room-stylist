@@ -553,6 +553,9 @@ export function buildIntelligentRoomPrompt(
     "- Never merge two tasks into one object. Two tasks means two separate pieces of furniture in the finished room, even when they use the same product.",
     "- Never draw two identical pieces where the plan names two DIFFERENT products. If the grounding blocks give two tasks different product names, the finished room must show two visibly different pieces.",
     "- Never treat a selected product as a style hint. The finished piece must be recognisably the product in its reference image, not something in the same genre.",
+    "- Never simplify a product into a generic version of its category. If a product's SIGNATURE VISUAL TRAITS name a glass shelf, a sculptural loop base, a two-tier top or similar, those exact features must appear — an ordinary table, sofa or unit of the same type is a failed render.",
+    "- Never render a multi-material product in a single material. If the plan says a piece combines stone and glass, both must be visible in the finished piece.",
+    "- Never substitute a similar product. Preserve the exact product identity, its distinctive material cues, and its signature construction details.",
     "- Generate ONLY the requested replacements, placements and removals.",
   ].join("\n");
 

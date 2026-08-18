@@ -37,6 +37,17 @@ export type CategoryFidelity = {
   mismatch: boolean;
 };
 
+/** Per-product reviewer verdict, so a rejection names what actually failed. */
+export type ProductVerdict = {
+  productId: string;
+  taskId: number;
+  productPresent: boolean;
+  identityMatches: boolean;
+  signatureTraitsPresent: boolean;
+  allMaterialsPresent: boolean;
+  missingSignatureTraits: string[];
+};
+
 export type RenderDiagnostics = {
   /** Which attempt produced this, 1-based. */
   attempt: number;
@@ -54,6 +65,10 @@ export type RenderDiagnostics = {
   referencesTransmitted: number;
   /** Critical failure kinds the reviewer raised, if it ran. */
   criticalFailures: string[];
+  /** Exact reason each critical failure was raised. */
+  criticalFailureDetails: string[];
+  /** One verdict per reviewed task. */
+  productVerdicts: ProductVerdict[];
   /** Reviewer's overall score, when available. */
   overallScore: number | null;
   /** Whether the existing recommendation logic wants another attempt. */
@@ -126,6 +141,20 @@ export function buildRenderDiagnostics(input: {
   const criticalFailures = (review?.criticalFailures ?? []).map(
     (failure) => failure.kind
   );
+  const criticalFailureDetails = (review?.criticalFailures ?? []).map(
+    (failure) => failure.detail
+  );
+  const productVerdicts: ProductVerdict[] = (review?.taskResults ?? []).map(
+    (task) => ({
+      productId: task.productId,
+      taskId: task.taskId,
+      productPresent: task.productPresent,
+      identityMatches: task.identityMatches,
+      signatureTraitsPresent: task.signatureTraitsPresent,
+      allMaterialsPresent: task.allMaterialsPresent,
+      missingSignatureTraits: task.missingSignatureTraits,
+    })
+  );
 
   const productsWithoutReference = manifest.uncoveredSelectedProductIds;
 
@@ -139,13 +168,16 @@ export function buildRenderDiagnostics(input: {
     productsWithoutReference,
     referencesTransmitted: manifest.transmitted.length,
     criticalFailures,
+    criticalFailureDetails,
+    productVerdicts,
     overallScore: review?.overall ?? null,
     recommendation: input.recommendation ?? "unavailable",
     contractSatisfied:
       categories.every((category) => !category.mismatch) &&
       productsWithoutReference.length === 0 &&
       !criticalFailures.includes("unexplained-addition") &&
-      !criticalFailures.includes("product-instance-count-mismatch"),
+      !criticalFailures.includes("product-instance-count-mismatch") &&
+      !criticalFailures.includes("signature-trait-missing"),
   };
 }
 

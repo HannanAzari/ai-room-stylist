@@ -227,6 +227,7 @@ section("Scenario A — 2 existing sofas, desired 2× the same 3-seater");
     taskId: t.taskId, productId: t.productId, productPresent: true,
     categoryCorrect: true, originalRemovedOrReplaced: true, genuineReplacement: true,
     noDuplicate: true, placementCorrect: true, scaleCorrect: true, identityMatches: true,
+    signatureTraitsPresent: true, missingSignatureTraits: [], allMaterialsPresent: true,
     reasoning: "", issues: [],
   }));
   check("2 requested, 2 rendered → no quantity failure",
@@ -471,6 +472,7 @@ section("Scenario F — sofas + coffee table only, model adds a desk and monitor
       taskId: t.taskId, productId: t.productId, productPresent: true,
       categoryCorrect: true, originalRemovedOrReplaced: true, genuineReplacement: true,
       noDuplicate: true, placementCorrect: true, scaleCorrect: true, identityMatches: true,
+      signatureTraitsPresent: true, missingSignatureTraits: [], allMaterialsPresent: true,
       reasoning: "", issues: [],
     })),
   ];

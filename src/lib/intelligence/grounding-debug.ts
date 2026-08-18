@@ -42,6 +42,14 @@ export type ProductGroundingDebug = {
   referenceViewCount: number;
   /** Views the product HAS, before per-product and budget capping. */
   referenceViewsAvailable: number;
+  /** The non-negotiable traits extracted for this product. */
+  signatureTraits: string[];
+  /** Materials that must ALL appear, when the product combines several. */
+  materialComponents: string[];
+  /** The single most identifying feature, elevated in prompt and reviewer. */
+  primaryFeature: string | null;
+  /** True when the distinctive-product emphasis rule applied. */
+  isDistinctive: boolean;
 };
 
 export type GroundingDebugPacket = {
@@ -144,6 +152,10 @@ export function buildGroundingDebugPacket(input: {
       referenceViewTypes: references.map((entry) => entry.viewType),
       referenceViewCount: references.length,
       referenceViewsAvailable: enriched?.views.length ?? 0,
+      signatureTraits: first.signature.traits,
+      materialComponents: first.signature.materialComponents,
+      primaryFeature: first.signature.primaryFeature,
+      isDistinctive: first.signature.isDistinctive,
     });
   }
 

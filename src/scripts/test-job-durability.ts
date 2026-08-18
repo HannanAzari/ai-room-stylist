@@ -217,8 +217,9 @@ section("F. Nothing else about generation changed");
   );
   check("ROOM_EDIT_PROVIDER still selects the renderer",
     /getRoomEditProvider\(\)/.test(ROUTE));
-  check("generation attempts still default to 1",
-    /if \(!Number\.isFinite\(configured\) \|\| configured < 1\) return 1;/.test(ROUTE));
+  check("generation attempts are still bounded and env-controlled",
+    /GENERATION_ATTEMPTS_PER_STAGE/.test(ROUTE) &&
+      /Math\.min\(configured, 3\)/.test(ROUTE));
   check("the enriched reference budget is unchanged",
     /MAX_TRANSMITTED_REFERENCES_GPT_IMAGE/.test(ROUTE));
   check("the grounding debug packet is still built",

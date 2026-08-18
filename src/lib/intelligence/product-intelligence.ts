@@ -130,11 +130,26 @@ export function selectReferenceViews(
   const chosen: EnrichedView[] = [];
   const takenUrls = new Set<string>();
 
-  for (const { family } of VIEW_FAMILIES) {
+  for (const { family, members } of VIEW_FAMILIES) {
     if (chosen.length >= maxViews) break;
-    const best = ranked.find(
+    /**
+     * Within a family, the VIEW TYPE decides before the usefulness score.
+     *
+     * The angled family holds 45-degree, side and lifestyle. A lifestyle shot
+     * often scores higher — it is a nicer photograph — but it shows the product
+     * small in a styled room, where a 45-degree elevation shows how the piece
+     * is actually built. For product identity the three-quarter view is worth
+     * more, so member order wins and usefulness only breaks ties within a type.
+     */
+    const candidates = ranked.filter(
       (view) => !takenUrls.has(view.url) && familyOf(view.view) === family
     );
+    const best = candidates.sort(
+      (a, b) =>
+        members.indexOf(a.view) - members.indexOf(b.view) ||
+        b.usefulness - a.usefulness ||
+        a.url.localeCompare(b.url)
+    )[0];
     if (best) {
       chosen.push(best);
       takenUrls.add(best.url);

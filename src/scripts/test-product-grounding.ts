@@ -249,8 +249,11 @@ section("5. The grounding block is deterministic and self-contained");
     /merely 'in the same style' is a failed render/.test(first));
   check("each block is separated by a blank line",
     /\n\nPRODUCT FOR TASK/.test(first));
+  // Only `key: value` FIELD lines may not dangle. The signature block has
+  // headings that legitimately end in a colon ("...ALL of these are visible:"),
+  // so the check is scoped to indented field lines rather than any colon.
   check("empty fields are omitted rather than left dangling",
-    !/: *\n/.test(first) && !first.includes(": |"));
+    !/^ {2}[a-z][a-z /]*: *$/m.test(first) && !first.includes(": |"));
 }
 
 // ===========================================================================

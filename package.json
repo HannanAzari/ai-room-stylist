@@ -30,7 +30,8 @@
     "import:intelligence": "tsx src/scripts/import-product-intelligence.ts",
     "test:enriched": "tsx src/scripts/test-enriched-grounding.ts",
     "test:route-guard": "tsx src/scripts/test-studio-route-guard.ts",
-    "test:job-durability": "tsx src/scripts/test-job-durability.ts"
+    "test:job-durability": "tsx src/scripts/test-job-durability.ts",
+    "test:signature": "tsx src/scripts/test-signature-traits.ts"
   },
   "dependencies": {
     "next": "16.2.6",

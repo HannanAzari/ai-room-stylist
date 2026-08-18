@@ -573,6 +573,9 @@ section("K. Reviewer critical-failure detection");
     placementCorrect: true,
     scaleCorrect: true,
     identityMatches: true,
+    signatureTraitsPresent: true,
+    missingSignatureTraits: [],
+    allMaterialsPresent: true,
     reasoning: "The product is present, correct and well placed.",
     issues: [],
   };

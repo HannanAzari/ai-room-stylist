@@ -402,6 +402,7 @@ section("Reviewer — architecture and instance failures");
     taskId: 1, productId: SOFA, productPresent: true, categoryCorrect: true,
     originalRemovedOrReplaced: true, genuineReplacement: true, noDuplicate: true,
     placementCorrect: true, scaleCorrect: true, identityMatches: true,
+    signatureTraitsPresent: true, missingSignatureTraits: [], allMaterialsPresent: true,
     reasoning: "Correct sofa, correct place.", issues: [],
   };
 
@@ -586,6 +587,7 @@ section("Acceptance D — debug visibility");
       taskId: 1, productId: SOFA, productPresent: true, categoryCorrect: true,
       originalRemovedOrReplaced: true, genuineReplacement: false, noDuplicate: true,
       placementCorrect: true, scaleCorrect: true, identityMatches: true,
+      signatureTraitsPresent: true, missingSignatureTraits: [], allMaterialsPresent: true,
       reasoning: "The original sofa was recoloured, not replaced.", issues: ["same silhouette"],
     }],
     goodAxes,
