@@ -46,6 +46,7 @@ import {
   splitPlanByStage,
   type ReplacementPlan,
 } from "@/lib/intelligence/replacement-planner";
+import { assessSceneReadiness } from "@/lib/intelligence/scene-readiness";
 import {
   buildGroundingDebugPacket,
   logGroundingDebugPacket,
@@ -69,7 +70,10 @@ import {
   parseCategoryIntents,
   resolveCategoryIntents,
 } from "@/lib/intelligence/category-intent";
-import { surpriseStylePrompt } from "@/lib/intelligence/room-categories";
+import {
+  isSeatingCategory,
+  surpriseStylePrompt,
+} from "@/lib/intelligence/room-categories";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
   reviewGeneratedRoom,
@@ -480,6 +484,55 @@ async function handleGeneration(
       : null;
   const effectiveContract = replacementContract ?? resolvedIntent?.contract ?? null;
 
+  /**
+   * Refuse to render a room we could not read.
+   *
+   * Scene analysis fails silently — an empty graph is not an error downstream,
+   * it just looks like an empty room, and the plan then places the new sofas
+   * BESIDE the old ones while dropping the coffee table entirely. Three of four
+   * paid renders during the renderer benchmark were lost this way with nothing
+   * noticing. Better to fail before the spend, with a reason the customer can
+   * act on, than to charge for a result that cannot satisfy the contract.
+   *
+   * Surprise Me is exempt: it has no requested categories to verify and the
+   * server chooses the package from whatever the room turned out to be.
+   */
+  if (!surpriseMe && categoryIntents.length > 0) {
+    const requestedCategories = categoryIntents
+      .map((intent) => intent.canonicalCategory)
+      // Seating states a DESIRED final count, so its own resolver reconciles
+      // against whatever exists; what matters there is that the room was read
+      // at all, which the analysed check below covers.
+      .filter((category) => !isSeatingCategory(roomType, category));
+
+    const readiness = assessSceneReadiness({
+      sceneGraph,
+      requestedCategories,
+    });
+
+    devLog("[studio-gemini] scene readiness", {
+      analysed: sceneGraph.analysed,
+      detected: readiness.detectedByCategory,
+      requested: requestedCategories,
+      ready: readiness.ready,
+    });
+
+    if (!readiness.ready) {
+      console.warn("[studio-gemini] refusing to render an unread room", {
+        missing: readiness.missingCategories,
+        detected: readiness.detectedByCategory,
+      });
+      return NextResponse.json(
+        {
+          error: readiness.reason,
+          sceneUnreadable: true,
+          detected: readiness.detectedByCategory,
+        },
+        { status: 422 }
+      );
+    }
+  }
+
   // Customer selection order is preserved end-to-end: profiles, the replacement
   // plan and reference-image priority all follow the order the customer picked,
   // so if a budget forces prioritisation the earliest choices keep their
@@ -570,6 +623,22 @@ async function handleGeneration(
     manifest: referenceManifest,
   });
   logGroundingDebugPacket(groundingDebug);
+
+  // The room as the analysis actually saw it, beside the tasks it produced —
+  // the two things needed to explain any render after the fact.
+  devLog("[studio-gemini] scene + plan", {
+    renderer: renderer.id,
+    analysed: sceneGraph.analysed,
+    detectedItems: (sceneGraph.furniture ?? []).map(
+      (item) => `${item.canonicalCategory}: ${item.instanceLabel}`
+    ),
+    replaceTasks: replacementPlan.replacements.map(
+      (task) => `#${task.taskId} ${task.existingInstanceLabel} -> ${task.productTitle}`
+    ),
+    removeTasks: replacementPlan.removals.map((task) => `#${task.taskId} ${task.existingInstanceLabel}`),
+    addTasks: replacementPlan.additions.map((task) => `#${task.taskId} ${task.productTitle}`),
+    preserved: replacementPlan.preserved,
+  });
 
   // A selected product with no transmitted reference is a real degradation:
   // surface it rather than letting it pass unnoticed.

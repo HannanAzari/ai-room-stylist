@@ -581,10 +581,14 @@ section("6. Provider boundary — the room edit is behind one interface");
   check("an unconfigured renderer fails before the analysis is paid for",
     /if \(!renderer\.available\)/.test(ROUTE));
 
-  check("GPT Image 2 is the default renderer",
-    /DEFAULT_ROOM_EDIT_PROVIDER: RoomEditProviderId = "gpt-image"/.test(
-      PROVIDER
-    ));
+  // Gemini became the default after a head-to-head benchmark on the same room
+  // and the same three products; GPT Image stays wired as the fallback. The
+  // point this assertion protects is that BOTH remain selectable, not which
+  // one happens to be first.
+  check("Gemini is the default renderer",
+    /DEFAULT_ROOM_EDIT_PROVIDER: RoomEditProviderId = "gemini"/.test(PROVIDER));
+  check("GPT Image is still selectable as a fallback",
+    /raw === "gpt-image"/.test(PROVIDER) && /id: "gpt-image"/.test(PROVIDER));
   check("Gemini is still reachable for comparison",
     /ROOM_EDIT_PROVIDER/.test(PROVIDER) && /"gemini"/.test(PROVIDER));
   check("an unrecognised provider value falls back rather than failing",

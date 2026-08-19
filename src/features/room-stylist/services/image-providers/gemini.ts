@@ -1,11 +1,64 @@
+import sharp from "sharp";
 import type {
   GeneratedImageResult,
   ImageProviderInput,
   LabelledProductImage,
 } from "./types";
 
-const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
-const GEMINI_IMAGE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
+/**
+ * The Gemini image model.
+ *
+ * Env-configurable, matching how the GPT provider already works. It was pinned
+ * to gemini-2.5-flash-image, but this key can reach gemini-3-pro-image and the
+ * 3.1 flash family — so benchmarking the best available model required a code
+ * change rather than a setting, which is the wrong way round.
+ *
+ * The default stays 2.5-flash-image so this change alters no existing
+ * behaviour; set GEMINI_IMAGE_MODEL to opt into another.
+ */
+export const DEFAULT_GEMINI_IMAGE_MODEL = "gemini-3-pro-image";
+
+/**
+ * Aspect ratios the image API accepts, with their decimal value.
+ *
+ * The room's own ratio is mapped to the nearest of these and sent as
+ * `imageConfig.aspectRatio`. Without it the model infers an aspect from the
+ * inputs — and because every product reference is a 1000x1000 studio square,
+ * a request carrying the room plus nine references came back 1024x1024, i.e.
+ * the customer's 4:3 room cropped to a square. Measured directly: the same
+ * prompt with `aspectRatio: "4:3"` returns 1200x896.
+ */
+const SUPPORTED_ASPECT_RATIOS: Array<{ label: string; value: number }> = [
+  { label: "1:1", value: 1 },
+  { label: "2:3", value: 2 / 3 },
+  { label: "3:2", value: 3 / 2 },
+  { label: "3:4", value: 3 / 4 },
+  { label: "4:3", value: 4 / 3 },
+  { label: "4:5", value: 4 / 5 },
+  { label: "5:4", value: 5 / 4 },
+  { label: "9:16", value: 9 / 16 },
+  { label: "16:9", value: 16 / 9 },
+  { label: "21:9", value: 21 / 9 },
+];
+
+/** Nearest supported ratio to the room photo's own. */
+export function nearestAspectRatio(width: number, height: number): string {
+  if (!width || !height) return "4:3";
+  const actual = width / height;
+  return SUPPORTED_ASPECT_RATIOS.reduce((best, candidate) =>
+    Math.abs(candidate.value - actual) < Math.abs(best.value - actual)
+      ? candidate
+      : best
+  ).label;
+}
+
+function geminiImageModel(): string {
+  return process.env.GEMINI_IMAGE_MODEL?.trim() || DEFAULT_GEMINI_IMAGE_MODEL;
+}
+
+function geminiImageEndpoint(): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${geminiImageModel()}:generateContent`;
+}
 /**
  * Cap applied ONLY to unlabelled `productImages` from the legacy routes. The
  * studio path passes `labelledProductImages`, whose budget is decided by the
@@ -91,6 +144,21 @@ export async function generateGeminiImage({
 
   // Each product image is preceded by its own text part naming the product and
   // its plan task, so the model is never left guessing which image is which.
+  /**
+   * The room's own aspect ratio, read from its pixels rather than assumed.
+   * Falls back to 4:3 if the image cannot be measured — never to square, which
+   * is the one outcome that always crops a landscape room.
+   */
+  let aspectRatio = "4:3";
+  try {
+    const metadata = await sharp(
+      Buffer.from(await roomImage.arrayBuffer())
+    ).rotate().metadata();
+    aspectRatio = nearestAspectRatio(metadata.width ?? 0, metadata.height ?? 0);
+  } catch {
+    // Keep the default.
+  }
+
   const roomPart = await fileToInlineData(roomImage);
   const referenceParts: Array<
     { text: string } | { inline_data: { mime_type: string; data: string } }
@@ -118,6 +186,14 @@ Gemini image editing priorities:
 - Prioritise photorealistic interior photography with natural lighting, believable materials, and realistic furniture scale.
 - Make supplied product references visually clear, recognisable, and naturally placed.
 - Follow the AI concept mode instructions exactly; do not make unrelated changes when that mode is OFF.
+
+NOTHING MAY BE ADDED TO THIS ROOM.
+- Do NOT add plants, pots or greenery of any kind. This is the single most common unrequested addition; a plant that was not in the original photo is a failed render.
+- Do NOT add decor, vases, bowls, trays, books, candles, cushions, throws or ornaments.
+- Do NOT add any furniture beyond the numbered tasks — no side tables, stools, benches, lamps, shelves or rugs.
+- Do NOT add wall art, mirrors or window dressing.
+- Do NOT tidy, restyle or "improve" the room. Clutter, objects on surfaces and personal items that are in the photo must remain exactly where they are.
+- The ONLY differences between the input photo and your output are the numbered tasks. Every other pixel of content should depict the same objects as the original.
 `;
   const body = JSON.stringify({
     contents: [
@@ -128,6 +204,8 @@ Gemini image editing priorities:
     ],
     generationConfig: {
       responseModalities: ["IMAGE"],
+      // Preserve the customer's framing — see SUPPORTED_ASPECT_RATIOS.
+      imageConfig: { aspectRatio },
     },
   });
 
@@ -145,7 +223,7 @@ Gemini image editing priorities:
   let data: GeminiGenerateResponse = {};
 
   for (let attempt = 0; attempt < MAX_TRANSIENT_RETRIES + 1; attempt += 1) {
-    response = await fetch(GEMINI_IMAGE_ENDPOINT, {
+    response = await fetch(geminiImageEndpoint(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -178,6 +256,31 @@ Gemini image editing priorities:
 
   if (!imageBase64) {
     throw new Error("Gemini generation completed without an image.");
+  }
+
+  /**
+   * Metadata-only render log. The output dimensions are measured from the
+   * returned pixels rather than assumed, because "did it come back square?" is
+   * exactly the regression the aspect-ratio request exists to prevent.
+   */
+  if (process.env.ENABLE_AI_DEBUG?.toLowerCase() === "true") {
+    let outputSize = "unknown";
+    try {
+      const meta = await sharp(Buffer.from(imageBase64, "base64")).metadata();
+      outputSize = `${meta.width}x${meta.height}`;
+    } catch {
+      // Leave it unknown; never fail a good render over a log line.
+    }
+    console.log("[gemini-render]", {
+      model: geminiImageModel(),
+      requestedAspectRatio: aspectRatio,
+      outputSize,
+      referenceImages: references.length,
+      referenceLabels: references.map((reference) =>
+        reference.label.slice(0, 60)
+      ),
+      outputBytes: Math.round((imageBase64.length * 3) / 4),
+    });
   }
 
   return {

@@ -49,7 +49,19 @@ export type RoomEditProvider = {
  * the previous one for comparison — the flag exists for that comparison, not
  * as a supported production fallback.
  */
-export const DEFAULT_ROOM_EDIT_PROVIDER: RoomEditProviderId = "gpt-image";
+/**
+ * Gemini is the primary renderer.
+ *
+ * Benchmarked head to head on the same room photo and the same three products
+ * (Kelly, Elva, Aspen): gemini-3-pro-image reproduced the tubular segments of
+ * the Elva sofa and the glass extension plus black ribbon-loop base of the
+ * Aspen table, where gpt-image-2 rendered a generic seamed sofa and an angular
+ * dark base. Room preservation was equal or better and latency comparable.
+ *
+ * GPT Image remains fully wired and is one env var away — ROOM_EDIT_PROVIDER=
+ * gpt-image — so it stays a working fallback rather than dead code.
+ */
+export const DEFAULT_ROOM_EDIT_PROVIDER: RoomEditProviderId = "gemini";
 
 function readConfiguredProviderId(): RoomEditProviderId {
   const raw = process.env.ROOM_EDIT_PROVIDER?.trim().toLowerCase();

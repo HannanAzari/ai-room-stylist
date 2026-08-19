@@ -18,6 +18,7 @@ import {
   isReplaceableCanonical,
   type CanonicalCategory,
 } from "./scene-taxonomy";
+import sharp from "sharp";
 
 const SCENE_MODEL = "gemini-2.5-flash";
 const SCENE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${SCENE_MODEL}:generateContent`;
@@ -27,7 +28,16 @@ const SCENE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/
  * call, so the scene graph silently fell back to "not analysed" — taking the
  * replacement planner's grounding with it. Measured, not guessed.
  */
-const SCENE_TIMEOUT_MS = 45_000;
+/**
+ * Measured on a real 12MP phone photo: 42s, 47s, 49s, 93s, 95s. The previous
+ * 45s budget sat BELOW the median, so it aborted more often than it succeeded —
+ * and an aborted analysis is indistinguishable from an empty room. 120s clears
+ * the observed tail; the downscale above should keep typical calls far under it.
+ */
+const SCENE_TIMEOUT_MS = Number.parseInt(
+  process.env.SCENE_ANALYSIS_TIMEOUT_MS?.trim() || "",
+  10
+) || 120_000;
 
 export type BoundingBox = {
   x: number;
@@ -393,14 +403,51 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
   }
 }
 
+/**
+ * Long edge, in pixels, for the copy sent to scene analysis.
+ *
+ * Analysis needs semantic understanding, not resolution. A 4032x3024 phone
+ * photo is ~2MB of base64 that measurably pushes this call past its budget,
+ * and a timeout here is silent: the scene graph falls back to "not analysed",
+ * the plan degrades to ADD-only tasks, and the customer's furniture is placed
+ * beside their old furniture instead of replacing it. 1568px is ample for
+ * identifying sofas and tables and cuts the payload by roughly an order of
+ * magnitude.
+ */
+const ANALYSIS_MAX_EDGE = 1568;
+
 async function fileToInlineData(file: File) {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  return {
-    inline_data: {
-      mime_type: file.type || "image/jpeg",
-      data: buffer.toString("base64"),
-    },
-  };
+  const original = Buffer.from(await file.arrayBuffer());
+
+  try {
+    const downscaled = await sharp(original)
+      // Bake EXIF orientation in, or a portrait photo is analysed sideways and
+      // every bounding box comes back rotated.
+      .rotate()
+      .resize({
+        width: ANALYSIS_MAX_EDGE,
+        height: ANALYSIS_MAX_EDGE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: 88 })
+      .toBuffer();
+
+    return {
+      inline_data: {
+        mime_type: "image/jpeg",
+        data: downscaled.toString("base64"),
+      },
+    };
+  } catch {
+    // Never let a decode problem block analysis entirely — send the original.
+    return {
+      inline_data: {
+        mime_type: file.type || "image/jpeg",
+        data: original.toString("base64"),
+      },
+    };
+  }
 }
 
 const SCENE_PROMPT = `You are a computer-vision system that turns an interior photo into a structured scene graph. Return ONLY a JSON object with EXACTLY these keys:

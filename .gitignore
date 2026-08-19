@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Local tooling / preview config (not part of the app)
 .claude/
+
+# Renderer benchmark inputs/outputs (personal photos, paid renders)
+data/bench/
