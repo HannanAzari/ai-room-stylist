@@ -18,7 +18,7 @@
  */
 import sharp from "sharp";
 import { nearestAspectRatio } from "./gemini";
-import type { GeneratedImageResult, LabelledProductImage } from "./types";
+import type { GeneratedImageResult } from "./types";
 import type { TimingsCollector } from "@/lib/generation-timings";
 
 const DEFAULT_MODEL = "gemini-3-pro-image";
@@ -28,6 +28,14 @@ const DEFAULT_MODEL = "gemini-3-pro-image";
  * client accepts — see `studio-gemini-api.ts`.
  */
 export const FEW_SHOT_RENDERER_ID = "gemini";
+
+/**
+ * Room normalisation target, matching the benchmark's input almost exactly
+ * (it used 2048x1536 at quality 92 from a 4032x3024 original).
+ */
+export const ROOM_MAX_WIDTH = 2048;
+export const ROOM_MAX_HEIGHT = 1536;
+export const ROOM_JPEG_QUALITY = 92;
 
 /**
  * ---------------------------------------------------------------------------
@@ -93,13 +101,15 @@ export function fewShotModel(): string {
 }
 
 export type FewShotGenerateInput = {
-  /** The complete prompt. Nothing is appended to it. */
+  /** The complete prompt, and the request's ONLY text part. */
   prompt: string;
   roomImage: File;
-  /** Label immediately preceding the room image. */
-  roomLabel: string;
-  /** Two per product, each with its own preceding label. */
-  references: LabelledProductImage[];
+  /**
+   * References in transmission order. Plain files, deliberately: the benchmark
+   * request sent its images back to back with no text between them, and the
+   * prompt names the reference order in prose instead.
+   */
+  references: File[];
   apiKey: string;
   timings: TimingsCollector;
 };
@@ -113,30 +123,77 @@ async function toInlineData(file: File): Promise<GeminiPart> {
 
 export async function generateFewShotRoomEdit(
   input: FewShotGenerateInput
-): Promise<GeneratedImageResult & { aspectRatio: string; attempts: number }> {
-  const { prompt, roomImage, roomLabel, references, apiKey, timings } = input;
+): Promise<
+  GeneratedImageResult & {
+    aspectRatio: string;
+    attempts: number;
+    roomWidth: number;
+    roomHeight: number;
+    roomBytes: number;
+  }
+> {
+  const { prompt, roomImage, references, apiKey, timings } = input;
 
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set.");
 
-  // Room preprocessing: measure the photo's real aspect so the output keeps the
-  // customer's framing. `.rotate()` applies the EXIF orientation first — a
-  // portrait phone photo reports landscape dimensions without it.
-  const aspectRatio = await timings.measure("room-preprocess", async () => {
+  /**
+   * Room preprocessing: EXIF-rotate, downscale, re-encode, then measure.
+   *
+   * The benchmark sent a 2048x1536 / ~600KB reduction of a 4032x3024 photo. The
+   * app was sending the phone's original untouched, which is a different input
+   * to the model as well as a slower upload. `withoutEnlargement` means a photo
+   * already smaller than the cap is only re-encoded, never blown up.
+   *
+   * The aspect is measured from the NORMALISED bytes so the ratio requested can
+   * never disagree with the pixels actually sent.
+   */
+  const normalisedRoom = await timings.measure("room-preprocess", async () => {
+    const original = Buffer.from(await roomImage.arrayBuffer());
     try {
-      const metadata = await sharp(Buffer.from(await roomImage.arrayBuffer()))
+      const { data, info } = await sharp(original)
         .rotate()
-        .metadata();
-      return nearestAspectRatio(metadata.width ?? 0, metadata.height ?? 0);
+        .resize(ROOM_MAX_WIDTH, ROOM_MAX_HEIGHT, {
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: ROOM_JPEG_QUALITY })
+        .toBuffer({ resolveWithObject: true });
+      return {
+        data,
+        mimeType: "image/jpeg",
+        width: info.width,
+        height: info.height,
+        aspectRatio: nearestAspectRatio(info.width, info.height),
+      };
     } catch {
-      return "4:3";
+      // Never fail a render over preprocessing: send what the customer gave us.
+      return {
+        data: original,
+        mimeType: roomImage.type || "image/jpeg",
+        width: 0,
+        height: 0,
+        aspectRatio: "4:3",
+      };
     }
   });
+  const aspectRatio = normalisedRoom.aspectRatio;
 
+  /**
+   * ONE text part, then the images back to back — room first, then the
+   * references in order. This is the benchmark request's exact shape.
+   */
   const body = await timings.measure("reference-prepare", async () => {
-    const parts: GeminiPart[] = [{ text: prompt }, { text: roomLabel }, await toInlineData(roomImage)];
+    const parts: GeminiPart[] = [
+      { text: prompt },
+      {
+        inline_data: {
+          mime_type: normalisedRoom.mimeType,
+          data: normalisedRoom.data.toString("base64"),
+        },
+      },
+    ];
     for (const reference of references) {
-      if (reference.label) parts.push({ text: reference.label });
-      parts.push(await toInlineData(reference.file));
+      parts.push(await toInlineData(reference));
     }
     return JSON.stringify({
       contents: [{ role: "user", parts }],
@@ -219,6 +276,9 @@ export async function generateFewShotRoomEdit(
         b64_json: inline.data,
         aspectRatio,
         attempts,
+        roomWidth: normalisedRoom.width,
+        roomHeight: normalisedRoom.height,
+        roomBytes: normalisedRoom.data.length,
       };
     }
 

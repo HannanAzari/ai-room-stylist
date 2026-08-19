@@ -12,11 +12,11 @@ import {
   generateFewShotRoomEdit,
   ProviderBusyError,
 } from "./image-providers/gemini-few-shot";
-import type { LabelledProductImage } from "./image-providers/types";
 import {
+  BASELINE_PRESERVED,
   buildFewShotPrompt,
-  referenceLabel,
-  ROOM_REFERENCE_LABEL,
+  describeTarget,
+  type FewShotReferenceNote,
   type FewShotReplacement,
 } from "@/lib/intelligence/few-shot-prompt";
 import {
@@ -81,6 +81,11 @@ export type FewShotResult = {
     promptBytes: number;
     referencesSent: number;
     imagesSent: number;
+    textParts: number;
+    roomNormalisedTo: string;
+    roomBytes: number;
+    targets: string[];
+    preserved: string[];
     references: Array<{ productId: string; url: string; view: string; role: string; bytes: number }>;
     skipped: Array<{ productId: string; url: string; reason: string }>;
     timings: ReturnType<ReturnType<typeof createTimings>["snapshot"]> & { unattributedMs: number };
@@ -110,46 +115,76 @@ export async function runFewShotRoomEdit(input: {
     }
   }
 
+  /**
+   * What is being replaced, DESCRIBED rather than named.
+   *
+   * `displayName` is the picker's label ("Sofa 1") and tells the model nothing
+   * about what to look for. `originalObjectDescription` is the scene graph's
+   * own "dark fabric sofa", which is what the benchmark prompt used, so it is
+   * preferred and the UI label is only a last resort.
+   */
   const replacements: FewShotReplacement[] = [];
   for (const assignment of input.contract.assignments) {
     const sku = getFewShotSku(assignment.productId);
     // Eligibility already guaranteed this, but the type does not know that.
     if (!sku) continue;
+    const target = assignment.target;
     replacements.push({
-      existingLabel: assignment.target.displayName || assignment.target.instanceLabel,
-      location: assignment.target.location || null,
+      targetDescription:
+        target.originalObjectDescription?.trim() ||
+        target.instanceLabel?.trim() ||
+        target.displayName,
+      location: target.location || null,
       productTitle: assignment.productTitle,
       sku,
     });
   }
 
-  const prompt = buildFewShotPrompt(replacements);
-
-  // Group references per product so the labels read "1 of 2", "2 of 2" rather
-  // than counting across the whole request.
-  const references: LabelledProductImage[] = [];
-  for (const product of input.products) {
-    const forProduct = loaded
+  // References in transmission order, so the prompt's prose and the payload
+  // cannot disagree about which image is which.
+  const orderedReferences = input.products.flatMap((product) =>
+    loaded
       .filter((reference) => reference.productId === product.id)
-      .slice(0, MAX_FEW_SHOT_REFERENCES);
-    forProduct.forEach((reference, index) => {
-      references.push({
-        label: referenceLabel({
-          productTitle: reference.productTitle,
-          view: reference.view,
-          index: index + 1,
-          total: forProduct.length,
-        }),
-        file: reference.file,
-      });
-    });
+      .slice(0, MAX_FEW_SHOT_REFERENCES)
+  );
+  const referenceNotes: FewShotReferenceNote[] = orderedReferences.map((reference) => ({
+    productTitle: reference.productTitle,
+    view: reference.view,
+  }));
+
+  /**
+   * Concrete preservation list.
+   *
+   * The baseline architecture always applies. Anything the contract explicitly
+   * protected — the detected objects the customer did NOT assign a product to —
+   * is added by name, so "the other sofa" and "the coffee table" are stated
+   * rather than left to "every other part of the room".
+   */
+  const preserved: string[] = [...BASELINE_PRESERVED];
+  for (const item of input.contract.protectedItems ?? []) {
+    const label = item.label?.trim();
+    if (!label) continue;
+    // "Sofa 2" is a picker label; say what it is instead.
+    const readable = /^[A-Za-z ]+\s\d+$/.test(label)
+      ? `the other ${label.replace(/\s*\d+$/, "").trim().toLowerCase()}`
+      : /^(the|a|an) /i.test(label)
+        ? label
+        : `the ${label.toLowerCase()}`;
+    if (!preserved.some((entry) => entry.toLowerCase() === readable.toLowerCase())) {
+      preserved.push(readable);
+    }
   }
+
+  const prompt = buildFewShotPrompt({
+    replacements,
+    references: referenceNotes,
+    preserved,
+  });
 
   const generated = await generateFewShotRoomEdit({
     prompt,
     roomImage: input.roomImage,
-    roomLabel: ROOM_REFERENCE_LABEL,
-    references,
+    references: orderedReferences.map((reference) => reference.file),
     apiKey: input.apiKey,
     timings,
   });
@@ -168,9 +203,16 @@ export async function runFewShotRoomEdit(input: {
       aspectRatio: generated.aspectRatio,
       prompt,
       promptBytes: Buffer.byteLength(prompt, "utf8"),
-      referencesSent: references.length,
+      referencesSent: orderedReferences.length,
       // References plus the room photo — what actually went over the wire.
-      imagesSent: references.length + 1,
+      imagesSent: orderedReferences.length + 1,
+      // Exactly one text part, then the images. Recorded so a regression back
+      // to interleaved labels is visible in the response, not just in a test.
+      textParts: 1,
+      roomNormalisedTo: `${generated.roomWidth}x${generated.roomHeight}`,
+      roomBytes: generated.roomBytes,
+      targets: replacements.map((replacement) => describeTarget(replacement)),
+      preserved,
       references: loaded.map((reference) => ({
         productId: reference.productId,
         url: reference.url,

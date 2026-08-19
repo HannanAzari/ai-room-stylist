@@ -1,63 +1,103 @@
 /**
- * The short few-shot replacement prompt.
+ * The short few-shot replacement prompt — benchmark-style.
  *
  * ---------------------------------------------------------------------------
- * WHY THIS IS SHORT
+ * WHY IT IS SHAPED LIKE THIS
  * ---------------------------------------------------------------------------
- * The grounding path builds ~19KB of prompt for a three-product room (measured:
- * `data/bench/out/…-21-52-904Z-…prompt.txt` is 19,142 bytes). The experiments
- * that produced the best fidelity used roughly one twentieth of that: a naming
- * sentence, a per-object instruction, one signature sentence per SKU, and a
- * preservation clause.
+ * The grounding path builds ~19KB for a three-product room (measured: 19,142
+ * bytes). The renders that actually held product identity used roughly one
+ * twentieth of that, and — this turned out to matter — sent it as ONE text part
+ * followed by the images back to back.
  *
- * So this builder is not a trimmed version of the other one. It is the prompt
- * that was actually measured, and nothing else is added to it. In particular no
- * product-intelligence metadata is interpolated here — that is the thing being
- * tested against.
+ * Three differences from the first version of this builder, each traced to a
+ * literal diff against the benchmark request:
+ *
+ *  1. ONE text part. Per-image labels used to be interleaved between the
+ *     images, so the request alternated text/image/text/image. The reference
+ *     order is now stated in prose instead, exactly as the benchmark did it.
+ *  2. Targets are DESCRIBED, not named. The prompt said "Replace the Sofa 1",
+ *     a label from the picker that tells the model nothing about what to look
+ *     for (and reads ungrammatically). It now says "the dark fabric sofa on the
+ *     left", built from the contract's own description and location.
+ *  3. Preservation is CONCRETE. "Keep every other part of the room unchanged"
+ *     became an explicit list, because that is what the benchmark carried.
+ *
+ * No product-intelligence metadata is interpolated here; that is the thing this
+ * strategy is being tested against.
  */
 import type { FewShotSku } from "./few-shot-references";
 
 export type FewShotReplacement = {
-  /** What is being replaced, as the customer's selection named it. */
-  existingLabel: string;
+  /** Visual description of what is being replaced, e.g. "the dark fabric sofa". */
+  targetDescription: string;
   /** Human-readable position, e.g. "on the left". */
   location: string | null;
   productTitle: string;
   sku: FewShotSku;
 };
 
-/**
- * One line per reference image, used as the text part immediately before it so
- * the model is never guessing which image belongs to which product.
- */
-export function referenceLabel(input: {
+/** One reference image, in the order it is sent. */
+export type FewShotReferenceNote = {
   productTitle: string;
+  /** e.g. "front", "rear-three-quarter". */
   view: string;
-  index: number;
-  total: number;
+};
+
+/**
+ * Baseline of things that must survive any room edit.
+ *
+ * Concrete rather than generic, and stated even when the contract carries no
+ * protected items — a resolved contract from the category flow often does not,
+ * and "every other part of the room" measurably under-constrains the model.
+ */
+export const BASELINE_PRESERVED = [
+  "the walls",
+  "the ceiling",
+  "the floor and carpet",
+  "the windows and curtains",
+  "the rug",
+  "the ceiling fan",
+  "the television and TV unit",
+] as const;
+
+/** "the dark fabric sofa on the left", from description + location. */
+export function describeTarget(replacement: {
+  targetDescription: string;
+  location: string | null;
 }): string {
-  return `Reference ${input.index} of ${input.total} for the ${input.productTitle} — ${input.view.replace(/-/g, " ")} view, complete product.`;
+  const description = replacement.targetDescription.trim();
+  const withArticle = /^(the|a|an) /i.test(description)
+    ? description
+    : `the ${description}`;
+  return replacement.location ? `${withArticle} ${replacement.location}` : withArticle;
 }
 
-/** The room image's own introductory line. */
-export const ROOM_REFERENCE_LABEL =
-  "ROOM PHOTOGRAPH — the customer's real room. Keep this camera, framing, lighting and architecture exactly.";
+export function buildFewShotPrompt(input: {
+  replacements: FewShotReplacement[];
+  /** In transmission order, so the prose matches the payload exactly. */
+  references: FewShotReferenceNote[];
+  /** Everything in this room that must not change. */
+  preserved: string[];
+}): string {
+  const referenceList = input.references
+    .map((reference, index) => `${index + 1}. the ${reference.productTitle} — ${reference.view.replace(/-/g, " ")} view`)
+    .join("; ");
 
-export function buildFewShotPrompt(replacements: FewShotReplacement[]): string {
-  const instructions = replacements
-    .map((replacement, index) => {
-      const where = replacement.location ? ` (${replacement.location})` : "";
-      return `${index + 1}. Replace the ${replacement.existingLabel}${where} with the ${replacement.productTitle}. ${replacement.sku.signature}`;
+  const instructions = input.replacements
+    .map((replacement) => {
+      const target = describeTarget(replacement);
+      return `Replace ${target} with the ${replacement.productTitle}. It must stand in exactly the same place, at the same size and the same orientation, following the same perspective and the same daylight as the object it replaces. ${replacement.sku.signature} Do not restyle it.`;
     })
-    .join("\n");
+    .map((line, index, all) => (all.length > 1 ? `${index + 1}. ${line}` : line))
+    .join("\n\n");
 
-  return `The reference images show the exact retail products selected by the customer.
+  const preserved = input.preserved.join(", ");
 
-Replace only the selected furniture in the room with those exact products. Match each replacement to the position, footprint, viewing direction and perspective of the object it replaces.
-
-Preserve the exact product design, proportions, materials and distinctive structural features. Keep every other part of the room and all unrelated objects unchanged.
+  return `The first image is a photograph of a real living room. The images after it show the exact retail products the customer selected, in this order: ${referenceList}.
 
 ${instructions}
 
-Objects resting on or around the furniture being replaced stay in the room — cushions, throws, toys, books, cups and anything else settle naturally onto or beside the replacement. Only move an object if the replacement makes its original position physically impossible. Do not clear, tidy or restyle the room, and add nothing that is not already in the photograph.`;
+Objects resting on or around the furniture being replaced stay where they are — cushions, throws, toys, books and anything else settle naturally onto or beside the replacement, and only move if the replacement makes their original position physically impossible.
+
+Every other part of the photograph — ${preserved} — stays exactly as it is. Do not clear, tidy or restyle the room. Add nothing to the room.`;
 }

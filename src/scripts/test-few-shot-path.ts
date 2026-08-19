@@ -17,8 +17,9 @@ import {
   MAX_FEW_SHOT_REFERENCES,
 } from "@/lib/intelligence/few-shot-references";
 import {
+  BASELINE_PRESERVED,
   buildFewShotPrompt,
-  referenceLabel,
+  describeTarget,
   type FewShotReplacement,
 } from "@/lib/intelligence/few-shot-prompt";
 import {
@@ -30,6 +31,8 @@ import { checkFewShotEligibility } from "@/features/room-stylist/services/few-sh
 import {
   FEW_SHOT_RENDERER_ID,
   generateFewShotRoomEdit,
+  ROOM_MAX_HEIGHT,
+  ROOM_MAX_WIDTH,
 } from "@/features/room-stylist/services/image-providers/gemini-few-shot";
 import { assertStudioGeminiProvider } from "@/components/studio/studio-gemini-api";
 import sharp from "sharp";
@@ -145,32 +148,52 @@ console.log("\nReference loading from disk");
 console.log("\nPrompt");
 {
   const replacements: FewShotReplacement[] = [
-    { existingLabel: "dark sofa", location: "on the left", productTitle: "Kelly", sku: getFewShotSku(KELLY)! },
-    { existingLabel: "navy sofa", location: "on the right", productTitle: "Elva", sku: getFewShotSku(ELVA)! },
-    { existingLabel: "wooden coffee table", location: "in the centre", productTitle: "Aspen", sku: getFewShotSku(ASPEN)! },
+    { targetDescription: "dark fabric sofa", location: "on the left", productTitle: "Kelly", sku: getFewShotSku(KELLY)! },
+    { targetDescription: "navy leather sofa", location: "on the right", productTitle: "Elva", sku: getFewShotSku(ELVA)! },
+    { targetDescription: "wooden coffee table", location: "in the centre", productTitle: "Aspen", sku: getFewShotSku(ASPEN)! },
   ];
-  const prompt = buildFewShotPrompt(replacements);
+  const prompt = buildFewShotPrompt({
+    replacements,
+    references: [
+      { productTitle: "Kelly", view: "front" },
+      { productTitle: "Kelly", view: "rear-three-quarter" },
+    ],
+    preserved: [...BASELINE_PRESERVED, "the other sofa"],
+  });
   const bytes = Buffer.byteLength(prompt, "utf8");
 
-  check("the prompt names every replacement", replacements.every((r) => prompt.includes(r.existingLabel)));
-  check("the prompt carries each target's location", prompt.includes("on the left") && prompt.includes("in the centre"));
+  check("the prompt describes every target visually",
+    replacements.every((r) => prompt.includes(r.targetDescription)));
+  check("the prompt carries each target's location",
+    prompt.includes("on the left") && prompt.includes("in the centre"));
+  check("targets read as descriptions, never as picker labels",
+    !/\bSofa \d\b/.test(prompt), prompt);
   check("each SKU contributes exactly one signature sentence",
     replacements.every((r) => prompt.split(r.sku.signature).length === 2));
+  check("the reference order is stated in prose, not as image labels",
+    /in this order: 1\. the Kelly — front view; 2\. the Kelly — rear three quarter view/.test(prompt));
   check("objects on replaced furniture are explicitly preserved",
     /settle naturally onto or beside the replacement/.test(prompt));
-  check("the room must not be cleared or restyled", /Do not clear, tidy or restyle the room/.test(prompt));
-  check("nothing may be added", /add nothing that is not already in the photograph/i.test(prompt));
+  check("preservation is concrete, not generic",
+    BASELINE_PRESERVED.every((entry) => prompt.includes(entry)));
+  check("contract-protected items join the preservation list",
+    prompt.includes("the other sofa"));
+  check("the room must not be cleared or restyled",
+    /Do not clear, tidy or restyle the room/.test(prompt));
+  check("nothing may be added", /Add nothing to the room/.test(prompt));
 
   /**
-   * The whole point of the strategy. The grounding path measured 19,142 bytes
-   * for this same three-product room; anything approaching that means product
-   * metadata has leaked back into the prompt.
+   * The grounding path measured 19,142 bytes for this same three-product room;
+   * anything approaching that means metadata has leaked back in.
    */
-  check(`the 3-product prompt stays under 2KB (got ${bytes}B vs 19,142B grounding)`, bytes < 2048, `${bytes} bytes`);
+  check(`the 3-product prompt stays under 2.5KB (got ${bytes}B vs 19,142B grounding)`,
+    bytes < 2560, `${bytes} bytes`);
 
-  const label = referenceLabel({ productTitle: "Kelly", view: "rear-three-quarter", index: 2, total: 2 });
-  check("reference labels name the product and its view", label.includes("Kelly") && label.includes("rear three quarter"));
-  check("reference labels say which of how many", label.includes("2 of 2"));
+  check("describeTarget adds an article when the description lacks one",
+    describeTarget({ targetDescription: "dark fabric sofa", location: "on the left" }) ===
+      "the dark fabric sofa on the left");
+  check("describeTarget does not double the article",
+    describeTarget({ targetDescription: "the left sofa", location: null }) === "the left sofa");
 }
 
 console.log("\nFeature flag");
@@ -374,16 +397,28 @@ console.log("\nRegression — the real Kelly + Elva + Aspen object-selection flo
 
   // Every replacement the prompt will describe must resolve to a real target.
   const replacements: FewShotReplacement[] = contract.assignments.map((assignment) => ({
-    existingLabel: assignment.target.displayName || assignment.target.instanceLabel,
+    targetDescription:
+      assignment.target.originalObjectDescription?.trim() ||
+      assignment.target.instanceLabel?.trim() ||
+      assignment.target.displayName,
     location: assignment.target.location || null,
     productTitle: assignment.productTitle,
     sku: getFewShotSku(assignment.productId)!,
   }));
-  const prompt = buildFewShotPrompt(replacements);
-  check("the prompt built from a real contract names all three targets",
-    replacements.every((entry) => prompt.includes(entry.existingLabel)));
+  const prompt = buildFewShotPrompt({
+    replacements,
+    references: POC_IDS.flatMap((id) => [
+      { productTitle: id, view: "front" },
+      { productTitle: id, view: "side" },
+    ]),
+    preserved: [...BASELINE_PRESERVED],
+  });
+  check("the prompt built from a real contract describes all three targets",
+    replacements.every((entry) => prompt.includes(entry.targetDescription)));
+  check("a real contract never yields a picker label as the target",
+    !/Replace the Sofa \d/.test(prompt), prompt);
   check("the prompt built from a real contract stays short",
-    Buffer.byteLength(prompt, "utf8") < 2048);
+    Buffer.byteLength(prompt, "utf8") < 3072);
 
   // The server-resolved contract (mainline flow) is the same type, so the
   // second attempt accepts it on exactly the same terms.
@@ -489,91 +524,102 @@ console.log("\nProvider routing — few-shot is a STRATEGY, not a provider id");
       !/ROOM_EDIT_STRATEGY/.test(PROVIDER_SRC));
 }
 
-console.log("\nEnd to end — Kelly + Elva + Aspen reach the Gemini few-shot renderer");
+console.log("\nEnd to end — benchmark-shaped request, Kelly only and all three");
 {
   /**
-   * Drives the real renderer with the transport stubbed out. Nothing leaves the
+   * Drives the real renderer with the transport stubbed. Nothing leaves the
    * machine and no generation is paid for, but every step between the contract
-   * and the response body is the production code path — which is where the
-   * provider id is set and where the previous two bugs both lived.
+   * and the request body is the production code path — which is exactly where
+   * the request SHAPE is decided.
    */
-  const png = await sharp({
-    create: { width: 64, height: 48, channels: 3, background: "#cccccc" },
+  const bigRoom = await sharp({
+    create: { width: 4032, height: 3024, channels: 3, background: "#b0a89c" },
   })
     .jpeg()
     .toBuffer();
-  const roomImage = new File([new Uint8Array(png)], "room.jpg", { type: "image/jpeg" });
+  const roomImage = new File([new Uint8Array(bigRoom)], "room.jpg", { type: "image/jpeg" });
 
-  const { loaded } = await loadFewShotReferences(POC_IDS.map((id) => ({ id, name: id })));
-  const references = loaded.map((reference) => ({
-    label: referenceLabel({
-      productTitle: reference.productTitle,
-      view: reference.view,
-      index: 1,
-      total: 2,
-    }),
-    file: reference.file,
-  }));
+  const capture = async (productIds: string[]) => {
+    const { loaded } = await loadFewShotReferences(productIds.map((id) => ({ id, name: id })));
+    const realFetch = globalThis.fetch;
+    let sent: { contents: Array<{ parts: Array<Record<string, unknown>> }>; generationConfig: Record<string, unknown> } | null = null;
+    let url = "";
+    globalThis.fetch = (async (requestUrl: string, init: RequestInit) => {
+      url = String(requestUrl);
+      sent = JSON.parse(String(init.body));
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ inlineData: { data: "AA==", mimeType: "image/jpeg" } }] } }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }) as unknown as typeof fetch;
+    try {
+      const result = await generateFewShotRoomEdit({
+        prompt: "PROMPT",
+        roomImage,
+        references: loaded.map((reference) => reference.file),
+        apiKey: "stub-not-used",
+        timings: createTimings(),
+      });
+      return { sent: sent!, url, result, loaded };
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  };
 
-  const realFetch = globalThis.fetch;
-  let requestedUrl = "";
-  let sentBody: Record<string, unknown> = {};
-  globalThis.fetch = (async (url: string, init: RequestInit) => {
-    requestedUrl = String(url);
-    sentBody = JSON.parse(String(init.body));
-    return new Response(
-      JSON.stringify({
-        candidates: [
-          { content: { parts: [{ inlineData: { data: png.toString("base64"), mimeType: "image/jpeg" } }] } },
-        ],
-      }),
-      { status: 200, headers: { "content-type": "application/json" } }
-    );
-  }) as unknown as typeof fetch;
+  const kelly = await capture([KELLY]);
+  const parts = kelly.sent.contents[0].parts;
+  const textParts = parts.filter((part) => "text" in part);
+  const imageParts = parts.filter((part) => "inline_data" in part);
 
-  try {
-    const timings = createTimings();
-    const result = await generateFewShotRoomEdit({
-      prompt: buildFewShotPrompt([
-        { existingLabel: "dark sofa", location: "on the left", productTitle: "Kelly", sku: getFewShotSku(KELLY)! },
-        { existingLabel: "navy sofa", location: "on the right", productTitle: "Elva", sku: getFewShotSku(ELVA)! },
-        { existingLabel: "wooden coffee table", location: "in the centre", productTitle: "Aspen", sku: getFewShotSku(ASPEN)! },
-      ]),
-      roomImage,
-      roomLabel: "ROOM PHOTOGRAPH",
-      references,
-      apiKey: "test-key-not-used",
-      timings,
-    });
+  check("no paid call was made — the transport was stubbed",
+    kelly.url.includes("generativelanguage.googleapis.com"));
+  check("Kelly-only sends EXACTLY 1 text part", textParts.length === 1, `got ${textParts.length}`);
+  check("the single text part comes first", "text" in parts[0]);
+  check("Kelly-only then sends EXACTLY 3 image parts", imageParts.length === 3, `got ${imageParts.length}`);
+  check("nothing is interleaved between the images",
+    parts.length === 4 && parts.slice(1).every((part) => "inline_data" in part),
+    parts.map((part) => ("text" in part ? "TEXT" : "IMAGE")).join(","));
 
-    check("no paid call was made — the transport was stubbed",
-      requestedUrl.includes("generativelanguage.googleapis.com") && realFetch !== globalThis.fetch);
-    check("the renderer returns a usable image", result.imageBase64.length > 0);
-    check("the response provider passes the studio client guard",
-      (() => {
-        try {
-          assertStudioGeminiProvider(result.provider);
-          return true;
-        } catch {
-          return false;
-        }
-      })(),
-      `provider was "${result.provider}"`);
-    check('the response provider is exactly "gemini"', result.provider === "gemini");
-    check("all three products' references were transmitted",
-      (sentBody.contents as Array<{ parts: unknown[] }>)[0].parts.filter(
-        (part) => typeof part === "object" && part !== null && "inline_data" in part
-      ).length === 7,
-      "6 references + the room");
-    check("the room's aspect ratio was sent",
-      Boolean(
-        (sentBody.generationConfig as { imageConfig?: { aspectRatio?: string } })?.imageConfig
-          ?.aspectRatio
-      ));
-    check("timings recorded a provider attempt", timings.snapshot().providerAttempts === 1);
-  } finally {
-    globalThis.fetch = realFetch;
-  }
+  const mimes = imageParts.map(
+    (part) => (part.inline_data as { mime_type: string }).mime_type
+  );
+  check("the room is first, normalised to JPEG", mimes[0] === "image/jpeg");
+  check("reference order is main.jpg then 03-side.webp",
+    kelly.loaded.map((reference) => reference.url.split("/").pop()).join(",") ===
+      "main.jpg,03-side.webp");
+  check("MIME sniffing is intact — the WebP-in-.jpg is declared image/webp",
+    mimes[1] === "image/webp" && mimes[2] === "image/webp",
+    mimes.join(","));
+
+  check(`the room is normalised to ${ROOM_MAX_WIDTH}x${ROOM_MAX_HEIGHT}`,
+    kelly.result.roomWidth === 2048 && kelly.result.roomHeight === 1536,
+    `${kelly.result.roomWidth}x${kelly.result.roomHeight}`);
+  check("normalisation shrank a 4032x3024 phone photo",
+    kelly.result.roomBytes < bigRoom.length, `${kelly.result.roomBytes} vs ${bigRoom.length}`);
+  check("the room's aspect is measured from the normalised pixels",
+    kelly.result.aspectRatio === "4:3", kelly.result.aspectRatio);
+  check("4:3 is still sent in generationConfig",
+    (kelly.sent.generationConfig.imageConfig as { aspectRatio: string }).aspectRatio === "4:3");
+  check("the response provider passes the studio client guard",
+    (() => {
+      try {
+        assertStudioGeminiProvider(kelly.result.provider);
+        return true;
+      } catch {
+        return false;
+      }
+    })());
+
+  // The shape must hold as products are added, not only at one SKU.
+  const all = await capture(POC_IDS);
+  const allParts = all.sent.contents[0].parts;
+  check("three SKUs still send exactly 1 text part",
+    allParts.filter((part) => "text" in part).length === 1);
+  check("three SKUs send 7 images with no interleaved text",
+    allParts.length === 8 && allParts.slice(1).every((part) => "inline_data" in part),
+    `${allParts.length} parts`);
 }
 
 console.log(`\n${"=".repeat(60)}`);
