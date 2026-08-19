@@ -448,10 +448,17 @@ section("6. The same room is not analysed twice");
     /sceneAnalysis:\s*\{[\s\S]{0,200}analysisCallMade/.test(generate));
   check("detection reports the same",
     /sceneAnalysis:\s*\{[\s\S]{0,200}analysisCallMade/.test(detect));
-  const generateDebugBlock =
-    generate.match(/if \(isAiDebugEnabled\(\)\) \{[\s\S]{0,400}/)?.[0] ?? "";
+  /**
+   * The sceneAnalysis instrumentation rides on the aiDebug response payload,
+   * which is itself gated. Asserted by adjacency rather than by matching the
+   * whole block: the route now has several `isAiDebugEnabled()` gates
+   * (generation mode, render calls), so "the first one" and "a fixed-width
+   * window" both silently test the wrong thing.
+   */
   check("generation's instrumentation sits behind the debug gate",
-    /sceneAnalysis/.test(generateDebugBlock));
+    /if \(isAiDebugEnabled\(\)\) \{\s*\n\s*responseBody\.aiDebug = \{/.test(generate) &&
+      /responseBody\.aiDebug = \{[\s\S]{0,400}sceneAnalysis/.test(generate),
+    "it must not be reachable without ENABLE_AI_DEBUG");
   const detectDebugBlock =
     detect.match(/if \(isAiDebugEnabled\(\)\) \{[\s\S]{0,400}/)?.[0] ?? "";
   check("detection's instrumentation sits behind the debug gate",

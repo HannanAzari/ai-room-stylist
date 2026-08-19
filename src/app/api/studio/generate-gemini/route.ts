@@ -652,14 +652,43 @@ async function handleGeneration(
     });
   }
 
-  // Two-stage generation: large anchor furniture first (against the customer's
-  // real photo), then smaller secondary pieces layered onto that result. A
-  // single pass degrades as the task count rises, so this is used only when the
-  // plan is genuinely mixed and large enough to benefit.
-  const useTwoStage = shouldUseTwoStageGeneration(replacementPlan);
+  /**
+   * Two-stage generation: large anchor furniture first (against the customer's
+   * real photo), then smaller secondary pieces layered onto that result. A
+   * single pass degrades as the task count rises, so this is used only when the
+   * plan is genuinely mixed and large enough to benefit.
+   *
+   * ---------------------------------------------------------------------------
+   * WHY GEMINI REPLACE-ITEMS IS SINGLE-STAGE
+   * ---------------------------------------------------------------------------
+   * The strong renderer benchmark was a SINGLE render carrying every task
+   * against the untouched room photo. The app was doing something materially
+   * different for the same three products: Kelly and Elva are `sofa` (anchor)
+   * and Aspen is `coffee-table` (secondary), which is exactly three tasks with
+   * both stages present — so `shouldUseTwoStageGeneration` fired and split it.
+   *
+   * That costs twice and, more importantly, changes the inputs. Stage 2 edits
+   * STAGE 1'S OUTPUT rather than the customer's photo, so the coffee table is
+   * placed into an already-generated image: a second round of lossy re-drawing
+   * over furniture that was itself just drawn. Every reported symptom of the
+   * phone test — roughly double the latency, and the coffee table faring worse
+   * than the sofas — follows from that difference, and the benchmark never had
+   * it.
+   *
+   * So the replace-items path on Gemini now matches the architecture that
+   * actually produced the good result. Surprise Me is deliberately untouched:
+   * it composes a whole room rather than swapping named items, and nothing has
+   * been measured about it here.
+   */
+  const singleStageForGemini = renderer.id === "gemini" && !surpriseMe;
+  const useTwoStage =
+    !singleStageForGemini && shouldUseTwoStageGeneration(replacementPlan);
   const stagePlans = useTwoStage
     ? splitPlanByStage(replacementPlan)
     : [{ stage: "anchor" as const, plan: replacementPlan }];
+  const generationMode: "single-stage" | "two-stage" = useTwoStage
+    ? "two-stage"
+    : "single-stage";
 
   // Only send the references a stage actually needs, so each pass sees a small,
   // unambiguous set of products.
@@ -680,6 +709,33 @@ async function handleGeneration(
       })
       .filter((entry): entry is { label: string; file: File } => entry !== null);
   };
+
+  /**
+   * Always logged, not behind devLog: `devLog` is gated on NODE_ENV and
+   * therefore silent on Vercel, which is precisely why the last investigation
+   * could not tell which renderer had run. Gated on the debug flag instead, so
+   * it works in preview where it is needed.
+   */
+  if (isAiDebugEnabled()) {
+    console.log("[studio-gemini] generation mode", {
+      generationMode,
+      renderer: renderer.id,
+      plannedRenderCalls: stagePlans.length,
+      stages: stagePlans.map((entry) => entry.stage),
+      baseImage:
+        stagePlans.length === 1
+          ? "the customer's original room photo"
+          : "photo for stage 1, previous stage output thereafter",
+      tasksInRender: stagePlans.map((entry) => ({
+        stage: entry.stage,
+        replace: entry.plan.replacements.map(
+          (task) => `#${task.taskId} ${task.existingInstanceLabel} -> ${task.productTitle}`
+        ),
+        remove: entry.plan.removals.map((task) => `#${task.taskId} ${task.existingInstanceLabel}`),
+        add: entry.plan.additions.map((task) => `#${task.taskId} ${task.productTitle}`),
+      })),
+    });
+  }
 
   devLog("[studio-gemini] generation request", {
     renderer: renderer.id,
@@ -757,6 +813,7 @@ async function handleGeneration(
         break;
       }
 
+      const renderStartedAt = Date.now();
       const generatedImage = await renderer.generate({
         prompt: built.prompt,
         roomImage: stageInputImage,
@@ -766,6 +823,23 @@ async function handleGeneration(
         apiKey: renderer.apiKey,
       });
       generationsUsed += 1;
+      if (isAiDebugEnabled()) {
+        console.log("[studio-gemini] render call", {
+          renderCall: generationsUsed,
+          generationMode,
+          stage,
+          attempt: attempt + 1,
+          renderMs: Date.now() - renderStartedAt,
+          taskCount:
+            stagePlan.replacements.length +
+            stagePlan.removals.length +
+            stagePlan.additions.length,
+          referencesSent: stageReferences.length,
+          editedImage: isSecondPass
+            ? "previous stage output"
+            : "original room photo",
+        });
+      }
 
       // The final stage is judged against the FULL plan — the finished image
       // must satisfy every task, not just this pass's subset. Earlier stages

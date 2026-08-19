@@ -32,7 +32,8 @@
     "test:route-guard": "tsx src/scripts/test-studio-route-guard.ts",
     "test:job-durability": "tsx src/scripts/test-job-durability.ts",
     "test:signature": "tsx src/scripts/test-signature-traits.ts",
-    "test:gemini-primary": "tsx src/scripts/test-gemini-primary.ts"
+    "test:gemini-primary": "tsx src/scripts/test-gemini-primary.ts",
+    "test:single-stage": "tsx src/scripts/test-single-stage.ts"
   },
   "dependencies": {
     "next": "16.2.6",
