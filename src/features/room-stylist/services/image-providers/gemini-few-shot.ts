@@ -24,6 +24,12 @@ import type { TimingsCollector } from "@/lib/generation-timings";
 const DEFAULT_MODEL = "gemini-3-pro-image";
 
 /**
+ * The renderer id this path reports. Must stay one of the ids the studio
+ * client accepts — see `studio-gemini-api.ts`.
+ */
+export const FEW_SHOT_RENDERER_ID = "gemini";
+
+/**
  * ---------------------------------------------------------------------------
  * RETRY POLICY
  * ---------------------------------------------------------------------------
@@ -195,8 +201,19 @@ export async function generateFewShotRoomEdit(
       if (!inline?.data) throw new Error("Gemini generation completed without an image.");
 
       return {
-        provider: "gemini-few-shot",
-        label: "Gemini (few-shot)",
+        /**
+         * The RENDERER's id, not the strategy's.
+         *
+         * This field answers "which image provider produced this", and the
+         * answer is Gemini — few-shot is a prompt/reference strategy that runs
+         * on top of it. Returning "gemini-few-shot" here made the client's
+         * `assertStudioGeminiProvider` allowlist ({gpt-image, gemini}) throw
+         * "Unknown studio image provider" AFTER the render had already been
+         * paid for, discarding a successful image. The strategy is reported
+         * where it belongs, in `aiDebug.strategy`.
+         */
+        provider: FEW_SHOT_RENDERER_ID,
+        label: "Gemini",
         imageBase64: inline.data,
         mimeType: inline.mimeType || inline.mime_type || "image/png",
         b64_json: inline.data,

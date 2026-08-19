@@ -28,6 +28,12 @@ import {
 import { createTimings, unattributedMs } from "@/lib/generation-timings";
 import { checkFewShotEligibility } from "@/features/room-stylist/services/few-shot-room-edit";
 import {
+  FEW_SHOT_RENDERER_ID,
+  generateFewShotRoomEdit,
+} from "@/features/room-stylist/services/image-providers/gemini-few-shot";
+import { assertStudioGeminiProvider } from "@/components/studio/studio-gemini-api";
+import sharp from "sharp";
+import {
   buildReplacementContract,
   contractProductIds,
   type AssignmentInput,
@@ -428,6 +434,146 @@ console.log("\nRegression — both contract origins reach the few-shot branch");
     /origin,\s*\n\s*model: result\.debug\.model/.test(ROUTE));
   check("the first attempt does not warn when a contract simply is not there yet",
     /if \(origin === "resolved-contract" \|\| contract\)/.test(ROUTE));
+}
+
+console.log("\nProvider routing — few-shot is a STRATEGY, not a provider id");
+{
+  /**
+   * The bug: the few-shot renderer reported `provider: "gemini-few-shot"`,
+   * which is not in the studio client's allowlist, so
+   * `assertStudioGeminiProvider` threw "Unknown studio image provider" — on the
+   * CLIENT, after the server had already rendered and paid for the image.
+   */
+  check("the few-shot renderer reports the renderer id, not the strategy",
+    FEW_SHOT_RENDERER_ID === "gemini", FEW_SHOT_RENDERER_ID);
+
+  let threw: string | null = null;
+  try {
+    assertStudioGeminiProvider(FEW_SHOT_RENDERER_ID);
+  } catch (error) {
+    threw = error instanceof Error ? error.message : String(error);
+  }
+  check("the studio client accepts what the few-shot renderer returns",
+    threw === null, threw ?? "");
+
+  check("the strategy name is never used as a provider id",
+    !/provider: "(few-shot|gemini-few-shot)"/.test(
+      readFileSync("src/features/room-stylist/services/image-providers/gemini-few-shot.ts", "utf8")
+    ));
+
+  /**
+   * Asserted from source rather than imported: room-edit-provider pulls in the
+   * OpenAI client, which throws at module load without OPENAI_API_KEY. Same
+   * convention as test-gemini-primary.ts.
+   */
+  const PROVIDER_SRC = readFileSync(
+    "src/features/room-stylist/services/image-providers/room-edit-provider.ts",
+    "utf8"
+  );
+  check("ROOM_EDIT_PROVIDER=gemini resolves to the Gemini renderer",
+    /if \(raw === "gemini"\) return "gemini";/.test(PROVIDER_SRC));
+  check("the renderer ids the resolver can return are all accepted by the client",
+    (() => {
+      const ids = ["gemini", "gpt-image"];
+      return ids.every((id) => {
+        try {
+          assertStudioGeminiProvider(id);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    })());
+  check("the strategy flag and the provider flag are separate settings",
+    /ROOM_EDIT_PROVIDER/.test(PROVIDER_SRC) &&
+      !/ROOM_EDIT_STRATEGY/.test(PROVIDER_SRC));
+}
+
+console.log("\nEnd to end — Kelly + Elva + Aspen reach the Gemini few-shot renderer");
+{
+  /**
+   * Drives the real renderer with the transport stubbed out. Nothing leaves the
+   * machine and no generation is paid for, but every step between the contract
+   * and the response body is the production code path — which is where the
+   * provider id is set and where the previous two bugs both lived.
+   */
+  const png = await sharp({
+    create: { width: 64, height: 48, channels: 3, background: "#cccccc" },
+  })
+    .jpeg()
+    .toBuffer();
+  const roomImage = new File([new Uint8Array(png)], "room.jpg", { type: "image/jpeg" });
+
+  const { loaded } = await loadFewShotReferences(POC_IDS.map((id) => ({ id, name: id })));
+  const references = loaded.map((reference) => ({
+    label: referenceLabel({
+      productTitle: reference.productTitle,
+      view: reference.view,
+      index: 1,
+      total: 2,
+    }),
+    file: reference.file,
+  }));
+
+  const realFetch = globalThis.fetch;
+  let requestedUrl = "";
+  let sentBody: Record<string, unknown> = {};
+  globalThis.fetch = (async (url: string, init: RequestInit) => {
+    requestedUrl = String(url);
+    sentBody = JSON.parse(String(init.body));
+    return new Response(
+      JSON.stringify({
+        candidates: [
+          { content: { parts: [{ inlineData: { data: png.toString("base64"), mimeType: "image/jpeg" } }] } },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  }) as unknown as typeof fetch;
+
+  try {
+    const timings = createTimings();
+    const result = await generateFewShotRoomEdit({
+      prompt: buildFewShotPrompt([
+        { existingLabel: "dark sofa", location: "on the left", productTitle: "Kelly", sku: getFewShotSku(KELLY)! },
+        { existingLabel: "navy sofa", location: "on the right", productTitle: "Elva", sku: getFewShotSku(ELVA)! },
+        { existingLabel: "wooden coffee table", location: "in the centre", productTitle: "Aspen", sku: getFewShotSku(ASPEN)! },
+      ]),
+      roomImage,
+      roomLabel: "ROOM PHOTOGRAPH",
+      references,
+      apiKey: "test-key-not-used",
+      timings,
+    });
+
+    check("no paid call was made — the transport was stubbed",
+      requestedUrl.includes("generativelanguage.googleapis.com") && realFetch !== globalThis.fetch);
+    check("the renderer returns a usable image", result.imageBase64.length > 0);
+    check("the response provider passes the studio client guard",
+      (() => {
+        try {
+          assertStudioGeminiProvider(result.provider);
+          return true;
+        } catch {
+          return false;
+        }
+      })(),
+      `provider was "${result.provider}"`);
+    check('the response provider is exactly "gemini"', result.provider === "gemini");
+    check("all three products' references were transmitted",
+      (sentBody.contents as Array<{ parts: unknown[] }>)[0].parts.filter(
+        (part) => typeof part === "object" && part !== null && "inline_data" in part
+      ).length === 7,
+      "6 references + the room");
+    check("the room's aspect ratio was sent",
+      Boolean(
+        (sentBody.generationConfig as { imageConfig?: { aspectRatio?: string } })?.imageConfig
+          ?.aspectRatio
+      ));
+    check("timings recorded a provider attempt", timings.snapshot().providerAttempts === 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 }
 
 console.log(`\n${"=".repeat(60)}`);
