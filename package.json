@@ -33,7 +33,8 @@
     "test:job-durability": "tsx src/scripts/test-job-durability.ts",
     "test:signature": "tsx src/scripts/test-signature-traits.ts",
     "test:gemini-primary": "tsx src/scripts/test-gemini-primary.ts",
-    "test:single-stage": "tsx src/scripts/test-single-stage.ts"
+    "test:single-stage": "tsx src/scripts/test-single-stage.ts",
+    "test:few-shot": "tsx src/scripts/test-few-shot-path.ts"
   },
   "dependencies": {
     "next": "16.2.6",

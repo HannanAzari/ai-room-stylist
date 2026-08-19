@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Renderer benchmark inputs/outputs (personal photos, paid renders)
 data/bench/
+
+# Few-shot fidelity experiments (paid renders, personal room photo)
+experiments/

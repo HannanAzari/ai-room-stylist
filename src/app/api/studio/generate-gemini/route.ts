@@ -74,6 +74,12 @@ import {
   isSeatingCategory,
   surpriseStylePrompt,
 } from "@/lib/intelligence/room-categories";
+import { getRoomEditStrategy } from "@/lib/intelligence/room-edit-strategy";
+import {
+  checkFewShotEligibility,
+  ProviderBusyError,
+  runFewShotRoomEdit,
+} from "@/features/room-stylist/services/few-shot-room-edit";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
   reviewGeneratedRoom,
@@ -417,6 +423,85 @@ async function handleGeneration(
   const replacementContract = parseReplacementContract(
     formData.get("replacementContract")
   );
+
+  /**
+   * FEW-SHOT STRATEGY — the POC path.
+   *
+   * Placed here deliberately: BEFORE the scene graph. With an explicit
+   * replacement contract the customer has already told us which region becomes
+   * which product, and the contract carries each target's label and location,
+   * so the vision call that would rediscover all that is pure latency.
+   *
+   * Anything this path cannot model falls through to the grounding path below
+   * rather than failing — a feature flag must not be able to break a request
+   * that would otherwise have worked.
+   */
+  if (getRoomEditStrategy() === "few-shot") {
+    const fewShotProducts = getProductsByIdsInSelectionOrder(selectedProductIds);
+    const eligibility = checkFewShotEligibility({
+      contract: replacementContract,
+      surpriseMe: formData.get("surpriseMe") === "true",
+      productIds: fewShotProducts.map((product) => product.id),
+    });
+
+    if (!eligibility.eligible) {
+      console.warn("[studio-gemini] few-shot strategy declined, using grounding path", {
+        reason: eligibility.reason,
+      });
+    } else if (renderer.id !== "gemini") {
+      console.warn("[studio-gemini] few-shot strategy needs the Gemini renderer", {
+        renderer: renderer.id,
+      });
+    } else {
+      try {
+        const result = await runFewShotRoomEdit({
+          roomImage: image,
+          // Eligibility guarantees a contract; the type does not know that.
+          contract: replacementContract!,
+          products: fewShotProducts,
+          apiKey: renderer.apiKey ?? "",
+        });
+
+        console.log("[studio-gemini] few-shot generation", {
+          model: result.debug.model,
+          aspectRatio: result.debug.aspectRatio,
+          promptBytes: result.debug.promptBytes,
+          imagesSent: result.debug.imagesSent,
+          timings: result.debug.timings,
+        });
+
+        const fewShotBody: Record<string, unknown> = {
+          images: [
+            {
+              provider: result.provider,
+              label: result.label,
+              imageBase64: result.imageBase64,
+              mimeType: result.mimeType,
+              b64_json: result.imageBase64,
+            },
+          ],
+          imageBase64: result.imageBase64,
+          products: result.products,
+        };
+        if (isAiDebugEnabled()) fewShotBody.aiDebug = result.debug;
+        return NextResponse.json(fewShotBody);
+      } catch (error) {
+        /**
+         * Capacity failures are the customer's to retry, not ours to absorb:
+         * silently re-running the grounding path here would spend a second
+         * render on a provider that just said it was full. Everything else
+         * falls through, so a bug in this new path cannot take generation down.
+         */
+        if (error instanceof ProviderBusyError) {
+          return NextResponse.json(
+            { error: error.message, retryable: true, reason: error.reason },
+            { status: 503 }
+          );
+        }
+        console.error("[studio-gemini] few-shot path failed, falling back to grounding", error);
+      }
+    }
+  }
 
   // Room understanding runs FIRST, because "Surprise me" needs to know what
   // kind of room this is before it can choose a package for it. Fallback-safe.
