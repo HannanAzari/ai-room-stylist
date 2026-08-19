@@ -46,6 +46,15 @@ const GEMINI = readFileSync(
   "src/features/room-stylist/services/image-providers/gemini.ts",
   "utf8"
 );
+/**
+ * Provider source with comments stripped. The note explaining WHY
+ * imageConfig.aspectRatio was removed quotes the line verbatim as a restore
+ * instruction, so an assertion about what the code DOES must not read prose.
+ */
+const GEMINI_CODE = GEMINI.replace(/\/\*[\s\S]*?\*\//g, "").replace(
+  /^\s*\/\/.*$/gm,
+  ""
+);
 const ROUTE = readFileSync(
   "src/app/api/studio/generate-gemini/route.ts",
   "utf8"
@@ -107,12 +116,20 @@ section("2. The room's framing is preserved");
   check("unmeasurable dimensions fall back to 4:3, never square",
     nearestAspectRatio(0, 0) === "4:3");
 
-  check("the aspect ratio is actually sent to the API",
-    /imageConfig: \{ aspectRatio \}/.test(GEMINI));
-  check("...and is measured from the room photo's own pixels",
-    /nearestAspectRatio\(metadata\.width \?\? 0, metadata\.height \?\? 0\)/.test(GEMINI));
+  /**
+   * The model now chooses its own framing. imageConfig.aspectRatio is a
+   * GENERATION-TIME conditioning parameter, and the benchmark render that
+   * produced the good fidelity sent none — so it is removed to isolate that
+   * variable. `nearestAspectRatio` is retained and still exercised above,
+   * because restoring the line must stay a one-line change.
+   */
+  check("NO imageConfig is sent to the API",
+    !/imageConfig/.test(GEMINI_CODE),
+    "aspect conditioning is the variable under test");
+  check("the room's ratio is still measured, for the log",
+    /nearestAspectRatio\(metadata\.width \?\? 0, metadata\.height \?\? 0\)/.test(GEMINI_CODE));
   check("EXIF rotation is applied before measuring",
-    /\.rotate\(\)\.metadata\(\)/.test(GEMINI),
+    /\.rotate\(\)\.metadata\(\)/.test(GEMINI_CODE),
     "a portrait photo would otherwise be measured as landscape");
 }
 
@@ -265,8 +282,11 @@ section("7. Debug output for every generation");
     /replaceTasks:/.test(ROUTE));
   check("the model used is logged",
     /model: geminiImageModel\(\)/.test(GEMINI));
-  check("the requested aspect ratio is logged",
-    /requestedAspectRatio: aspectRatio/.test(GEMINI));
+  check("the log records that nothing was requested",
+    /requestedAspectRatio: null/.test(GEMINI_CODE));
+  check("...beside the room's own ratio",
+    /roomAspectRatio: aspectRatio/.test(GEMINI_CODE),
+    "so the log shows room ratio vs what the model actually returned");
   check("the ACTUAL output size is measured, not assumed",
     /outputSize = `\$\{meta\.width\}x\$\{meta\.height\}`/.test(GEMINI),
     "'did it come back square?' is the regression being watched");

@@ -145,9 +145,11 @@ export async function generateGeminiImage({
   // Each product image is preceded by its own text part naming the product and
   // its plan task, so the model is never left guessing which image is which.
   /**
-   * The room's own aspect ratio, read from its pixels rather than assumed.
-   * Falls back to 4:3 if the image cannot be measured — never to square, which
-   * is the one outcome that always crops a landscape room.
+   * The room's own aspect ratio, still measured but NO LONGER SENT.
+   *
+   * Retained purely so the debug log can show what the room actually is beside
+   * what the model chose to return — which is the measurement this experiment
+   * turns on. See the generationConfig note below.
    */
   let aspectRatio = "4:3";
   try {
@@ -204,8 +206,22 @@ NOTHING MAY BE ADDED TO THIS ROOM.
     ],
     generationConfig: {
       responseModalities: ["IMAGE"],
-      // Preserve the customer's framing — see SUPPORTED_ASPECT_RATIOS.
-      imageConfig: { aspectRatio },
+      /**
+       * NO imageConfig — the model chooses its own output framing.
+       *
+       * `imageConfig.aspectRatio` was added to stop a 4:3 room coming back
+       * square, and it does work: the same prompt returns 1200x896 with it and
+       * 1024x1024 without. But it is a GENERATION-TIME conditioning parameter,
+       * not a crop applied afterwards — the model composes into a different
+       * canvas — and the benchmark render that produced the good fidelity sent
+       * no imageConfig at all.
+       *
+       * So it is removed to isolate that variable. If fidelity returns, aspect
+       * conditioning was the cause and framing needs solving another way; if it
+       * does not, this line comes back and the next suspect is prompt overhead
+       * or plain renderer variance. Restoring it is one line:
+       *   imageConfig: { aspectRatio },
+       */
     },
   });
 
@@ -273,7 +289,10 @@ NOTHING MAY BE ADDED TO THIS ROOM.
     }
     console.log("[gemini-render]", {
       model: geminiImageModel(),
-      requestedAspectRatio: aspectRatio,
+      // What we asked for (nothing — the model decides), beside the room's own
+      // ratio and what actually came back.
+      requestedAspectRatio: null,
+      roomAspectRatio: aspectRatio,
       outputSize,
       referenceImages: references.length,
       referenceLabels: references.map((reference) =>
