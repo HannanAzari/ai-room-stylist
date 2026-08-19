@@ -427,81 +427,121 @@ async function handleGeneration(
   /**
    * FEW-SHOT STRATEGY — the POC path.
    *
-   * Placed here deliberately: BEFORE the scene graph. With an explicit
-   * replacement contract the customer has already told us which region becomes
-   * which product, and the contract carries each target's label and location,
-   * so the vision call that would rediscover all that is pure latency.
+   * ---------------------------------------------------------------------------
+   * WHY THIS IS TRIED TWICE
+   * ---------------------------------------------------------------------------
+   * A contract can arrive two ways, and only one of them exists this early:
    *
-   * Anything this path cannot model falls through to the grounding path below
-   * rather than failing — a feature flag must not be able to break a request
-   * that would otherwise have worked.
+   *  1. The client built one, because the customer went through object
+   *     selection. Everything the prompt needs is already in it, so the scene
+   *     graph is pure latency and this attempt runs BEFORE it.
+   *
+   *  2. The customer picked a category and a product — the mainline flow, which
+   *     never triggers detection (`detectRoomObjects` is only wired to Refine
+   *     and "Mark an area yourself"). No contract is sent, so `resolvedIntent`
+   *     builds an equivalent one FROM the scene graph further down.
+   *
+   * The first version of this branch only handled case 1, which meant the flag
+   * silently never applied to the flow customers actually use: every mainline
+   * request declined with "no explicit replacement contract" and fell through
+   * to the grounding path. So the same attempt is made again once
+   * `effectiveContract` exists — same prompt, same references, same single
+   * render, just after paying for the scene graph that case 2 genuinely needs.
    */
-  if (getRoomEditStrategy() === "few-shot") {
-    const fewShotProducts = getProductsByIdsInSelectionOrder(selectedProductIds);
+  const attemptFewShot = async (
+    contract: ReplacementContract | null,
+    productIds: string[],
+    origin: "client-contract" | "resolved-contract"
+  ): Promise<NextResponse | null> => {
+    if (getRoomEditStrategy() !== "few-shot") return null;
+
+    const fewShotProducts = getProductsByIdsInSelectionOrder(productIds);
     const eligibility = checkFewShotEligibility({
-      contract: replacementContract,
+      contract,
       surpriseMe: formData.get("surpriseMe") === "true",
       productIds: fewShotProducts.map((product) => product.id),
     });
 
     if (!eligibility.eligible) {
-      console.warn("[studio-gemini] few-shot strategy declined, using grounding path", {
-        reason: eligibility.reason,
-      });
-    } else if (renderer.id !== "gemini") {
+      // Case 2 has no contract yet at the first attempt; that is expected, not
+      // a problem, so it is not warned about until the second attempt has also
+      // declined.
+      if (origin === "resolved-contract" || contract) {
+        console.warn("[studio-gemini] few-shot strategy declined, using grounding path", {
+          origin,
+          reason: eligibility.reason,
+        });
+      }
+      return null;
+    }
+
+    if (renderer.id !== "gemini") {
       console.warn("[studio-gemini] few-shot strategy needs the Gemini renderer", {
         renderer: renderer.id,
       });
-    } else {
-      try {
-        const result = await runFewShotRoomEdit({
-          roomImage: image,
-          // Eligibility guarantees a contract; the type does not know that.
-          contract: replacementContract!,
-          products: fewShotProducts,
-          apiKey: renderer.apiKey ?? "",
-        });
-
-        console.log("[studio-gemini] few-shot generation", {
-          model: result.debug.model,
-          aspectRatio: result.debug.aspectRatio,
-          promptBytes: result.debug.promptBytes,
-          imagesSent: result.debug.imagesSent,
-          timings: result.debug.timings,
-        });
-
-        const fewShotBody: Record<string, unknown> = {
-          images: [
-            {
-              provider: result.provider,
-              label: result.label,
-              imageBase64: result.imageBase64,
-              mimeType: result.mimeType,
-              b64_json: result.imageBase64,
-            },
-          ],
-          imageBase64: result.imageBase64,
-          products: result.products,
-        };
-        if (isAiDebugEnabled()) fewShotBody.aiDebug = result.debug;
-        return NextResponse.json(fewShotBody);
-      } catch (error) {
-        /**
-         * Capacity failures are the customer's to retry, not ours to absorb:
-         * silently re-running the grounding path here would spend a second
-         * render on a provider that just said it was full. Everything else
-         * falls through, so a bug in this new path cannot take generation down.
-         */
-        if (error instanceof ProviderBusyError) {
-          return NextResponse.json(
-            { error: error.message, retryable: true, reason: error.reason },
-            { status: 503 }
-          );
-        }
-        console.error("[studio-gemini] few-shot path failed, falling back to grounding", error);
-      }
+      return null;
     }
-  }
+
+    try {
+      const result = await runFewShotRoomEdit({
+        roomImage: image,
+        // Eligibility guarantees a contract; the type does not know that.
+        contract: contract!,
+        products: fewShotProducts,
+        apiKey: renderer.apiKey ?? "",
+      });
+
+      console.log("[studio-gemini] few-shot generation", {
+        origin,
+        model: result.debug.model,
+        aspectRatio: result.debug.aspectRatio,
+        promptBytes: result.debug.promptBytes,
+        imagesSent: result.debug.imagesSent,
+        timings: result.debug.timings,
+      });
+
+      const fewShotBody: Record<string, unknown> = {
+        images: [
+          {
+            provider: result.provider,
+            label: result.label,
+            imageBase64: result.imageBase64,
+            mimeType: result.mimeType,
+            b64_json: result.imageBase64,
+          },
+        ],
+        imageBase64: result.imageBase64,
+        products: result.products,
+      };
+      if (isAiDebugEnabled()) {
+        fewShotBody.aiDebug = { ...result.debug, contractOrigin: origin };
+      }
+      return NextResponse.json(fewShotBody);
+    } catch (error) {
+      /**
+       * Capacity failures are the customer's to retry, not ours to absorb:
+       * silently re-running the grounding path here would spend a second
+       * render on a provider that just said it was full. Everything else
+       * falls through, so a bug in this new path cannot take generation down.
+       */
+      if (error instanceof ProviderBusyError) {
+        return NextResponse.json(
+          { error: error.message, retryable: true, reason: error.reason },
+          { status: 503 }
+        );
+      }
+      console.error("[studio-gemini] few-shot path failed, falling back to grounding", error);
+      return null;
+    }
+  };
+
+  // Attempt 1 — a client-built contract needs no room understanding at all.
+  const earlyFewShot = await attemptFewShot(
+    replacementContract,
+    selectedProductIds,
+    "client-contract"
+  );
+  if (earlyFewShot) return earlyFewShot;
 
   // Room understanding runs FIRST, because "Surprise me" needs to know what
   // kind of room this is before it can choose a package for it. Fallback-safe.
@@ -617,6 +657,24 @@ async function handleGeneration(
       );
     }
   }
+
+  /**
+   * Attempt 2 — the mainline flow.
+   *
+   * `effectiveContract` now exists for category-intent requests, resolved from
+   * the scene graph above, and it is the same shape the client builds during
+   * object selection. Placed after the readiness gate deliberately: if the room
+   * could not be read, the resolved contract would be guesswork, and few-shot
+   * has no more ability to place an unseen object than the grounding path does.
+   */
+  const resolvedFewShot = await attemptFewShot(
+    effectiveContract,
+    effectiveContract
+      ? contractProductIds(effectiveContract)
+      : selectedProductIds,
+    "resolved-contract"
+  );
+  if (resolvedFewShot) return resolvedFewShot;
 
   // Customer selection order is preserved end-to-end: profiles, the replacement
   // plan and reference-image priority all follow the order the customer picked,
