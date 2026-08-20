@@ -75,6 +75,7 @@ import {
   surpriseStylePrompt,
 } from "@/lib/intelligence/room-categories";
 import { getRoomEditStrategy } from "@/lib/intelligence/room-edit-strategy";
+import { normaliseCustomerNote } from "@/lib/intelligence/customer-note";
 import {
   checkFewShotEligibility,
   ProviderBusyError,

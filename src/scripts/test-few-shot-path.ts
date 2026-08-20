@@ -23,6 +23,11 @@ import {
   type FewShotReplacement,
 } from "@/lib/intelligence/few-shot-prompt";
 import {
+  customerNoteSection,
+  MAX_CUSTOMER_NOTE_LENGTH,
+  normaliseCustomerNote,
+} from "@/lib/intelligence/customer-note";
+import {
   DEFAULT_ROOM_EDIT_STRATEGY,
   getRoomEditStrategy,
 } from "@/lib/intelligence/room-edit-strategy";
@@ -148,9 +153,9 @@ console.log("\nReference loading from disk");
 console.log("\nPrompt");
 {
   const replacements: FewShotReplacement[] = [
-    { targetDescription: "dark fabric sofa", location: "on the left", productTitle: "Kelly", sku: getFewShotSku(KELLY)! },
-    { targetDescription: "navy leather sofa", location: "on the right", productTitle: "Elva", sku: getFewShotSku(ELVA)! },
-    { targetDescription: "wooden coffee table", location: "in the centre", productTitle: "Aspen", sku: getFewShotSku(ASPEN)! },
+    { targetDescription: "dark fabric sofa", location: "on the left", productTitle: "Kelly", category: "sofa", sku: getFewShotSku(KELLY)! },
+    { targetDescription: "navy leather sofa", location: "on the right", productTitle: "Elva", category: "sofa", sku: getFewShotSku(ELVA)! },
+    { targetDescription: "wooden coffee table", location: "in the centre", productTitle: "Aspen", category: "coffee-table", sku: getFewShotSku(ASPEN)! },
   ];
   const prompt = buildFewShotPrompt({
     replacements,
@@ -403,6 +408,7 @@ console.log("\nRegression — the real Kelly + Elva + Aspen object-selection flo
       assignment.target.displayName,
     location: assignment.target.location || null,
     productTitle: assignment.productTitle,
+    category: assignment.canonicalCategory,
     sku: getFewShotSku(assignment.productId)!,
   }));
   const prompt = buildFewShotPrompt({
@@ -620,6 +626,123 @@ console.log("\nEnd to end — benchmark-shaped request, Kelly only and all three
   check("three SKUs send 7 images with no interleaved text",
     allParts.length === 8 && allParts.slice(1).every((part) => "inline_data" in part),
     `${allParts.length} parts`);
+}
+
+console.log("\nExact replacement targets — one sofa selected, two sofas in the room");
+{
+  /**
+   * The reported failure: one sofa was selected and Gemini replaced both. The
+   * contract already protects the second sofa; the prompt did not say so
+   * loudly enough, and "replace the left sofa with a green one" invites the
+   * model to harmonise the pair.
+   */
+  const sofaRoom = buildFewShotPrompt({
+    replacements: [
+      { targetDescription: "dark charcoal fabric sofa", location: "on the left", productTitle: "Elva", category: "sofa", sku: getFewShotSku(ELVA)! },
+    ],
+    references: [
+      { productTitle: "Elva", view: "front" },
+      { productTitle: "Elva", view: "side" },
+    ],
+    preserved: [...BASELINE_PRESERVED, "the other sofa"],
+    sameCategoryProtected: [{ label: "the other sofa", category: "sofa" }],
+  });
+
+  check("the surviving sofa is named explicitly", sofaRoom.includes("the other sofa"));
+  check("the room's sofa count is stated", /This room contains 2 sofas\./.test(sofaRoom), sofaRoom);
+  check("exactly how many change is stated", /Exactly 1 of them is replaced/.test(sofaRoom));
+  check("the survivor must not be replaced", /do not replace it/.test(sofaRoom));
+  check("the survivor must not be removed", /do not remove it/.test(sofaRoom));
+  check("the survivor must not be recoloured to match", /do not recolour it to match the new furniture/.test(sofaRoom));
+  check("the survivor sentence reads as prose, not a fragment",
+    /The other sofa must stay in the photograph exactly as it is/.test(sofaRoom), sofaRoom);
+  check("no automatic replace-all instruction is introduced",
+    !/replace (all|both|every)/i.test(sofaRoom), sofaRoom);
+
+  // Two selected sofas must NOT produce a survivor clause.
+  const bothSelected = buildFewShotPrompt({
+    replacements: [
+      { targetDescription: "dark charcoal fabric sofa", location: "on the left", productTitle: "Kelly", category: "sofa", sku: getFewShotSku(KELLY)! },
+      { targetDescription: "navy leather sofa", location: "on the right", productTitle: "Elva", category: "sofa", sku: getFewShotSku(ELVA)! },
+    ],
+    references: [{ productTitle: "Kelly", view: "front" }],
+    preserved: [...BASELINE_PRESERVED],
+    sameCategoryProtected: [],
+  });
+  check("two selected sofas produce two replacement instructions",
+    /1\. Replace the dark charcoal fabric sofa/.test(bothSelected) &&
+      /2\. Replace the navy leather sofa/.test(bothSelected));
+  check("with nothing surviving, no survivor clause is emitted",
+    !/This room contains/.test(bothSelected));
+
+  // A protected coffee table is not a same-category survivor for a sofa swap.
+  const mixed = buildFewShotPrompt({
+    replacements: [
+      { targetDescription: "dark charcoal fabric sofa", location: "on the left", productTitle: "Elva", category: "sofa", sku: getFewShotSku(ELVA)! },
+    ],
+    references: [{ productTitle: "Elva", view: "front" }],
+    preserved: [...BASELINE_PRESERVED],
+    sameCategoryProtected: [
+      { label: "the other sofa", category: "sofa" },
+      { label: "the coffee table", category: "coffee-table" },
+    ],
+  });
+  check("the replaced category gets a counted sentence",
+    /This room contains 2 sofas\. Exactly 1 of them is replaced/.test(mixed), mixed);
+  check("a category with NOTHING replaced gets no misleading count",
+    !/contains 1 coffee-table/.test(mixed), mixed);
+  check("a category with nothing replaced still protects its survivor",
+    /The coffee table must stay in the photograph exactly as it is/.test(mixed), mixed);
+  check("survivor sentences start with a capital letter",
+    !/\. the other sofa must stay/.test(mixed), mixed);
+  check("categories are pluralised correctly",
+    /2 sofas/.test(mixed) && !/2 sofass/.test(mixed));
+}
+
+console.log("\nCustomer note — optional, and never overrides product identity");
+{
+  check("an empty note contributes nothing", normaliseCustomerNote("   ") === null);
+  check("a missing note contributes nothing", normaliseCustomerNote(undefined) === null);
+  check("a note is trimmed", normaliseCustomerNote("  put it on the right  ") === "put it on the right");
+  check("control characters are stripped",
+    !/[\u0000-\u0008]/.test(normaliseCustomerNote("keep\u0000 the rug") ?? ""));
+  check("newlines survive — customers write lists",
+    (normaliseCustomerNote("keep the rug\nclear the table") ?? "").includes("\n"));
+  check("an over-long note is capped",
+    (normaliseCustomerNote("x".repeat(2000)) ?? "").length <= MAX_CUSTOMER_NOTE_LENGTH + 1);
+  check("an empty note renders no section", customerNoteSection(null, ["Elva"]) === "");
+
+  const withNote = buildFewShotPrompt({
+    replacements: [
+      { targetDescription: "dark charcoal fabric sofa", location: "on the left", productTitle: "Elva Green Pastel Nubuck Leather 3 Seater Sofa", category: "sofa", sku: getFewShotSku(ELVA)! },
+    ],
+    references: [{ productTitle: "Elva", view: "front" }],
+    preserved: [...BASELINE_PRESERVED],
+    customerNote: "Make the sofa more luxurious",
+  });
+
+  check("the note appears in the prompt", withNote.includes("Make the sofa more luxurious"));
+  check("the note is the LAST section",
+    withNote.trimEnd().endsWith("the instructions above win."), withNote.slice(-80));
+  check("the note is introduced as the customer's, not as an instruction",
+    /The customer added a note about this room:/.test(withNote));
+  check("the note explicitly cannot change which products are used",
+    /It does NOT change which products are used or how they look/.test(withNote));
+  check("the note re-asserts the selected product by name",
+    /Elva Green Pastel Nubuck Leather 3 Seater Sofa — must still appear exactly as their reference images show them/.test(withNote));
+  check("conflicts resolve in favour of the mandatory instructions",
+    /the instructions above win/.test(withNote));
+  check("the replacement instruction still precedes the note",
+    withNote.indexOf("Replace the dark charcoal fabric sofa") < withNote.indexOf("The customer added a note"));
+
+  const noNote = buildFewShotPrompt({
+    replacements: [
+      { targetDescription: "dark charcoal fabric sofa", location: "on the left", productTitle: "Elva", category: "sofa", sku: getFewShotSku(ELVA)! },
+    ],
+    references: [{ productTitle: "Elva", view: "front" }],
+    preserved: [...BASELINE_PRESERVED],
+  });
+  check("no note means no note section at all", !/customer added a note/.test(noNote));
 }
 
 console.log(`\n${"=".repeat(60)}`);

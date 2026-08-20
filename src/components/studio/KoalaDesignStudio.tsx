@@ -112,6 +112,7 @@ import {
   type SourceImageSize,
 } from "@/lib/intelligence/room-selection";
 import { RoomObjectSelector } from "./RoomObjectSelector";
+import { MAX_CUSTOMER_NOTE_LENGTH } from "@/lib/intelligence/customer-note";
 import {
   assertStudioGeminiProvider,
   fetchStudioGemini,
@@ -1488,6 +1489,12 @@ export function KoalaDesignStudio() {
   const [refineSheetOpen, setRefineSheetOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [changeRequest, setChangeRequest] = useState("");
+  /**
+   * Optional free-text guidance typed before Generate. Same instruction model
+   * as the Edit box — see lib/intelligence/customer-note.ts — so the two read
+   * as one conversation rather than two systems.
+   */
+  const [customerNote, setCustomerNote] = useState("");
   const [selectedRefinementProductIds, setSelectedRefinementProductIds] =
     useState<string[]>([]);
   const [openRefinementCategoryId, setOpenRefinementCategoryId] = useState<
@@ -2035,15 +2042,36 @@ export function KoalaDesignStudio() {
    * animation — and the interval is torn down as soon as the wait ends so it
    * never keeps running behind the result page.
    */
+  /**
+   * Start (or restart) the elapsed clock for ONE request.
+   *
+   * Both the clock's origin and its displayed value are set here. Refine used
+   * to set neither, so the overlay kept showing the previous generation's final
+   * time — a refine begun after a 43s render opened at "43s elapsed" and
+   * counted up from there.
+   */
+  function beginTimedRequest(startedAt = nowMs()) {
+    setGenerationStartedAt(startedAt);
+    setGenerationElapsedMs(0);
+  }
+
+  /** Stop the clock, whether the request succeeded or failed. */
+  function endTimedRequest() {
+    setGenerationStartedAt(null);
+    setGenerationElapsedMs(0);
+  }
+
   useEffect(() => {
-    if (!loading || generationStartedAt === null) return;
+    // Refine shows the same overlay, so it must drive the same clock.
+    const inFlight = loading || refining;
+    if (!inFlight || generationStartedAt === null) return;
 
     const update = () =>
       setGenerationElapsedMs(nowMs() - generationStartedAt);
     update();
     const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
-  }, [loading, generationStartedAt]);
+  }, [loading, refining, generationStartedAt]);
 
   /**
    * Pick a generation back up if the page was reloaded while one was running.
@@ -2075,6 +2103,7 @@ export function KoalaDesignStudio() {
       forgetPendingJob();
       setLoading(false);
       setResumedGeneration(false);
+      endTimedRequest();
 
       if (finalStatus.status !== "succeeded") {
         setError(
@@ -2605,8 +2634,7 @@ export function KoalaDesignStudio() {
     // about when this render began.
     const generationStart = nowMs();
     setLoading(true);
-    setGenerationStartedAt(generationStart);
-    setGenerationElapsedMs(0);
+    beginTimedRequest(generationStart);
     setResumedGeneration(false);
     setAddedRecommendationIds([]);
     resetLoadingIndex();
@@ -2640,6 +2668,10 @@ export function KoalaDesignStudio() {
         "selectedProductIds",
         JSON.stringify(contractProductIdList)
       );
+      // Optional, and optional all the way down: an empty box sends nothing.
+      if (customerNote.trim()) {
+        formData.append("customerNote", customerNote.trim());
+      }
       if (contract) {
         formData.append("replacementContract", JSON.stringify(contract));
       } else if (mode === "replace-items") {
@@ -2812,6 +2844,7 @@ export function KoalaDesignStudio() {
       void logAiEvaluation(undefined, null, reason);
     } finally {
       setLoading(false);
+      endTimedRequest();
     }
   }
 
@@ -2823,6 +2856,7 @@ export function KoalaDesignStudio() {
 
     setError("");
     setRefining(true);
+    beginTimedRequest();
     resetLoadingIndex();
     trackRefineStarted({
       conceptIndex: selectedConceptIndex,
@@ -2898,6 +2932,7 @@ export function KoalaDesignStudio() {
       );
     } finally {
       setRefining(false);
+      endTimedRequest();
     }
   }
 
@@ -2986,6 +3021,7 @@ export function KoalaDesignStudio() {
     setStyle(DEFAULT_STYLE);
     setCustomPrompt("");
     setSelectedProductIds([]);
+    setCustomerNote("");
     setDesignMode(null);
     setRoomSelections([]);
     setChosenProductByCategory({});
@@ -3196,6 +3232,34 @@ export function KoalaDesignStudio() {
             </p>
           )}
         </div>
+
+        {/*
+          Optional guidance, deliberately the last thing before Generate.
+          Conversational rather than a form field: the customer is talking to
+          the AI, and the same instruction model backs the Edit box.
+        */}
+        <section className="mt-6 rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#050505]/40 p-5">
+          <label htmlFor="customer-note" className="block text-sm font-semibold text-[#F7F7F2]">
+            Anything else?
+          </label>
+          <p className="mt-1 text-xs leading-5 text-[#9C9C94]">
+            Optional — tell AI how you&apos;d like the room changed.
+          </p>
+          <textarea
+            id="customer-note"
+            value={customerNote}
+            onChange={(event) => setCustomerNote(event.target.value)}
+            maxLength={MAX_CUSTOMER_NOTE_LENGTH}
+            rows={3}
+            placeholder="e.g. Replace both sofas, keep the coffee table, put the new sofa on the right, keep my cushions and toys"
+            className="mt-3 min-h-24 w-full rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-4 text-sm text-[#F7F7F2] outline-none placeholder:text-[#6f6d67] focus:border-[#C9A57A]"
+          />
+          {customerNote.trim().length > 0 && (
+            <p className="mt-2 text-[11px] tabular-nums text-[#6f6d67]">
+              {customerNote.trim().length}/{MAX_CUSTOMER_NOTE_LENGTH}
+            </p>
+          )}
+        </section>
 
         <CategoryProductShelves
           categories={shelfCategories}

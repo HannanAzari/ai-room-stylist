@@ -31,6 +31,19 @@ import type { Product } from "@/lib/products";
 
 export { ProviderBusyError };
 
+/**
+ * "Sofa 2" is the picker's label. Say what the thing is instead, so the prompt
+ * reads as a description of the room rather than of the UI.
+ */
+function readableProtectedLabel(label: string, category?: string): string {
+  const trimmed = label?.trim() ?? "";
+  if (!trimmed) return category ? `the other ${category}` : "the other item";
+  if (/^[A-Za-z ]+\s\d+$/.test(trimmed)) {
+    return `the other ${trimmed.replace(/\s*\d+$/, "").trim().toLowerCase()}`;
+  }
+  return /^(the|a|an) /i.test(trimmed) ? trimmed : `the ${trimmed.toLowerCase()}`;
+}
+
 export type FewShotEligibility =
   | { eligible: true }
   | { eligible: false; reason: string };
@@ -86,6 +99,8 @@ export type FewShotResult = {
     roomBytes: number;
     targets: string[];
     preserved: string[];
+    sameCategoryProtected: string[];
+    customerNote: string | null;
     references: Array<{ productId: string; url: string; view: string; role: string; bytes: number }>;
     skipped: Array<{ productId: string; url: string; reason: string }>;
     timings: ReturnType<ReturnType<typeof createTimings>["snapshot"]> & { unattributedMs: number };
@@ -97,6 +112,8 @@ export async function runFewShotRoomEdit(input: {
   contract: ReplacementContract;
   products: Product[];
   apiKey: string;
+  /** Optional free-text guidance. Never overrides product identity. */
+  customerNote?: string | null;
 }): Promise<FewShotResult> {
   const timings = createTimings();
 
@@ -136,6 +153,7 @@ export async function runFewShotRoomEdit(input: {
         target.displayName,
       location: target.location || null,
       productTitle: assignment.productTitle,
+      category: assignment.canonicalCategory,
       sku,
     });
   }
@@ -164,21 +182,33 @@ export async function runFewShotRoomEdit(input: {
   for (const item of input.contract.protectedItems ?? []) {
     const label = item.label?.trim();
     if (!label) continue;
-    // "Sofa 2" is a picker label; say what it is instead.
-    const readable = /^[A-Za-z ]+\s\d+$/.test(label)
-      ? `the other ${label.replace(/\s*\d+$/, "").trim().toLowerCase()}`
-      : /^(the|a|an) /i.test(label)
-        ? label
-        : `the ${label.toLowerCase()}`;
+    const readable = readableProtectedLabel(label, item.canonicalCategory);
     if (!preserved.some((entry) => entry.toLowerCase() === readable.toLowerCase())) {
       preserved.push(readable);
     }
   }
 
+  /**
+   * Protected items of the SAME kind as something being replaced.
+   *
+   * This is the "I selected one sofa and it replaced both" case: told to swap
+   * the left sofa for a green one, the model harmonises the room. Naming the
+   * survivors and stating the arithmetic is what stops it.
+   */
+  const replacedCategories = new Set(replacements.map((replacement) => replacement.category));
+  const sameCategoryProtected = (input.contract.protectedItems ?? [])
+    .filter((item) => item.canonicalCategory && replacedCategories.has(item.canonicalCategory))
+    .map((item) => ({
+      label: readableProtectedLabel(item.label, item.canonicalCategory),
+      category: String(item.canonicalCategory),
+    }));
+
   const prompt = buildFewShotPrompt({
     replacements,
     references: referenceNotes,
     preserved,
+    sameCategoryProtected,
+    customerNote: input.customerNote ?? null,
   });
 
   const generated = await generateFewShotRoomEdit({
@@ -213,6 +243,8 @@ export async function runFewShotRoomEdit(input: {
       roomBytes: generated.roomBytes,
       targets: replacements.map((replacement) => describeTarget(replacement)),
       preserved,
+      sameCategoryProtected: sameCategoryProtected.map((item) => item.label),
+      customerNote: input.customerNote ?? null,
       references: loaded.map((reference) => ({
         productId: reference.productId,
         url: reference.url,

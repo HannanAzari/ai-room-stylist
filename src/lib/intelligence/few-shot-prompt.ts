@@ -25,6 +25,7 @@
  * No product-intelligence metadata is interpolated here; that is the thing this
  * strategy is being tested against.
  */
+import { customerNoteSection } from "./customer-note";
 import type { FewShotSku } from "./few-shot-references";
 
 export type FewShotReplacement = {
@@ -33,6 +34,8 @@ export type FewShotReplacement = {
   /** Human-readable position, e.g. "on the left". */
   location: string | null;
   productTitle: string;
+  /** Canonical category of the object being replaced, e.g. "sofa". */
+  category: string;
   sku: FewShotSku;
 };
 
@@ -78,6 +81,16 @@ export function buildFewShotPrompt(input: {
   references: FewShotReferenceNote[];
   /** Everything in this room that must not change. */
   preserved: string[];
+  /**
+   * Items of the SAME kind as something being replaced, that are NOT being
+   * replaced — e.g. the second sofa in a two-sofa room when only one was
+   * selected. Called out separately because this is the case the model gets
+   * wrong: told to replace "the sofa on the left" with a green sofa, it
+   * harmonises the room and replaces both.
+   */
+  sameCategoryProtected?: Array<{ label: string; category: string }>;
+  /** Optional customer instruction. Always rendered last, always subordinate. */
+  customerNote?: string | null;
 }): string {
   const referenceList = input.references
     .map((reference, index) => `${index + 1}. the ${reference.productTitle} — ${reference.view.replace(/-/g, " ")} view`)
@@ -93,11 +106,56 @@ export function buildFewShotPrompt(input: {
 
   const preserved = input.preserved.join(", ");
 
+  /**
+   * The count is stated explicitly. "Do not change the other sofa" is weaker
+   * than "the room contains 2 sofas and exactly 1 of them changes" — the
+   * second gives the model an arithmetic check on its own output.
+   */
+  const sameCategory = input.sameCategoryProtected ?? [];
+  let sameCategoryClause = "";
+  if (sameCategory.length > 0) {
+    const byCategory = new Map<string, string[]>();
+    for (const item of sameCategory) {
+      byCategory.set(item.category, [...(byCategory.get(item.category) ?? []), item.label]);
+    }
+    const sentences: string[] = [];
+    const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+    const plural = (word: string, count: number) => (count === 1 ? word : `${word}s`);
+
+    for (const [category, labels] of byCategory) {
+      const replacedHere = input.replacements.filter(
+        (replacement) => replacement.category === category
+      ).length;
+      const survivors = labels.join(" and ");
+      const it = labels.length === 1 ? "it" : "them";
+      const stay = labels.length === 1 ? "it is" : "they are";
+      const mustStay = `${capitalise(survivors)} must stay in the photograph exactly as ${stay}: do not replace ${it}, do not restyle ${it}, do not remove ${it}, and do not recolour ${it} to match the new furniture.`;
+
+      if (replacedHere === 0) {
+        // Nothing of this kind is being replaced, so a count would only invite
+        // the model to wonder which one it missed.
+        sentences.push(mustStay);
+        continue;
+      }
+
+      const total = replacedHere + labels.length;
+      sentences.push(
+        `This room contains ${total} ${plural(category, total)}. Exactly ${replacedHere} of them ${replacedHere === 1 ? "is" : "are"} replaced — the ${replacedHere === 1 ? "one" : "ones"} named above. ${mustStay}`
+      );
+    }
+    sameCategoryClause = `\n\n${sentences.join(" ")}`;
+  }
+
+  const note = customerNoteSection(
+    input.customerNote ?? null,
+    input.replacements.map((replacement) => replacement.productTitle)
+  );
+
   return `The first image is a photograph of a real living room. The images after it show the exact retail products the customer selected, in this order: ${referenceList}.
 
 ${instructions}
 
 Objects resting on or around the furniture being replaced stay where they are — cushions, throws, toys, books and anything else settle naturally onto or beside the replacement, and only move if the replacement makes their original position physically impossible.
 
-Every other part of the photograph — ${preserved} — stays exactly as it is. Do not clear, tidy or restyle the room. Add nothing to the room.`;
+Every other part of the photograph — ${preserved} — stays exactly as it is. Do not clear, tidy or restyle the room. Add nothing to the room.${sameCategoryClause}${note}`;
 }
