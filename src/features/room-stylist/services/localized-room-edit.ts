@@ -30,10 +30,10 @@ import { buildLocalizedPrompt } from "@/lib/intelligence/localized-prompt";
 import {
   assessTargetGeometry,
   deriveCrop,
-  deriveMaskRect,
-  deriveProtectedRects,
-  findMaskOverlaps,
+  intersectRects,
+  resolveWritableMasks,
   type PixelRect,
+  type WritableMask,
 } from "@/lib/intelligence/localized-geometry";
 import {
   getFewShotSku,
@@ -114,17 +114,27 @@ export function checkLocalizedEligibility(input: {
     }
   }
 
-  // Masks are derived and checked BEFORE spending: two edits writing the same
-  // pixel would make the composite order-dependent, which is the one thing this
-  // architecture must never allow.
-  const masks = input.contract.assignments.map((assignment) => ({
-    id: assignment.target.targetId,
-    rect: deriveMaskRect(assignment.target.boundingBox, bounds),
-  }));
-  const overlaps = findMaskOverlaps(masks);
-  if (overlaps.length > 0) {
-    const described = overlaps.map((o) => `${o.a}/${o.b} (${o.area}px)`).join(", ");
-    return { eligible: false, reason: `edit masks overlap: ${described}` };
+  /**
+   * Writable regions are resolved BEFORE spending.
+   *
+   * Overlapping crops and overlapping context margins are fine — the benchmark
+   * that motivated this architecture had both. What must be disjoint is the set
+   * of pixels each edit may WRITE, so margins are carved deterministically
+   * (front-most object keeps the shared margin) rather than the whole request
+   * being refused. Only genuinely ambiguous occlusion falls back.
+   */
+  const resolution = resolveWritableMasks({
+    targets: input.contract.assignments.map((assignment) => ({
+      id: assignment.target.targetId,
+      box: assignment.target.boundingBox,
+    })),
+    protectedBoxes: (input.contract.protectedItems ?? [])
+      .map((item) => item.boundingBox)
+      .filter((box): box is BoundingBox => Boolean(box)),
+    bounds,
+  });
+  if (!resolution.ok) {
+    return { eligible: false, reason: resolution.reason };
   }
 
   return { eligible: true };
@@ -188,6 +198,26 @@ export async function runLocalizedRoomEdit(input: {
     .map((item) => item.boundingBox)
     .filter((box): box is BoundingBox => Boolean(box));
 
+  /**
+   * Writable regions, carved so they are provably disjoint. Eligibility has
+   * already proved this resolves; re-deriving here keeps the orchestrator
+   * honest rather than trusting a value computed in another call.
+   */
+  const resolution = resolveWritableMasks({
+    targets: assignments.map((assignment) => ({
+      id: assignment.target.targetId,
+      box: assignment.target.boundingBox,
+    })),
+    protectedBoxes,
+    bounds,
+  });
+  if (!resolution.ok) {
+    throw new Error(`Localized masks could not be resolved: ${resolution.reason}`);
+  }
+  const writableById = new Map<string, WritableMask>(
+    resolution.masks.map((mask) => [mask.id, mask])
+  );
+
   // ------------------------------------------------------------ plan
   const plans = await timings.measure("reference-prepare", async () => {
     const built: LocalizedEditPlan[] = [];
@@ -204,16 +234,15 @@ export async function runLocalizedRoomEdit(input: {
         throw new Error(`Could not derive a crop for ${assignment.target.targetId}.`);
       }
 
-      const maskRect = deriveMaskRect(assignment.target.boundingBox, bounds);
-      const protectedRects = deriveProtectedRects({
-        crop: derived.crop,
-        ownMask: maskRect,
-        otherTargetBoxes: assignments
-          .filter((other) => other.target.targetId !== assignment.target.targetId)
-          .map((other) => other.target.boundingBox),
-        protectedBoxes,
-        bounds,
-      });
+      const resolved = writableById.get(assignment.target.targetId);
+      if (!resolved) {
+        throw new Error(`No writable region resolved for ${assignment.target.targetId}.`);
+      }
+      const maskRect = resolved.maskRect;
+      // Only the protections that actually meet this crop need rasterising.
+      const protectedRects = resolved.protectedRects
+        .map((rect) => intersectRects(rect, derived.crop))
+        .filter((rect): rect is PixelRect => rect !== null);
 
       const { loaded } = await loadFewShotReferences([{ id: product.id, name: product.name }]);
       const references = loaded.slice(0, MAX_FEW_SHOT_REFERENCES);
@@ -361,6 +390,7 @@ export async function runLocalizedRoomEdit(input: {
       model: process.env.GEMINI_IMAGE_MODEL?.trim() || "gemini-3-pro-image",
       room: { width: bounds.width, height: bounds.height, bytes: room.data.length, aspectRatio: room.aspectRatio },
       targetCount: plans.length,
+      depthOrder: resolution.masks.map((mask) => ({ id: mask.id, depthIndex: mask.depthIndex })),
       edits: succeeded.map((entry, index) => ({
         ...maskSummaries[index],
         productTitle: entry.plan.productTitle,

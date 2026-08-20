@@ -20,6 +20,11 @@ import {
   expandRect,
   findMaskOverlaps,
   intersectRects,
+  MAX_CORE_OVERLAP_SHARE,
+  orderByDepth,
+  resolveWritableMasks,
+  writableConflicts,
+  writableOverlapArea,
   LOCALIZED_DEFAULTS,
   rectsOverlap,
   snapToSupportedAspect,
@@ -404,13 +409,28 @@ async function main() {
     check("the cap rejection says how many and what the cap is",
       !capped.eligible && /exceeds the localized cap/.test(capped.reason));
 
-    const overlapping = contractOf([
+    const three = contractOf(
+      [
+        { id: "kelly", box: BOX.leftSofa, product: KELLY, title: "Kelly" },
+        { id: "elva", box: BOX.rightSofa, product: ELVA, title: "Elva" },
+        { id: "aspen", box: BOX.coffeeTable, product: ASPEN, title: "Aspen" },
+      ],
+      [BOX.tvUnit]
+    );
+    const threeWay = checkLocalizedEligibility({ ...base, contract: three, productIds: [KELLY, ELVA, ASPEN] });
+    check("THE BENCHMARK CASE: Kelly + Elva + Aspen is eligible for localized",
+      threeWay.eligible, threeWay.eligible ? "" : threeWay.reason);
+
+    // Genuinely ambiguous occlusion — one box mostly inside another — still falls back.
+    const ambiguous = contractOf([
       { id: "a", box: { x: 0.1, y: 0.6, width: 0.3, height: 0.25 }, product: KELLY, title: "Kelly" },
-      { id: "b", box: { x: 0.2, y: 0.62, width: 0.3, height: 0.25 }, product: ELVA, title: "Elva" },
+      { id: "b", box: { x: 0.12, y: 0.62, width: 0.28, height: 0.22 }, product: ELVA, title: "Elva" },
     ]);
-    const overlapCheck = checkLocalizedEligibility({ ...base, contract: overlapping, productIds: [KELLY, ELVA] });
-    check("OVERLAPPING MASKS force a fallback rather than a guess", !overlapCheck.eligible);
-    check("the overlap rejection names the pair", !overlapCheck.eligible && /masks overlap/.test(overlapCheck.reason));
+    const ambiguousCheck = checkLocalizedEligibility({ ...base, contract: ambiguous, productIds: [KELLY, ELVA] });
+    check("heavily overlapping target boxes still fall back", !ambiguousCheck.eligible);
+    check("the ambiguity rejection explains itself",
+      !ambiguousCheck.eligible && /too much to attribute safely/.test(ambiguousCheck.reason),
+      ambiguousCheck.eligible ? "" : ambiguousCheck.reason);
 
     const degenerate = contractOf([{ id: "t1", box: { x: 0.1, y: 0.1, width: 0, height: 0.2 }, product: KELLY, title: "Kelly" }]);
     check("a degenerate box is not eligible",
@@ -452,6 +472,130 @@ async function main() {
         { status: 200, headers: { "content-type": "application/json" } }
       );
   };
+
+  console.log("\nBenchmark fixture — Kelly + Elva + Aspen, real measured boxes");
+  {
+    const targets = [
+      { id: "kelly", box: BOX.leftSofa },
+      { id: "elva", box: BOX.rightSofa },
+      { id: "aspen", box: BOX.coffeeTable },
+    ];
+
+    // The margins genuinely collide — this is the case that used to fall back.
+    const plainOverlaps = findMaskOverlaps(
+      targets.map((t) => ({ id: t.id, rect: deriveMaskRect(t.box, ROOM) }))
+    );
+    check("the raw mask rectangles DO overlap — the old rule would have refused",
+      plainOverlaps.length > 0, `${plainOverlaps.length} overlaps`);
+
+    const resolution = resolveWritableMasks({ targets, protectedBoxes: [BOX.tvUnit], bounds: ROOM });
+    check("carving resolves the benchmark geometry", resolution.ok,
+      resolution.ok ? "" : resolution.reason);
+    if (!resolution.ok) return;
+
+    check("all three targets survive carving with writable area left",
+      resolution.masks.length === 3);
+    check("THE FINAL WRITABLE MASKS HAVE ZERO INTERSECTION",
+      writableConflicts(resolution.masks).length === 0,
+      JSON.stringify(writableConflicts(resolution.masks)));
+
+    for (let i = 0; i < resolution.masks.length; i += 1) {
+      for (let j = i + 1; j < resolution.masks.length; j += 1) {
+        const a = resolution.masks[i];
+        const b = resolution.masks[j];
+        check(`${a.id} and ${b.id} share no writable pixel`,
+          writableOverlapArea(a, b) === 0, `${writableOverlapArea(a, b)}px`);
+      }
+    }
+
+    /**
+     * The coffee table sits between the two sofas, so its box meets the left
+     * sofa's. Whoever owns that strip, BOTH edits must protect the other's
+     * actual object — that is the property that stops a sofa edit redrawing the
+     * table, and it holds regardless of which way the depth heuristic falls.
+     */
+    const byId = new Map(resolution.masks.map((mask) => [mask.id, mask]));
+    const kellyMask = byId.get("kelly")!;
+    const aspenMask = byId.get("aspen")!;
+    const kellyCore = boxToPixels(BOX.leftSofa, ROOM);
+    const aspenCore = boxToPixels(BOX.coffeeTable, ROOM);
+
+    check("the sofa and table boxes really do meet", intersectRects(kellyCore, aspenCore) !== null);
+    check("Kelly's edit protects the coffee table's core",
+      kellyMask.protectedRects.some((rect) => intersectRects(rect, aspenCore) !== null));
+    check("Aspen's edit protects the left sofa's core",
+      aspenMask.protectedRects.some((rect) => intersectRects(rect, kellyCore) !== null));
+    check("every edit protects the TV unit, which no product replaces",
+      resolution.masks.every((mask) =>
+        !intersectRects(mask.maskRect, boxToPixels(BOX.tvUnit, ROOM)) ||
+        mask.protectedRects.some((rect) => intersectRects(rect, boxToPixels(BOX.tvUnit, ROOM)) !== null)));
+
+    // Depth order is deterministic and documented, so the carve is reproducible.
+    const order = orderByDepth(targets, ROOM).map((t) => t.id);
+    const repeated = orderByDepth([...targets].reverse(), ROOM).map((t) => t.id);
+    check("depth ordering is deterministic regardless of input order",
+      order.join(",") === repeated.join(","), `${order.join(",")} vs ${repeated.join(",")}`);
+    /**
+     * The frontmost target carves only its siblings' CORES; the backmost also
+     * carves every sibling's whole rectangle. So the counts must differ, and in
+     * that direction — a vacuous "both are non-empty" would pass for free.
+     */
+    const frontProtections = byId.get(order[0])!.protectedRects.length;
+    const backProtections = byId.get(order[order.length - 1])!.protectedRects.length;
+    check("the frontmost target carves strictly less than the backmost",
+      frontProtections < backProtections, `front ${frontProtections} vs back ${backProtections}`);
+    check("the frontmost target keeps the shared margin",
+      byId.get(order[0])!.depthIndex === 0);
+    console.log(`      depth order (frontmost first): ${order.join(" → ")}`);
+
+    check("core overlap tolerance is a stated constant, not a magic number",
+      MAX_CORE_OVERLAP_SHARE > 0 && MAX_CORE_OVERLAP_SHARE < 1);
+
+    // Crops may overlap freely — only writable regions may not.
+    const crops = targets.map((t) => deriveCrop(t.box, ROOM)!.crop);
+    const cropsOverlap = crops.some((a, i) => crops.some((b, j) => i !== j && intersectRects(a, b) !== null));
+    check("crops are allowed to overlap, and here they do", cropsOverlap);
+  }
+
+  console.log("\nBenchmark fixture — protected interiors stay hard zero after carving");
+  {
+    const targets = [
+      { id: "kelly", box: BOX.leftSofa },
+      { id: "elva", box: BOX.rightSofa },
+      { id: "aspen", box: BOX.coffeeTable },
+    ];
+    const resolution = resolveWritableMasks({ targets, protectedBoxes: [BOX.tvUnit], bounds: ROOM });
+    if (!resolution.ok) return;
+
+    for (const mask of resolution.masks) {
+      const target = targets.find((t) => t.id === mask.id)!;
+      const crop = deriveCrop(target.box, ROOM)!.crop;
+      const protectedInCrop = mask.protectedRects
+        .map((rect) => intersectRects(rect, crop))
+        .filter((rect): rect is PixelRect => rect !== null);
+      const raster = await buildLocalizedMask({
+        crop,
+        maskRect: mask.maskRect,
+        protectedRects: protectedInCrop,
+      });
+
+      let nonZero = 0;
+      let checked = 0;
+      for (const rect of protectedInCrop) {
+        for (let y = rect.top - crop.top; y < rect.top - crop.top + rect.height; y += 1) {
+          for (let x = rect.left - crop.left; x < rect.left - crop.left + rect.width; x += 1) {
+            if (x < 0 || y < 0 || x >= crop.width || y >= crop.height) continue;
+            checked += 1;
+            if (raster[y * crop.width + x] !== 0) nonZero += 1;
+          }
+        }
+      }
+      check(`${mask.id}: protected interiors are exactly zero (${checked.toLocaleString()} px)`,
+        nonZero === 0, `${nonZero} non-zero`);
+      check(`${mask.id}: a real editable core survives carving`,
+        maskStats(raster).fullyEditablePixels > 5000, JSON.stringify(maskStats(raster)));
+    }
+  }
 
   console.log("\nOrchestration — parallel, isolated, composited");
   {

@@ -275,17 +275,16 @@ export function deriveProtectedRects(input: {
   return rects;
 }
 
-// ---------------------------------------------------------------- overlap
+// ---------------------------------------------------------------- ownership
 
 export type MaskOverlap = { a: string; b: string; area: number };
 
 /**
- * Pairwise overlap between the edits' mask rectangles, in room space.
+ * Pairwise overlap between plain mask rectangles.
  *
- * Crops are allowed to overlap — they are only inputs. Masks are not: two edits
- * writing the same pixel would make the composite order-dependent, which is
- * exactly the non-determinism this architecture exists to remove. Any overlap
- * is a fallback condition.
+ * Kept because it is the honest measure of "do these two rectangles touch",
+ * which the writable-region resolver below needs. It is NOT by itself a reason
+ * to refuse a request — see `resolveWritableMasks`.
  */
 export function findMaskOverlaps(
   masks: Array<{ id: string; rect: PixelRect }>
@@ -300,6 +299,223 @@ export function findMaskOverlaps(
     }
   }
   return overlaps;
+}
+
+export type LocalizedTargetSpec = { id: string; box: BoundingBox };
+
+/**
+ * How much of the smaller of two target boxes the other one covers.
+ *
+ * Two targets whose CORES overlap substantially are genuinely ambiguous — one
+ * object is largely hidden behind the other and no rule about margins can say
+ * which pixels belong to which product. Above this share the request falls back
+ * rather than guessing.
+ */
+export const MAX_CORE_OVERLAP_SHARE = 0.25;
+
+/**
+ * Front-to-back order, frontmost first.
+ *
+ * Image-space depth heuristic: in a photograph taken from standing height, the
+ * object whose bottom edge sits lower in the frame is nearer the camera. It is
+ * a heuristic and it is wrong for objects at very different heights, which is
+ * why it only ever decides MARGIN pixels — a target's own core is protected
+ * from its neighbours regardless of the order this returns.
+ *
+ * Ties break on area then id, so the order is fully deterministic and two runs
+ * of the same request always carve the same pixels.
+ */
+export function orderByDepth(
+  targets: LocalizedTargetSpec[],
+  bounds: Bounds
+): LocalizedTargetSpec[] {
+  return [...targets].sort((a, b) => {
+    const ra = boxToPixels(a.box, bounds);
+    const rb = boxToPixels(b.box, bounds);
+    const bottomA = ra.top + ra.height;
+    const bottomB = rb.top + rb.height;
+    if (bottomA !== bottomB) return bottomB - bottomA;
+    const areaDiff = rectArea(rb) - rectArea(ra);
+    if (areaDiff !== 0) return areaDiff;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+export type WritableMask = {
+  id: string;
+  /** The region this edit may write into, before carving. */
+  maskRect: PixelRect;
+  /** Everything carved out of it: siblings, their cores, and neighbours. */
+  protectedRects: PixelRect[];
+  /** Position in the front-to-back order; 0 is frontmost. */
+  depthIndex: number;
+};
+
+export type WritableMaskResolution =
+  | { ok: true; masks: WritableMask[] }
+  | { ok: false; reason: string };
+
+/**
+ * Turn overlapping mask rectangles into provably disjoint WRITABLE regions.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY CARVING RATHER THAN REFUSING
+ * ---------------------------------------------------------------------------
+ * The first version rejected a request whenever two expanded masks touched.
+ * That was too blunt: the hand-built benchmark that motivated this whole
+ * architecture had overlapping CROPS and overlapping context margins, and was
+ * perfectly safe, because what actually has to be disjoint is the set of pixels
+ * each edit is allowed to WRITE. Kelly, Elva and Aspen in the benchmark room
+ * would have fallen back for a few hundred pixels of shared carpet margin.
+ *
+ * So each target keeps its own rectangle and carves out:
+ *   - every OTHER target's core box, always and in both directions, so no edit
+ *     can ever redraw another product's actual object;
+ *   - every frontward sibling's whole mask rectangle, which resolves the
+ *     margin-only overlaps deterministically in favour of the nearer object;
+ *   - every protected neighbour that carries geometry.
+ *
+ * Disjointness then holds by construction: for any pair, the further-back one
+ * has carved away the entire rectangle of the nearer one, which contains all of
+ * the nearer one's writable pixels. `writableOverlapArea` verifies this rather
+ * than trusting the argument.
+ */
+export function resolveWritableMasks(input: {
+  targets: LocalizedTargetSpec[];
+  protectedBoxes: BoundingBox[];
+  bounds: Bounds;
+  maskOptions?: { maskMargin?: number; minMaskMarginPx?: number };
+}): WritableMaskResolution {
+  const { bounds } = input;
+  const ordered = orderByDepth(input.targets, bounds);
+
+  // Genuinely ambiguous occlusion is a fallback, not a guess.
+  for (let i = 0; i < ordered.length; i += 1) {
+    for (let j = i + 1; j < ordered.length; j += 1) {
+      const coreA = boxToPixels(ordered[i].box, bounds);
+      const coreB = boxToPixels(ordered[j].box, bounds);
+      const shared = intersectRects(coreA, coreB);
+      if (!shared) continue;
+      const share = rectArea(shared) / Math.min(rectArea(coreA), rectArea(coreB));
+      if (share > MAX_CORE_OVERLAP_SHARE) {
+        return {
+          ok: false,
+          reason: `targets ${ordered[i].id} and ${ordered[j].id} overlap by ${(share * 100).toFixed(0)}% of the smaller box, which is too much to attribute safely`,
+        };
+      }
+    }
+  }
+
+  const protectedNeighbourRects = input.protectedBoxes.map((box) => boxToPixels(box, bounds));
+
+  const masks: WritableMask[] = ordered.map((target, index) => {
+    const maskRect = deriveMaskRect(target.box, bounds, input.maskOptions);
+
+    const carved: PixelRect[] = [];
+    ordered.forEach((other, otherIndex) => {
+      if (other.id === target.id) return;
+      // Never write over another target's actual object, in either direction.
+      carved.push(boxToPixels(other.box, bounds));
+      // Margin-only overlap goes to whichever is nearer the camera.
+      if (otherIndex < index) {
+        carved.push(deriveMaskRect(other.box, bounds, input.maskOptions));
+      }
+    });
+    carved.push(...protectedNeighbourRects);
+
+    // Only the parts that actually meet this mask are worth carrying.
+    const protectedRects = carved
+      .map((rect) => intersectRects(rect, maskRect))
+      .filter((rect): rect is PixelRect => rect !== null);
+
+    return { id: target.id, maskRect, protectedRects, depthIndex: index };
+  });
+
+  // A carve that swallowed a target leaves nothing to edit — better to fall
+  // back than to send a request that can only return the room unchanged.
+  for (const mask of masks) {
+    if (writableAreaEstimate(mask) <= 0) {
+      return { ok: false, reason: `target ${mask.id} has no writable area left after protecting its neighbours` };
+    }
+  }
+
+  const conflicts = writableConflicts(masks);
+  if (conflicts.length > 0) {
+    const described = conflicts.map((c) => `${c.a}/${c.b} (${c.area}px)`).join(", ");
+    return { ok: false, reason: `writable regions still overlap after carving: ${described}` };
+  }
+
+  return { ok: true, masks };
+}
+
+/** Whether a pixel is inside any of the rectangles. */
+function coveredBy(rects: PixelRect[], x: number, y: number): boolean {
+  for (const rect of rects) {
+    if (x >= rect.left && x < rect.left + rect.width && y >= rect.top && y < rect.top + rect.height) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Pixels two writable regions genuinely share, after carving.
+ *
+ * Exact rather than clever: the candidate area is the intersection of two mask
+ * rectangles, which is small, so every pixel in it is tested against both
+ * protection lists. An estimate would be the wrong trade here — this is the
+ * check that decides whether the composite is order-independent.
+ */
+export function writableOverlapArea(a: WritableMask, b: WritableMask): number {
+  const shared = intersectRects(a.maskRect, b.maskRect);
+  if (!shared) return 0;
+
+  // Fast path: one protection rectangle covering the whole shared area is the
+  // normal outcome of carving a frontward sibling's rectangle.
+  const swallowed = (mask: WritableMask) =>
+    mask.protectedRects.some(
+      (rect) =>
+        rect.left <= shared.left &&
+        rect.top <= shared.top &&
+        rect.left + rect.width >= shared.left + shared.width &&
+        rect.top + rect.height >= shared.top + shared.height
+    );
+  if (swallowed(a) || swallowed(b)) return 0;
+
+  let overlap = 0;
+  for (let y = shared.top; y < shared.top + shared.height; y += 1) {
+    for (let x = shared.left; x < shared.left + shared.width; x += 1) {
+      if (!coveredBy(a.protectedRects, x, y) && !coveredBy(b.protectedRects, x, y)) {
+        overlap += 1;
+      }
+    }
+  }
+  return overlap;
+}
+
+export function writableConflicts(masks: WritableMask[]): MaskOverlap[] {
+  const conflicts: MaskOverlap[] = [];
+  for (let i = 0; i < masks.length; i += 1) {
+    for (let j = i + 1; j < masks.length; j += 1) {
+      const area = writableOverlapArea(masks[i], masks[j]);
+      if (area > 0) conflicts.push({ a: masks[i].id, b: masks[j].id, area });
+    }
+  }
+  return conflicts;
+}
+
+/**
+ * Rough writable area: the mask minus the largest single protection.
+ *
+ * Deliberately an under-estimate — overlapping protections are not
+ * double-counted, so a mask this says is empty really is empty.
+ */
+export function writableAreaEstimate(mask: WritableMask): number {
+  const covered = mask.protectedRects.reduce((largest, rect) => {
+    const shared = intersectRects(rect, mask.maskRect);
+    return Math.max(largest, shared ? rectArea(shared) : 0);
+  }, 0);
+  return rectArea(mask.maskRect) - covered;
 }
 
 // ---------------------------------------------------------------- eligibility
