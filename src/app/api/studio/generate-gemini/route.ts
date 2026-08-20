@@ -81,6 +81,10 @@ import {
   ProviderBusyError,
   runFewShotRoomEdit,
 } from "@/features/room-stylist/services/few-shot-room-edit";
+import {
+  checkLocalizedEligibility,
+  runLocalizedRoomEdit,
+} from "@/features/room-stylist/services/localized-room-edit";
 import type { QualityScore } from "@/lib/intelligence/quality-score";
 import {
   reviewGeneratedRoom,
@@ -449,6 +453,103 @@ async function handleGeneration(
    * `effectiveContract` exists — same prompt, same references, same single
    * render, just after paying for the scene graph that case 2 genuinely needs.
    */
+  /**
+   * LOCALIZED STRATEGY — one edit per target, in parallel, composited back.
+   *
+   * Shares the two-attempt shape with the few-shot path below: a client-built
+   * contract can run before the scene graph, and the mainline flow retries once
+   * `effectiveContract` exists. Anything it cannot model falls through to the
+   * configured strategy rather than failing.
+   */
+  const attemptLocalized = async (
+    contract: ReplacementContract | null,
+    productIds: string[],
+    origin: "client-contract" | "resolved-contract"
+  ): Promise<NextResponse | null> => {
+    if (getRoomEditStrategy() !== "localized") return null;
+
+    const products = getProductsByIdsInSelectionOrder(productIds);
+    /**
+     * The contract's boxes are normalised 0–1, so eligibility only needs the
+     * room's SHAPE, not its bytes. `sourceImage` is what the boxes were drawn
+     * against; falling back to a 4:3 stand-in keeps a missing value from
+     * blocking a request that the geometry checks would pass anyway.
+     */
+    const sourceImage = contract?.sourceImage;
+    const eligibility = checkLocalizedEligibility({
+      contract,
+      surpriseMe: formData.get("surpriseMe") === "true",
+      productIds: products.map((product) => product.id),
+      roomWidth: sourceImage?.width || 2048,
+      roomHeight: sourceImage?.height || 1536,
+    });
+
+    if (!eligibility.eligible) {
+      if (origin === "resolved-contract" || contract) {
+        console.warn("[studio-gemini] localized strategy declined", {
+          origin,
+          reason: eligibility.reason,
+        });
+      }
+      return null;
+    }
+
+    if (renderer.id !== "gemini") {
+      console.warn("[studio-gemini] localized strategy needs the Gemini renderer", {
+        renderer: renderer.id,
+      });
+      return null;
+    }
+
+    try {
+      const result = await runLocalizedRoomEdit({
+        roomImage: image,
+        contract: contract!,
+        products,
+        apiKey: renderer.apiKey ?? "",
+      });
+
+      console.log("[studio-gemini] localized generation", {
+        origin,
+        targetCount: result.debug.targetCount,
+        parallelWallMs: result.debug.parallelWallMs,
+        sumOfEditLatencyMs: result.debug.sumOfEditLatencyMs,
+        compositeMs: result.debug.compositeMs,
+        changedFraction: result.debug.changedFraction,
+      });
+
+      const body: Record<string, unknown> = {
+        images: [
+          {
+            provider: result.provider,
+            label: result.label,
+            imageBase64: result.imageBase64,
+            mimeType: result.mimeType,
+            b64_json: result.imageBase64,
+          },
+        ],
+        imageBase64: result.imageBase64,
+        products: result.products,
+      };
+      if (isAiDebugEnabled()) body.aiDebug = { ...result.debug, contractOrigin: origin };
+      return NextResponse.json(body);
+    } catch (error) {
+      /**
+       * A capacity failure is the customer's to retry. Falling through here
+       * would spend a full grounding render on a provider that just said it was
+       * full, on top of the localized edits already paid for.
+       */
+      if (error instanceof ProviderBusyError) {
+        return NextResponse.json(
+          { error: error.message, retryable: true, reason: error.reason },
+          { status: 503 }
+        );
+      }
+      console.error("[studio-gemini] localized path failed, falling back", error);
+      return null;
+    }
+  };
+
   const attemptFewShot = async (
     contract: ReplacementContract | null,
     productIds: string[],
@@ -537,6 +638,13 @@ async function handleGeneration(
   };
 
   // Attempt 1 — a client-built contract needs no room understanding at all.
+  const earlyLocalized = await attemptLocalized(
+    replacementContract,
+    selectedProductIds,
+    "client-contract"
+  );
+  if (earlyLocalized) return earlyLocalized;
+
   const earlyFewShot = await attemptFewShot(
     replacementContract,
     selectedProductIds,
@@ -668,6 +776,13 @@ async function handleGeneration(
    * could not be read, the resolved contract would be guesswork, and few-shot
    * has no more ability to place an unseen object than the grounding path does.
    */
+  const resolvedLocalized = await attemptLocalized(
+    effectiveContract,
+    effectiveContract ? contractProductIds(effectiveContract) : selectedProductIds,
+    "resolved-contract"
+  );
+  if (resolvedLocalized) return resolvedLocalized;
+
   const resolvedFewShot = await attemptFewShot(
     effectiveContract,
     effectiveContract

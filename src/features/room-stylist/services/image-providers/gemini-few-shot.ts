@@ -121,6 +121,56 @@ async function toInlineData(file: File): Promise<GeminiPart> {
   return { inline_data: { mime_type: file.type, data: buffer.toString("base64") } };
 }
 
+export type NormalisedRoom = {
+  data: Buffer;
+  mimeType: string;
+  width: number;
+  height: number;
+  aspectRatio: string;
+};
+
+/**
+ * Room preprocessing: EXIF-rotate, downscale, re-encode, then measure.
+ *
+ * The benchmark sent a 2048x1536 / ~600KB reduction of a 4032x3024 photo. The
+ * app was sending the phone's original untouched, which is a different input to
+ * the model as well as a slower upload. `withoutEnlargement` means a photo
+ * already smaller than the cap is only re-encoded, never blown up.
+ *
+ * The aspect is measured from the NORMALISED bytes so the ratio requested can
+ * never disagree with the pixels actually sent.
+ *
+ * Exported because the localized strategy derives every crop rectangle in this
+ * coordinate space — it must normalise the room exactly as this path does, and
+ * two copies of that rule would eventually disagree.
+ */
+export async function normaliseRoomForEdit(roomImage: File): Promise<NormalisedRoom> {
+  const original = Buffer.from(await roomImage.arrayBuffer());
+  try {
+    const { data, info } = await sharp(original)
+      .rotate()
+      .resize(ROOM_MAX_WIDTH, ROOM_MAX_HEIGHT, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: ROOM_JPEG_QUALITY })
+      .toBuffer({ resolveWithObject: true });
+    return {
+      data,
+      mimeType: "image/jpeg",
+      width: info.width,
+      height: info.height,
+      aspectRatio: nearestAspectRatio(info.width, info.height),
+    };
+  } catch {
+    // Never fail a render over preprocessing: send what the customer gave us.
+    return {
+      data: original,
+      mimeType: roomImage.type || "image/jpeg",
+      width: 0,
+      height: 0,
+      aspectRatio: "4:3",
+    };
+  }
+}
+
 export async function generateFewShotRoomEdit(
   input: FewShotGenerateInput
 ): Promise<
@@ -136,46 +186,9 @@ export async function generateFewShotRoomEdit(
 
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set.");
 
-  /**
-   * Room preprocessing: EXIF-rotate, downscale, re-encode, then measure.
-   *
-   * The benchmark sent a 2048x1536 / ~600KB reduction of a 4032x3024 photo. The
-   * app was sending the phone's original untouched, which is a different input
-   * to the model as well as a slower upload. `withoutEnlargement` means a photo
-   * already smaller than the cap is only re-encoded, never blown up.
-   *
-   * The aspect is measured from the NORMALISED bytes so the ratio requested can
-   * never disagree with the pixels actually sent.
-   */
-  const normalisedRoom = await timings.measure("room-preprocess", async () => {
-    const original = Buffer.from(await roomImage.arrayBuffer());
-    try {
-      const { data, info } = await sharp(original)
-        .rotate()
-        .resize(ROOM_MAX_WIDTH, ROOM_MAX_HEIGHT, {
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: ROOM_JPEG_QUALITY })
-        .toBuffer({ resolveWithObject: true });
-      return {
-        data,
-        mimeType: "image/jpeg",
-        width: info.width,
-        height: info.height,
-        aspectRatio: nearestAspectRatio(info.width, info.height),
-      };
-    } catch {
-      // Never fail a render over preprocessing: send what the customer gave us.
-      return {
-        data: original,
-        mimeType: roomImage.type || "image/jpeg",
-        width: 0,
-        height: 0,
-        aspectRatio: "4:3",
-      };
-    }
-  });
+  const normalisedRoom = await timings.measure("room-preprocess", () =>
+    normaliseRoomForEdit(roomImage)
+  );
   const aspectRatio = normalisedRoom.aspectRatio;
 
   /**

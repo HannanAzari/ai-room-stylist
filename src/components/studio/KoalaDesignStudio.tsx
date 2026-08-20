@@ -2520,6 +2520,9 @@ export function KoalaDesignStudio() {
         sceneItemId: object.sceneItemId,
         canonicalCategory: object.canonicalCategory,
         displayName: object.displayName,
+        // Carried so the localized strategy can cut neighbours out of an
+        // edit mask structurally rather than asking the model to spare them.
+        boundingBox: object.boundingBox,
       })),
       sourceImage: sourceImageSize,
     });

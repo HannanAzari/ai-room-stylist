@@ -133,6 +133,18 @@ export type ProtectedItem = {
   reason: string;
   /** Known for detected objects; absent for blanket architectural entries. */
   canonicalCategory?: CanonicalCategory;
+  /**
+   * Where it is, normalised 0–1, when a detection supplied it.
+   *
+   * Optional because it was added for the localized strategy and older callers
+   * do not send it. It exists because bounding boxes are axis-aligned: a
+   * target's box routinely contains part of a neighbour (in the benchmark room
+   * the left sofa's box contains the coffee table's near corner), so a
+   * box-shaped edit mask needs the neighbour's geometry to cut it back out.
+   * Without this the neighbour can only be protected by prose, which is what
+   * the localized architecture exists to stop relying on.
+   */
+  boundingBox?: BoundingBox;
 };
 
 /**
@@ -238,6 +250,8 @@ export function buildReplacementContract(input: {
     sceneItemId: string;
     canonicalCategory: CanonicalCategory;
     displayName: string;
+    /** Optional: carried through to `protectedItems` for localized editing. */
+    boundingBox?: BoundingBox;
   }[];
   sourceImage: SourceImageSize;
 }): ReplacementContract {
@@ -323,6 +337,7 @@ export function buildReplacementContract(input: {
       label: object.displayName,
       reason: "not assigned a replacement — must stay exactly as photographed",
       canonicalCategory: object.canonicalCategory,
+      ...(object.boundingBox ? { boundingBox: object.boundingBox } : {}),
     });
   }
 

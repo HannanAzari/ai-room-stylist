@@ -35,7 +35,8 @@
     "test:gemini-primary": "tsx src/scripts/test-gemini-primary.ts",
     "test:single-stage": "tsx src/scripts/test-single-stage.ts",
     "test:few-shot": "tsx src/scripts/test-few-shot-path.ts",
-    "test:timer": "tsx src/scripts/test-studio-timer.ts"
+    "test:timer": "tsx src/scripts/test-studio-timer.ts",
+    "test:localized": "tsx src/scripts/test-localized-edit.ts"
   },
   "dependencies": {
     "next": "16.2.6",
