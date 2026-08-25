@@ -7,6 +7,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/features/room-stylist/components/ProductImage";
 import { useProgressIndex } from "@/features/room-stylist/hooks/useProgressIndex";
 import {
+  generationProgress,
+  GENERATION_STAGES,
+  REFINEMENT_STAGES,
+} from "@/features/room-stylist/hooks/useGenerationProgress";
+import {
   getRoomPhotoValidationError,
   normalizeRoomPhoto,
   UNSUPPORTED_UPLOAD_ERROR,
@@ -138,14 +143,8 @@ import {
 const CACHE_KEY = "ai-room-stylist:studio:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with Koala Design Studio.";
-// Customer-facing progress only. Never prompts, product ids or model internals.
-const loadingMessages = [
-  "Understanding your room",
-  "Choosing your Koala pieces",
-  "Balancing colour and materials",
-  "Refining layout and lighting",
-  "Creating your Koala look",
-];
+/** How long to wait before the single automatic retry of a busy provider. */
+const TRANSIENT_RETRY_DELAY_MS = 2500;
 const refineChips = [
   "Make it brighter",
   "More luxury",
@@ -834,6 +833,85 @@ function ShoppingSummaryCard({
       >
         Add room package to cart
       </button>
+    </div>
+  );
+}
+
+/**
+ * Something to look at while the room renders.
+ *
+ * A two-to-three minute wait with nothing on screen but a progress bar invites
+ * the customer to leave. This rotates through what they actually chose, what
+ * happens next, and a styling note — useful rather than decorative, and it
+ * doubles as reassurance that the right pieces were understood.
+ */
+function WaitingCarousel({
+  products,
+  roomType,
+  index,
+}: {
+  products: Product[];
+  roomType: string;
+  index: number;
+}) {
+  const cards: Array<{ eyebrow: string; title: string; body: string }> = [
+    ...(products.length > 0
+      ? [
+          {
+            eyebrow: "Your pieces",
+            title: products.map((product) => getShortProductName(product)).join(" · "),
+            body: `Being placed into your ${roomType.toLowerCase()} now.`,
+          },
+        ]
+      : []),
+    {
+      eyebrow: "What happens next",
+      title: "Your room, then your list",
+      body: "You'll see the finished room first, then every Koala piece in it with pricing.",
+    },
+    {
+      eyebrow: "Styling tip",
+      title: "Leave the walkways",
+      body: "A clear path through a room makes large pieces feel generous rather than crowded.",
+    },
+    {
+      eyebrow: "What happens next",
+      title: "Swap anything you like",
+      body: "Not sure about a piece? Swap it for another from the same range and we'll re-render the room.",
+    },
+    {
+      eyebrow: "Styling tip",
+      title: "One material, three times",
+      body: "Repeating a timber or a metal across three pieces is what makes a room read as designed.",
+    },
+  ];
+
+  const card = cards[index % cards.length];
+
+  return (
+    <div className="mt-8 w-full">
+      <div
+        key={`${card.eyebrow}-${card.title}`}
+        className="animate-[stepIn_500ms_ease-out] rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] p-4 text-left"
+      >
+        <p className="text-[10px] uppercase tracking-[0.28em] text-[#C9A57A]">
+          {card.eyebrow}
+        </p>
+        <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-[#F5F3EE]">
+          {card.title}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-[#9C9C94]">{card.body}</p>
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-1.5">
+        {cards.map((entry, dot) => (
+          <span
+            key={entry.title}
+            className={`h-1 w-1 rounded-full transition-colors ${
+              dot === index % cards.length ? "bg-[#C9A57A]" : "bg-white/15"
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -1747,6 +1825,12 @@ export function KoalaDesignStudio() {
    * render did, not a dead end, and it must not wear the red error styling.
    */
   const [notice, setNotice] = useState("");
+  /**
+   * Whether the last failure was the provider being busy rather than something
+   * wrong with the request. Only these get a Try again button — offering one
+   * for a genuinely bad photo would just waste the customer's time.
+   */
+  const [retryableError, setRetryableError] = useState(false);
   /** Cart intents, ids only. See services/cart.ts for the API seam. */
   const [cartProductIds, setCartProductIds] = useState<string[]>([]);
   /** The result product whose swap picker is open, if any. */
@@ -1825,11 +1909,18 @@ export function KoalaDesignStudio() {
    * watches `screenKey` alone.
    */
   const viewKey = `${screenKey}/${resultEpoch}`;
+  /**
+   * The waiting screen is driven by REAL elapsed time, not a timer that
+   * advances regardless — see hooks/useGenerationProgress.ts. `loadingIndex`
+   * now only paces the carousel, which is genuinely arbitrary.
+   */
   const [loadingIndex, resetLoadingIndex] = useProgressIndex(
     loading || refining,
-    loadingMessages.length,
-    2600
+    Number.MAX_SAFE_INTEGER,
+    4500
   );
+  const waitStages = refining ? REFINEMENT_STAGES : GENERATION_STAGES;
+  const waitProgress = generationProgress(generationElapsedMs, waitStages);
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
   /**
    * What the customer has chosen on the replace-items shelves.
@@ -1852,6 +1943,13 @@ export function KoalaDesignStudio() {
     [chosenSeatingProducts, chosenProductByCategory]
   );
   const shelfChosenProducts = selectedIdsToProducts(shelfChosenProductIds);
+  /**
+   * What to show the customer while they wait. Shelf picks during the first
+   * generation, and the finished room package during a refine — in both cases
+   * the pieces they actually chose, not a generic list.
+   */
+  const selectedProductsForWait =
+    products.length > 0 ? products : shelfChosenProducts;
 
   /** Clear every shelf holding this product, so the summary can undo a pick. */
   function removeShelfProduct(productId: string) {
@@ -2928,6 +3026,7 @@ export function KoalaDesignStudio() {
 
     setError("");
     setNotice("");
+    setRetryableError(false);
     // Captured once and reused for both the elapsed clock and the remembered
     // job, so the processing screen and the resume record cannot disagree
     // about when this render began.
@@ -3017,18 +3116,46 @@ export function KoalaDesignStudio() {
        * tab, which it does readily — no longer throws away a render the
        * customer has already waited minutes for.
        */
-      const startResponse = await fetchStudioGemini(
-        `${STUDIO_GEMINI_ROUTE}?async=1`,
-        { method: "POST", body: formData }
-      );
-      const startData = await startResponse.json().catch(() => ({}));
+      /**
+       * ONE automatic retry, and only for a provider that said it was busy.
+       *
+       * The image endpoint returns intermittent 429/503 under load — measured
+       * repeatedly during benchmarking, including thirteen in a row — and the
+       * server marks those `retryable` rather than leaving the client to guess
+       * from a status code. A single quiet retry turns most of them into a
+       * slightly longer wait instead of a dead end.
+       *
+       * Deliberately once. Retrying a saturated provider in a loop makes the
+       * outage worse and leaves the customer staring at a screen that will
+       * never resolve; after that they get a clear message and a Try again
+       * button, with their photo, room type and product picks all intact.
+       */
+      const startGeneration = async () =>
+        fetchStudioGemini(`${STUDIO_GEMINI_ROUTE}?async=1`, {
+          method: "POST",
+          body: formData,
+        });
+
+      let startResponse = await startGeneration();
+      let startData = await startResponse.json().catch(() => ({}));
+
+      if (!startResponse.ok && startData?.retryable === true) {
+        setNotice("The studio is busy right now — trying once more.");
+        await new Promise((resolve) => setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS));
+        startResponse = await startGeneration();
+        startData = await startResponse.json().catch(() => ({}));
+        setNotice("");
+      }
 
       if (!startResponse.ok) {
         const reason =
           typeof startData.error === "string"
             ? startData.error
             : "Generation failed to start.";
+        // Nothing is cleared here: the photo, room type and chosen products all
+        // survive so Try again is one tap rather than the whole flow again.
         setError(reason);
+        setRetryableError(startData?.retryable === true);
         void logAiEvaluation(undefined, null, reason);
         return;
       }
@@ -3079,6 +3206,14 @@ export function KoalaDesignStudio() {
               ? "We lost track of this generation. Please try again."
               : "Generation failed.");
           setError(reason);
+          /**
+           * The job store carries only a message, not a flag, so a busy
+           * provider is recognised by the sentence the server writes for it.
+           * Matching prose is brittle in general; here the two sides are the
+           * same codebase and the alternative is offering no retry at all for
+           * the most common failure there is.
+           */
+          setRetryableError(/try again in a moment|at capacity|rate limited/i.test(reason));
           void logAiEvaluation(undefined, null, reason);
           return;
         }
@@ -4139,48 +4274,49 @@ export function KoalaDesignStudio() {
             <p className="text-[11px] uppercase tracking-[0.32em] text-[#9C9C94]">
               Koala Design Studio
             </p>
+
+            {/* The stage label IS the message. It used to be repeated verbatim
+                in a second line below the bar, which read as filler. */}
             <h2
-              key={loadingIndex}
-              className="mx-auto mt-5 min-h-[6.5rem] max-w-[300px] animate-[stepIn_500ms_ease-out] font-serif text-3xl font-medium leading-tight text-[#F7F7F2]"
+              key={waitProgress.label}
+              className="mx-auto mt-5 min-h-[4.5rem] max-w-[300px] animate-[stepIn_500ms_ease-out] font-serif text-3xl font-medium leading-tight text-[#F7F7F2]"
             >
-              {loadingMessages[loadingIndex]}
+              {resumedGeneration && waitProgress.stageIndex === 0
+                ? "Picking your room back up"
+                : waitProgress.label}
             </h2>
 
-            <div className="mt-6 flex items-center justify-center gap-2">
-              {loadingMessages.map((message, index) => (
-                <span
-                  key={message}
-                  className={`h-1 flex-1 overflow-hidden rounded-full transition-colors duration-500 ${
-                    index < loadingIndex
-                      ? "bg-[#C9A57A]"
-                      : "bg-[rgba(255,255,255,0.12)]"
-                  }`}
-                >
-                  {index === loadingIndex && (
-                    <span className="block h-full w-1/2 animate-[progressShimmer_1.4s_ease-in-out_infinite] rounded-full bg-[#C9A57A]" />
-                  )}
-                </span>
-              ))}
+            {/*
+              One continuous bar rather than a segment per stage. Segments
+              invited the eye to count them and notice the last one stalling;
+              a single bar that keeps easing forward is honest about a wait
+              whose length we genuinely do not know in advance.
+            */}
+            <div className="mt-6 h-1 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.12)]">
+              <div
+                className="h-full rounded-full bg-[#C9A57A] transition-[width] duration-700 ease-out"
+                style={{ width: `${Math.round(waitProgress.fraction * 100)}%` }}
+              />
             </div>
 
-            {/*
-              Honest waiting copy. A render is 2-3 minutes, so a step counter
-              that finishes long before the image does reads as a stall. The
-              elapsed time is true, keeps moving, and sets the expectation the
-              wait actually needs.
-            */}
-            <p className="mt-5 text-sm font-medium text-[#F5F3EE]">
-              {refining
-                ? "Updating your room"
-                : resumedGeneration
-                  ? "Still creating your Koala look"
-                  : "Creating your Koala look"}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-[#9C9C94]">
+            <div className="mt-3 flex items-center justify-center gap-2 text-[11px] tracking-[0.14em] text-[#6f6d67]">
+              <span>
+                Step {waitProgress.stageIndex + 1} of {waitStages.length}
+              </span>
+            </div>
+
+            <p className="mt-4 text-xs leading-5 text-[#9C9C94]">
               {resumedGeneration
                 ? "We picked this back up where you left off — it can take a couple of minutes."
-                : "This can take a couple of minutes."}
+                : "This usually takes a minute or two. You can keep this screen open."}
             </p>
+
+            <WaitingCarousel
+              products={selectedProductsForWait}
+              roomType={roomType}
+              index={loadingIndex}
+            />
+
             {generationStartedAt !== null && (
               <p className="mt-2 text-[11px] tabular-nums tracking-[0.14em] text-[#6f6d67]">
                 {formatElapsed(generationElapsedMs)} elapsed
@@ -4378,7 +4514,22 @@ export function KoalaDesignStudio() {
             </p>
           )}
 
-          {error && (
+          {error && retryableError && (
+            <div className="mt-4 rounded-2xl border border-red-400/30 bg-red-400/10 p-3">
+              <p className="text-sm text-red-200">{error}</p>
+              {/* Everything the customer chose is still in state, so this is a
+                  single tap rather than walking the flow again. */}
+              <StudioButton
+                onClick={() => void handleGenerate()}
+                disabled={loading || refining}
+                className="mt-3 w-full rounded-xl"
+              >
+                Try again
+              </StudioButton>
+            </div>
+          )}
+
+          {error && !retryableError && (
             <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">
               {error}
             </p>
