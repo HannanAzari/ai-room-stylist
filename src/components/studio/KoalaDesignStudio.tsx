@@ -1609,6 +1609,12 @@ export function KoalaDesignStudio() {
    * as one conversation rather than two systems.
    */
   const [customerNote, setCustomerNote] = useState("");
+  /**
+   * Non-blocking notice, e.g. "we could not find your mirror, we'll add one".
+   * Deliberately separate from `error`: this is information about what the
+   * render did, not a dead end, and it must not wear the red error styling.
+   */
+  const [notice, setNotice] = useState("");
   const [selectedRefinementProductIds, setSelectedRefinementProductIds] =
     useState<string[]>([]);
   const [openRefinementCategoryId, setOpenRefinementCategoryId] = useState<
@@ -2783,6 +2789,7 @@ export function KoalaDesignStudio() {
     }
 
     setError("");
+    setNotice("");
     // Captured once and reused for both the elapsed clock and the remembered
     // job, so the processing screen and the resume record cannot disagree
     // about when this render began.
@@ -2942,6 +2949,10 @@ export function KoalaDesignStudio() {
         // Synchronous fallback: this response IS the result.
         data = startData as typeof data;
       }
+
+      // Pieces the room did not contain are ADDED rather than replaced; the
+      // server says so here so the customer is told rather than left to notice.
+      setNotice(typeof data.notice === "string" ? data.notice : "");
 
       // From here down nothing knows or cares which path produced the body.
       const nextConcepts = normalizeStudioGeminiConcepts(
@@ -3187,6 +3198,7 @@ export function KoalaDesignStudio() {
     setLoading(false);
     setRefining(false);
     setSelectedSheetOpen(false);
+    setNotice("");
     setSelectedSheetMode("review");
     setRoomTypeConfirmed(false);
     setRefineSheetOpen(false);
@@ -4126,6 +4138,12 @@ export function KoalaDesignStudio() {
           >
             {renderStep()}
           </div>
+
+          {notice && !error && (
+            <p className="mt-4 rounded-2xl border border-[#C9A57A]/30 bg-[#C9A57A]/10 p-3 text-sm text-[#E4D3B8]">
+              {notice}
+            </p>
+          )}
 
           {error && (
             <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">

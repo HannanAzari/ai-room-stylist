@@ -74,6 +74,7 @@ import {
   isSeatingCategory,
   surpriseStylePrompt,
 } from "@/lib/intelligence/room-categories";
+import { canonicalCategoryLabel } from "@/lib/intelligence/scene-taxonomy";
 import { getRoomEditStrategy } from "@/lib/intelligence/room-edit-strategy";
 import { normaliseCustomerNote } from "@/lib/intelligence/customer-note";
 import {
@@ -530,6 +531,7 @@ async function handleGeneration(
         ],
         imageBase64: result.imageBase64,
         products: result.products,
+        ...(absentNotice() ? { notice: absentNotice(), addedCategories: absentCategoryLabels } : {}),
       };
       if (isAiDebugEnabled()) body.aiDebug = { ...result.debug, contractOrigin: origin };
       return NextResponse.json(body);
@@ -591,6 +593,12 @@ async function handleGeneration(
         contract: contract!,
         products: fewShotProducts,
         apiKey: renderer.apiKey ?? "",
+        // Optional guidance. Subordinate to the contract by construction —
+        // see customer-note.ts. The LOCALIZED path deliberately does not carry
+        // this: a note about room layout cannot be honoured by an edit that
+        // only sees one object's crop, and repeating it per crop would invite
+        // each edit to reinterpret it independently.
+        customerNote: normaliseCustomerNote(formData.get("customerNote")),
       });
 
       console.log("[studio-gemini] few-shot generation", {
@@ -614,6 +622,7 @@ async function handleGeneration(
         ],
         imageBase64: result.imageBase64,
         products: result.products,
+        ...(absentNotice() ? { notice: absentNotice(), addedCategories: absentCategoryLabels } : {}),
       };
       if (isAiDebugEnabled()) {
         fewShotBody.aiDebug = { ...result.debug, contractOrigin: origin };
@@ -701,6 +710,22 @@ async function handleGeneration(
    * in the scene graph this request already paid for. The customer chose
    * "Sofas"; the room decides which sofas that means.
    */
+  /**
+   * Chosen pieces the room turned out not to contain. Carried to the response
+   * as a non-blocking notice so the customer knows they will be ADDED.
+   */
+  let absentCategoryLabels: string[] = [];
+  /**
+   * The customer-facing sentence for pieces that will be added rather than
+   * replaced. Null when everything they chose was found, so the client can
+   * simply not render a notice.
+   */
+  const absentNotice = () =>
+    absentCategoryLabels.length === 0
+      ? null
+      : `We could not clearly find these items in your photo: ${absentCategoryLabels
+          .join(", ")
+          .toLowerCase()}. We'll try to add them to the room instead.`;
   const categoryIntents = parseCategoryIntents(formData.get("replaceCategories"));
   const resolvedIntent =
     !surpriseMe && categoryIntents.length > 0 && !replacementContract
@@ -752,6 +777,8 @@ async function handleGeneration(
     });
 
     if (!readiness.ready) {
+      // The PHOTO is unusable — a genuinely different situation from a room
+      // that simply lacks one of the chosen pieces, which no longer blocks.
       console.warn("[studio-gemini] refusing to render an unread room", {
         missing: readiness.missingCategories,
         detected: readiness.detectedByCategory,
@@ -764,6 +791,19 @@ async function handleGeneration(
         },
         { status: 422 }
       );
+    }
+
+    /**
+     * Readable room, absent pieces. Not an error: those categories become ADD
+     * tasks in the contract, and the customer is told what will be added rather
+     * than replaced.
+     */
+    if (readiness.absentCategories.length > 0) {
+      absentCategoryLabels = readiness.absentCategories.map(canonicalCategoryLabel);
+      console.log("[studio-gemini] adding pieces the room does not contain", {
+        absent: readiness.absentCategories,
+        detected: readiness.detectedByCategory,
+      });
     }
   }
 
@@ -1253,6 +1293,8 @@ async function handleGeneration(
     images: [best.image],
     imageBase64: best.image.imageBase64,
     products: verifiedProducts,
+    // Non-blocking: says which chosen pieces were added rather than replaced.
+    ...(absentNotice() ? { notice: absentNotice(), addedCategories: absentCategoryLabels } : {}),
     // Units per product. The browser cannot know these — it never saw how many
     // sofas the room has — so the basket takes them from here.
     ...(resolvedIntent

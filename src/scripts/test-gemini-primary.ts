@@ -212,20 +212,30 @@ section("4. Scene readiness — the gate that stops a wasted render");
     sceneGraph: noTable,
     requestedCategories: ["coffee-table"],
   });
-  check("a missing target category is NOT ready", !missing.ready);
-  check("...and names the missing item",
-    /coffee table/i.test(missing.reason ?? ""), missing.reason);
-  check("...and lists it in missingCategories",
-    missing.missingCategories.includes("coffee-table"));
+  /**
+   * POLICY CHANGE: a readable room that simply lacks the requested item is no
+   * longer refused. Choosing a coffee table for a room without one is a
+   * purchase intent, not a mistake, so it becomes an ADD task instead. `ready`
+   * now answers one question only — was the photograph usable.
+   */
+  check("a readable room missing the target is STILL ready", missing.ready,
+    missing.reason ?? "");
+  check("...and blocks with no reason at all", !missing.reason);
+  check("...and reports the item as absent, to be added",
+    missing.absentCategories.includes("coffee-table"),
+    missing.absentCategories.join(","));
+  check("...and leaves missingCategories empty, which now means unreadable only",
+    missing.missingCategories.length === 0);
 
   const multi = assessSceneReadiness({
     sceneGraph: noTable,
     requestedCategories: ["coffee-table", "rug"],
   });
-  check("several missing items are all named",
-    multi.missingCategories.length === 2 &&
-      /coffee table/i.test(multi.reason ?? "") && /rug/i.test(multi.reason ?? ""),
-    multi.reason);
+  check("several absent items are all reported without blocking",
+    multi.ready && multi.absentCategories.length === 2 &&
+      multi.absentCategories.includes("coffee-table") &&
+      multi.absentCategories.includes("rug"),
+    multi.absentCategories.join(","));
 
   check("no requested categories means nothing to block",
     assessSceneReadiness({ sceneGraph: full, requestedCategories: [] }).ready);

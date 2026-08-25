@@ -20,17 +20,38 @@
  * customer waits two minutes, pays for a render, and gets their old furniture
  * with new furniture next to it.
  *
- * So the pipeline now refuses to spend the render. Failing loudly with "we
- * could not read your room, try another photo" is a far better outcome than
- * charging for a result that cannot satisfy the contract.
+ * So the pipeline refuses to spend the render when the ROOM could not be read.
+ * Failing loudly with "we could not read your room, try another photo" is a far
+ * better outcome than charging for a result that cannot satisfy the contract.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT THIS DELIBERATELY NO LONGER BLOCKS
+ * ---------------------------------------------------------------------------
+ * A readable room that simply does not contain one of the chosen items is a
+ * different situation entirely, and it used to be treated the same way. A
+ * customer who picks a mirror for a room with no mirror has not made a mistake
+ * — they want a mirror — and a dead end there is both bad UX and a lost sale.
+ *
+ * Those categories are now reported as `absentCategories` and the pipeline
+ * turns them into ADD tasks instead. `ready` therefore answers only one
+ * question: was this photograph usable at all.
  */
 import type { SceneGraph } from "./scene-graph";
-import { canonicalCategoryLabel, type CanonicalCategory } from "./scene-taxonomy";
+import type { CanonicalCategory } from "./scene-taxonomy";
 
 export type SceneReadiness = {
   ready: boolean;
-  /** Categories the customer chose that the analysis could not find. */
+  /**
+   * Categories the customer chose that the analysis could not find, in the
+   * case where the room itself could not be read. Empty for a readable room —
+   * see `absentCategories`.
+   */
   missingCategories: CanonicalCategory[];
+  /**
+   * Requested categories a READABLE room does not contain. These are added
+   * rather than replaced, and never block generation.
+   */
+  absentCategories: CanonicalCategory[];
   /** How many instances of each requested category were detected. */
   detectedByCategory: Record<string, number>;
   /** Customer-safe explanation, present only when not ready. */
@@ -38,12 +59,15 @@ export type SceneReadiness = {
 };
 
 /**
- * Categories that must be FOUND in the room before a replacement can run.
+ * Is this photograph usable, and which requested categories is it missing?
  *
- * Only replace-style intents are checked. A category the customer wants ADDED
- * has nothing to find by definition, and seating is excluded here because its
- * own resolver handles desired-vs-existing explicitly — what matters for
- * seating is that the room was read at all, which `analysed` covers.
+ * `ready` is now about the PHOTO alone. A readable room that lacks a requested
+ * category returns `ready: true` with that category in `absentCategories`, for
+ * the caller to turn into an ADD task.
+ *
+ * Seating is excluded by the caller because its own resolver handles
+ * desired-vs-existing explicitly; what matters there is that the room was read
+ * at all, which `analysed` covers.
  */
 export function assessSceneReadiness(input: {
   sceneGraph: SceneGraph;
@@ -67,28 +91,22 @@ export function assessSceneReadiness(input: {
     return {
       ready: false,
       missingCategories: requestedCategories,
+      absentCategories: [],
       detectedByCategory,
       reason:
         "We could not read the furniture in this photo. Try a wider, brighter shot of the room with the furniture clearly visible.",
     };
   }
 
-  const missingCategories = requestedCategories.filter(
+  /**
+   * Requested categories the room does not contain.
+   *
+   * Not a failure — these become ADD tasks. Returned so the caller can tell the
+   * customer what will be added rather than replaced.
+   */
+  const absentCategories = requestedCategories.filter(
     (category) => (detectedByCategory[category] ?? 0) === 0
   );
 
-  if (missingCategories.length > 0) {
-    const labels = missingCategories.map(canonicalCategoryLabel);
-    return {
-      ready: false,
-      missingCategories,
-      detectedByCategory,
-      reason:
-        labels.length === 1
-          ? `We could not find a ${labels[0]} in this photo, so we cannot replace it. Try a photo where the ${labels[0]} is clearly visible.`
-          : `We could not find these in this photo: ${labels.join(", ")}. Try a photo where they are clearly visible.`,
-    };
-  }
-
-  return { ready: true, missingCategories: [], detectedByCategory };
+  return { ready: true, missingCategories: [], absentCategories, detectedByCategory };
 }

@@ -39,6 +39,7 @@
  */
 import {
   buildReplacementContract,
+  canAssignProductCategory,
   selectionToTarget,
   type AssignmentInput,
   type ContractAddition,
@@ -198,6 +199,39 @@ export type ResolvedIntent = {
  * removed item must carry exactly one instruction (remove it), never two
  * contradictory ones (remove it, but also leave it exactly as it is).
  */
+/**
+ * Where a piece should go when the room has no counterpart to replace.
+ *
+ * An ADD task has no region to point at, so the placement has to be described.
+ * These are deliberately relational ("above the main seating", "in an empty
+ * corner") rather than absolute: the model can see the room and we cannot, so
+ * naming a relationship it can verify beats naming coordinates it would have to
+ * invent.
+ */
+export function defaultPlacementFor(category: CanonicalCategory): string {
+  const placements: Partial<Record<CanonicalCategory, string>> = {
+    mirror: "on a clear wall where it suits the room, at a natural height",
+    artwork: "on a clear wall, hung at a natural height above the main furniture",
+    "floor-lamp": "standing on the floor beside the seating, in a spot that is currently empty",
+    "table-lamp": "on an existing side table or surface",
+    "ceiling-light": "hanging centrally from the ceiling",
+    rug: "on the floor under the main seating area",
+    plant: "standing in an empty corner or beside the seating",
+    "coffee-table": "on the floor in front of the main seating",
+    bookshelf: "against a clear wall",
+    sideboard: "against a clear wall",
+    "tv-unit": "against the wall below the television",
+    bedside: "beside the bed",
+    dresser: "against a clear wall",
+    desk: "against a clear wall with room to sit at it",
+    armchair: "in the seating area, angled towards the other seats",
+  };
+  return (
+    placements[category] ??
+    "in a natural, empty spot that suits the room without crowding the existing furniture"
+  );
+}
+
 export function resolveCategoryIntents(input: {
   intents: CategoryIntent[];
   sceneGraph: SceneGraph | undefined;
@@ -251,7 +285,48 @@ export function resolveCategoryIntents(input: {
       overrides
     );
     if (objects.length === 0) {
-      unmatchedCategories.push(intent.canonicalCategory);
+      /**
+       * Nothing of this kind in the room, so PLACE it rather than dropping it.
+       *
+       * This used to record the category as unmatched and produce no task at
+       * all, which — combined with the readiness gate — turned "I would like a
+       * mirror" into a dead end. A customer choosing a piece the room does not
+       * already have is expressing exactly the intent the catalogue exists to
+       * serve.
+       */
+      const product = catalogue.find((entry) => entry.id === productId);
+      /**
+       * Two guards, both load-bearing.
+       *
+       * The room must have been READ. An unanalysed graph is indistinguishable
+       * from an empty room, and placing furniture into a room nobody could see
+       * is the precise failure the readiness gate exists to prevent — turning
+       * it into an ADD task here would route around that gate.
+       *
+       * And the product must legally fill the category. The replace path gets
+       * this from `buildReplacementContract`'s category lock; an addition never
+       * touches that code, so without this a rug chosen for an "artwork" slot
+       * would be hung on the wall.
+       */
+      const roomWasRead = Boolean(sceneGraph?.analysed) && (sceneGraph?.furniture ?? []).length > 0;
+      const productFits =
+        Boolean(product) && canAssignProductCategory(intent.canonicalCategory, product!.category);
+
+      if (product && roomWasRead && productFits) {
+        unmatchedCategories.push(intent.canonicalCategory);
+        bump(productId, 1);
+        pendingAdditions.push({
+          action: "PLACE",
+          productId,
+          productTitle: product.name,
+          productCategorySlug: product.category,
+          canonicalCategory: intent.canonicalCategory,
+          placement: defaultPlacementFor(intent.canonicalCategory),
+        });
+      } else {
+        // Still reported, so the caller knows the choice went nowhere.
+        unmatchedCategories.push(intent.canonicalCategory);
+      }
       continue;
     }
 
