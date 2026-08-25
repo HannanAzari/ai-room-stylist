@@ -55,11 +55,12 @@ console.log("\nElapsed timer");
 
   /**
    * The error path is the finally block in both flows, so an exception cannot
-   * leave the clock running — asserted by there being no early return between
-   * the catch and the finally.
+   * leave the clock running. The finally also releases the single-flight guard
+   * now, so this matches the clock-stopping pair without pinning the line
+   * above it.
    */
   check("errors fall through to the same finally",
-    /catch \(refinementError\)[\s\S]{0,400}?\} finally \{\s*\n\s*setRefining\(false\);\s*\n\s*endTimedRequest\(\);/.test(UI));
+    /catch \(refinementError\)[\s\S]{0,500}?\} finally \{[\s\S]{0,120}?setRefining\(false\);\s*\n\s*endTimedRequest\(\);/.test(UI));
 
   check("the overlay only shows a time while one is running",
     /generationStartedAt !== null && \(/.test(UI));

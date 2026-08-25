@@ -166,6 +166,44 @@ console.log("\nTransient failures — one retry, never a loop");
     /const TRANSIENT_RETRY_DELAY_MS = \d+/.test(UI));
 }
 
+console.log("\nDouble-submit — a paid request cannot be launched twice");
+{
+  /**
+   * `setLoading(true)` does not take effect until React re-renders, so two taps
+   * landing in the same frame both sail past a `loading` check — and disabling
+   * the button has exactly the same hole. Only a ref updates synchronously.
+   */
+  const FLIGHT = readFileSync("src/features/room-stylist/hooks/useSingleFlight.ts", "utf8");
+  check("the guard is a ref, not state", /const inFlight = useRef\(false\)/.test(FLIGHT));
+  check("state alone is not relied on to block a second tap",
+    !/useState/.test(FLIGHT));
+  check("claiming is synchronous and reports whether it won",
+    /begin: \(\) => \{\s*\n\s*if \(inFlight\.current\) return false;\s*\n\s*inFlight\.current = true;\s*\n\s*return true;/.test(FLIGHT));
+  check("the ref is never read from anything reachable during render",
+    !/generationFlight\.(begin|end)\(\)/.test(UI.slice(UI.indexOf("function renderStep"), UI.indexOf("function renderStep") + 400)));
+
+  const claims = (UI.match(/if \(!generationFlight\.begin\(\)\) return;/g) ?? []).length;
+  const releases = (UI.match(/generationFlight\.end\(\);/g) ?? []).length;
+  check("both paid paths claim the guard", claims === 2, `${claims} claims`);
+  check("both paid paths release it", releases === 2, `${releases} releases`);
+  check("every claim has a matching release", claims === releases);
+
+  check("generation claims before committing",
+    /if \(!generationFlight\.begin\(\)\) return;\s*\n\s*\n?\s*setError\(""\);\s*\n\s*setNotice\(""\)/.test(UI));
+  check("refinement — and therefore Swap — claims the same guard",
+    /if \(!generationFlight\.begin\(\)\) return;\s*\n\s*\n?\s*setError\(""\);\s*\n\s*setRefining\(true\)/.test(UI));
+
+  /**
+   * The release must sit in `finally`, or a thrown request leaves the guard set
+   * and the customer can never generate again without reloading.
+   */
+  check("the guard is released in finally, so a failure cannot wedge the app",
+    /\} finally \{\s*\n\s*generationFlight\.end\(\);\s*\n\s*setLoading\(false\)/.test(UI) &&
+      /\} finally \{\s*\n\s*generationFlight\.end\(\);\s*\n\s*setRefining\(false\)/.test(UI));
+  check("the confirm button is also disabled while running, as a second line",
+    /confirmDisabled=\{loading \|\| refining\}/.test(UI));
+}
+
 console.log("\nManual retry and state preservation");
 {
   check("a Try again button is offered for retryable failures",
@@ -196,6 +234,14 @@ console.log("\nManual retry and state preservation");
     !/setChosenSeatingProducts\(\{\}\)/.test(failureBranch) &&
       !/setSelectedProductIds\(\[\]\)/.test(failureBranch));
   check("failing does not send the customer back a step", !/setStep\(/.test(failureBranch));
+  check("failing does not clear the customer note", !/setCustomerNote\(/.test(failureBranch));
+  check("failing does not clear the design mode", !/setDesignMode\(/.test(failureBranch));
+  /**
+   * The note is only ever cleared by the explicit New room action, so a
+   * transient failure leaves everything the customer typed intact.
+   */
+  check("the customer note is cleared only by an explicit reset",
+    (UI.match(/setCustomerNote\(""\)/g) ?? []).length === 1);
 }
 
 console.log(`\n${"=".repeat(60)}`);

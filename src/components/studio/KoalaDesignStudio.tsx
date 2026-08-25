@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/features/room-stylist/components/ProductImage";
 import { useProgressIndex } from "@/features/room-stylist/hooks/useProgressIndex";
+import { useSingleFlight } from "@/features/room-stylist/hooks/useSingleFlight";
 import {
   generationProgress,
   GENERATION_STAGES,
@@ -1831,6 +1832,11 @@ export function KoalaDesignStudio() {
    * for a genuinely bad photo would just waste the customer's time.
    */
   const [retryableError, setRetryableError] = useState(false);
+  /**
+   * Guards every path that spends money — generation, refinement and swap.
+   * See useSingleFlight for why this cannot be state or a disabled prop.
+   */
+  const generationFlight = useSingleFlight();
   /** Cart intents, ids only. See services/cart.ts for the API seam. */
   const [cartProductIds, setCartProductIds] = useState<string[]>([]);
   /** The result product whose swap picker is open, if any. */
@@ -3024,6 +3030,9 @@ export function KoalaDesignStudio() {
       return;
     }
 
+    // Claimed synchronously so a double tap cannot buy two renders.
+    if (!generationFlight.begin()) return;
+
     setError("");
     setNotice("");
     setRetryableError(false);
@@ -3281,6 +3290,7 @@ export function KoalaDesignStudio() {
       setError(reason);
       void logAiEvaluation(undefined, null, reason);
     } finally {
+      generationFlight.end();
       setLoading(false);
       endTimedRequest();
     }
@@ -3356,6 +3366,8 @@ export function KoalaDesignStudio() {
     if (!request.trim() && refinementIds.length === 0) {
       return;
     }
+
+    if (!generationFlight.begin()) return;
 
     setError("");
     setRefining(true);
@@ -3439,6 +3451,7 @@ export function KoalaDesignStudio() {
           : "Room refinement failed. Please try again."
       );
     } finally {
+      generationFlight.end();
       setRefining(false);
       endTimedRequest();
     }
