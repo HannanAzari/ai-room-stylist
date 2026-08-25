@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Image from "next/image";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/features/room-stylist/components/ProductImage";
 import { useProgressIndex } from "@/features/room-stylist/hooks/useProgressIndex";
 import {
@@ -92,10 +92,12 @@ import { SurpriseStylePicker } from "./SurpriseStylePicker";
 import {
   describeSeatingPlan,
   describeSeatingProducts,
-  getCategoryMenu,
+  FULLY_SUPPORTED_ROOM_TYPE,
+  getSupportedCategoryMenu,
   isCategorySupported,
   isSeatingCategory,
   isValidSeatingPlan,
+  SELECTABLE_ROOM_TYPES,
   seatingPlanSlots,
   seatingSlotKey,
   type SeatingPlan,
@@ -487,20 +489,100 @@ function DeleteIcon() {
   );
 }
 
+/**
+ * Which room this is.
+ *
+ * The room type has always existed in the flow state — it decides the replace
+ * menu and reaches the prompt — it simply had no screen and silently defaulted
+ * to a living room. Asking makes the rest of the flow honest, and prepares the
+ * category filtering the other room types will need.
+ */
+function RoomTypeSelector({
+  value,
+  onChange,
+  supportedCountFor,
+}: {
+  value: string;
+  onChange: (roomType: string) => void;
+  supportedCountFor: (roomType: string) => number;
+}) {
+  return (
+    <div className="grid gap-3">
+      {SELECTABLE_ROOM_TYPES.map((option) => {
+        const selected = option.value === value;
+        const count = supportedCountFor(option.value);
+        const full = option.value === FULLY_SUPPORTED_ROOM_TYPE;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={selected}
+            className={`flex items-center justify-between gap-4 rounded-3xl border p-5 text-left transition ${
+              selected
+                ? "border-[#C9A57A] bg-[#C9A57A]/10"
+                : "border-[rgba(255,255,255,0.12)] bg-[#111111]"
+            }`}
+          >
+            <span>
+              <span className="block text-base font-semibold text-[#F5F3EE]">
+                {option.label}
+              </span>
+              <span className="mt-0.5 block text-xs text-[#9C9C94]">
+                {/* Say what is actually behind the choice rather than implying
+                    a full catalogue everywhere. */}
+                {full
+                  ? "Full Koala range"
+                  : count > 0
+                    ? `${count} ${count === 1 ? "category" : "categories"} available`
+                    : "Coming soon"}
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className={`h-5 w-5 shrink-0 rounded-full border ${
+                selected ? "border-[#C9A57A] bg-[#C9A57A]" : "border-[rgba(255,255,255,0.25)]"
+              }`}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The selected-products sheet, in two modes.
+ *
+ * `review` is the summary the customer opens themselves from the Selected (n)
+ * button. `confirm` is the same list shown as the last thing before a paid
+ * generation, with the room type stated and an explicit Confirm — Generate used
+ * to fire straight from a tap, which is an easy thing to do by accident and an
+ * expensive one.
+ */
 function SelectedProductsSheet({
   products,
+  mode,
+  roomTypeLabel,
   onClose,
   onRemove,
+  onConfirm,
+  confirmDisabled,
 }: {
   products: Product[];
+  mode: "review" | "confirm";
+  roomTypeLabel: string;
   onClose: () => void;
   onRemove: (productId: string) => void;
+  onConfirm?: () => void;
+  confirmDisabled?: boolean;
 }) {
+  const confirming = mode === "confirm";
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Selected Koala products"
+      aria-label={confirming ? "Confirm your room" : "Selected Koala products"}
       className="fixed inset-0 z-50 flex items-end bg-black/70 px-6 pb-[calc(env(safe-area-inset-bottom)_+_24px)]"
     >
       <button
@@ -513,15 +595,21 @@ function SelectedProductsSheet({
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-              Selected products
+              {confirming ? "Ready to generate" : "Selected products"}
             </p>
             <h2 className="mt-1 text-lg font-semibold">
-              {products.length} selected
+              {products.length} {products.length === 1 ? "product" : "products"}
             </h2>
+            <p className="mt-1 text-xs capitalize text-[#9C9C94]">{roomTypeLabel}</p>
           </div>
-          <StudioButton variant="ghost" onClick={onClose}>
-            Done
-          </StudioButton>
+          {/* Confirm mode already has Cancel beside the primary action, so a
+              second one in the header would just be noise. The backdrop still
+              dismisses either way. */}
+          {!confirming && (
+            <StudioButton variant="ghost" onClick={onClose}>
+              Done
+            </StudioButton>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -551,9 +639,27 @@ function SelectedProductsSheet({
               <p className="mt-2 line-clamp-2 text-xs font-semibold leading-snug">
                 {getShortProductName(product)}
               </p>
+              <p className="mt-0.5 text-[11px] capitalize text-[#9C9C94]">
+                {product.category.replace(/-/g, " ")}
+              </p>
             </article>
           ))}
         </div>
+
+        {confirming && (
+          <div className="mt-5 grid gap-3">
+            <StudioButton
+              onClick={onConfirm}
+              disabled={confirmDisabled || products.length === 0}
+              className="min-h-14 rounded-2xl text-base"
+            >
+              Confirm and generate
+            </StudioButton>
+            <StudioButton variant="ghost" onClick={onClose} className="rounded-2xl">
+              Cancel
+            </StudioButton>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -1486,6 +1592,14 @@ export function KoalaDesignStudio() {
   const [loading, setLoading] = useState(false);
   const [refining, setRefining] = useState(false);
   const [selectedSheetOpen, setSelectedSheetOpen] = useState(false);
+  /**
+   * `confirm` turns the same sheet into the last gate before a paid render.
+   * One piece of state rather than two sheets, so the list the customer
+   * reviews and the list they confirm cannot drift apart.
+   */
+  const [selectedSheetMode, setSelectedSheetMode] = useState<"review" | "confirm">("review");
+  /** Step 2 asks the room type first, then what to do with it. */
+  const [roomTypeConfirmed, setRoomTypeConfirmed] = useState(false);
   const [refineSheetOpen, setRefineSheetOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [changeRequest, setChangeRequest] = useState("");
@@ -1573,6 +1687,41 @@ export function KoalaDesignStudio() {
     2600
   );
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
+  /**
+   * What the customer has chosen on the replace-items shelves.
+   *
+   * NOT `selectedProductIds` — that list belongs to Surprise Me and the refine
+   * sheet. Shelf picks live in the two maps below, which are also what
+   * `buildCategoryIntents` and `buildContract` send, so the summary shows
+   * exactly what would be generated rather than a parallel idea of it.
+   */
+  const shelfChosenProductIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...Object.values(chosenSeatingProducts),
+            ...Object.values(chosenProductByCategory),
+          ].filter((id): id is string => Boolean(id))
+        )
+      ),
+    [chosenSeatingProducts, chosenProductByCategory]
+  );
+  const shelfChosenProducts = selectedIdsToProducts(shelfChosenProductIds);
+
+  /** Clear every shelf holding this product, so the summary can undo a pick. */
+  function removeShelfProduct(productId: string) {
+    setChosenSeatingProducts((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, value]) => [key, value === productId ? undefined : value])
+      )
+    );
+    setChosenProductByCategory((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, value]) => [key, value === productId ? undefined : value])
+      )
+    );
+  }
   // Full catalogue, so each region can offer only its own category.
   const allCatalogueProducts = getAllCatalogueProducts();
   /**
@@ -1583,7 +1732,9 @@ export function KoalaDesignStudio() {
    * have looked at this particular one — and nobody should wait half a minute
    * to be shown a list we could have written in advance.
    */
-  const menuCategories = getCategoryMenu(roomType);
+  // Living room keeps its full menu (unavailable entries already read as
+  // "coming soon"); the newer room types are filtered to what Koala can fill.
+  const menuCategories = getSupportedCategoryMenu(roomType, allCatalogueProducts);
   /**
    * Types the menu offers that the catalogue cannot fill yet. Shown, because
    * the menu should read like a whole room, but never selectable — a tap that
@@ -3036,6 +3187,8 @@ export function KoalaDesignStudio() {
     setLoading(false);
     setRefining(false);
     setSelectedSheetOpen(false);
+    setSelectedSheetMode("review");
+    setRoomTypeConfirmed(false);
     setRefineSheetOpen(false);
     setImageViewerOpen(false);
     setChangeRequest("");
@@ -3419,6 +3572,32 @@ export function KoalaDesignStudio() {
 
     // The fork. Two genuinely different jobs, presented as a real choice
     // rather than a setting with a default.
+    if (step === 2 && !roomTypeConfirmed) {
+      return (
+        <section className="flex flex-1 flex-col justify-center space-y-4 py-1">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[#9C9C94]">
+              Which room is this?
+            </p>
+            <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-[#F5F3EE]">
+              Tell us the room
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-[#9C9C94]">
+              It decides what you can change and what Koala can supply.
+            </p>
+          </div>
+
+          <RoomTypeSelector
+            value={roomType}
+            onChange={setRoomType}
+            supportedCountFor={(candidate) =>
+              getSupportedCategoryMenu(candidate, allCatalogueProducts).length
+            }
+          />
+        </section>
+      );
+    }
+
     if (step === 2) {
       return (
         <section className="flex flex-1 flex-col justify-center space-y-4 py-1">
@@ -3777,13 +3956,16 @@ export function KoalaDesignStudio() {
 
       {selectedSheetOpen && (
         <SelectedProductsSheet
-          products={selectedProducts}
+          products={shelfChosenProducts}
+          mode={selectedSheetMode}
+          roomTypeLabel={roomType}
           onClose={() => setSelectedSheetOpen(false)}
-          onRemove={(productId) =>
-            setSelectedProductIds((current) =>
-              current.filter((id) => id !== productId)
-            )
-          }
+          onRemove={removeShelfProduct}
+          onConfirm={() => {
+            setSelectedSheetOpen(false);
+            void handleGenerate();
+          }}
+          confirmDisabled={loading || refining}
         />
       )}
 
@@ -3983,6 +4165,12 @@ export function KoalaDesignStudio() {
                       return;
                     }
                   }
+                  if (step === 2 && roomTypeConfirmed) {
+                    // Back inside step 2 returns to the room question rather
+                    // than dropping the customer out to the photo screen.
+                    setRoomTypeConfirmed(false);
+                    return;
+                  }
                   if (step === 3) {
                     // Leaving a flow clears its intent so the choice screen is
                     // a genuine fork rather than a remembered setting.
@@ -4003,6 +4191,14 @@ export function KoalaDesignStudio() {
                 className="min-w-20 rounded-2xl"
               >
                 Back
+              </StudioButton>
+            )}
+            {step === 2 && !roomTypeConfirmed && (
+              <StudioButton
+                onClick={() => setRoomTypeConfirmed(true)}
+                className="min-h-14 rounded-2xl text-base"
+              >
+                Continue
               </StudioButton>
             )}
             {step === 1 && (
@@ -4084,19 +4280,39 @@ export function KoalaDesignStudio() {
             {step === 3 &&
               designMode === "replace-items" &&
               replacePhase === "products" && (
-                <StudioButton
-                  onClick={() => void handleGenerate()}
-                  disabled={!canGenerateConcept() || loading}
-                  className="min-h-14 rounded-2xl text-base"
-                >
-                  {loading
-                    ? "Generating..."
-                    : // Naming what is missing, rather than a dead button the
-                      // customer has to work out for themselves.
-                      unfilledShelfCount > 0
-                      ? `Choose ${unfilledShelfCount} more ${unfilledShelfCount > 1 ? "pieces" : "piece"}`
-                      : "Generate my room"}
-                </StudioButton>
+                <div className="flex items-center gap-3">
+                  {/* A way to see and undo what has been chosen, right beside
+                      the button that spends money on it. */}
+                  <StudioButton
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedSheetMode("review");
+                      setSelectedSheetOpen(true);
+                    }}
+                    disabled={shelfChosenProductIds.length === 0}
+                    className="min-h-14 shrink-0 rounded-2xl px-4 text-sm"
+                  >
+                    Selected ({shelfChosenProductIds.length})
+                  </StudioButton>
+                  <StudioButton
+                    onClick={() => {
+                      // Generation is confirmed, never fired straight from a
+                      // tap: the sheet restates the room and the products.
+                      setSelectedSheetMode("confirm");
+                      setSelectedSheetOpen(true);
+                    }}
+                    disabled={!canGenerateConcept() || loading}
+                    className="min-h-14 flex-1 rounded-2xl text-base"
+                  >
+                    {loading
+                      ? "Generating..."
+                      : // Naming what is missing, rather than a dead button the
+                        // customer has to work out for themselves.
+                        unfilledShelfCount > 0
+                        ? `Choose ${unfilledShelfCount} more ${unfilledShelfCount > 1 ? "pieces" : "piece"}`
+                        : "Generate my room"}
+                  </StudioButton>
+                </div>
               )}
           </footer>
         )}

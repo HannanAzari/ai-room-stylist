@@ -71,7 +71,59 @@ const ROOM_CATEGORY_MENUS: Record<string, MenuCategory[]> = {
     { canonicalCategory: "mirror", label: "Mirror", behaviour: "simple" },
     { canonicalCategory: "plant", label: "Plant", behaviour: "simple" },
   ],
+  "home office": [
+    { canonicalCategory: "desk", label: "Desk", behaviour: "simple" },
+    // Deliberately no desk chair: every catalogue product filed under "chairs"
+    // is a DINING chair, and one of those pulled up to a desk is a category
+    // error rather than a near-enough match — the same reason `armchair` maps
+    // to nothing in CATEGORY_LOCK. Add it the day the feed has office seating.
+    { canonicalCategory: "bookshelf", label: "Bookshelf", behaviour: "simple" },
+    { canonicalCategory: "rug", label: "Rug", behaviour: "simple" },
+    { canonicalCategory: "floor-lamp", label: "Floor lamp", behaviour: "simple" },
+    { canonicalCategory: "table-lamp", label: "Table lamp", behaviour: "simple" },
+    { canonicalCategory: "artwork", label: "Artwork", behaviour: "simple" },
+    { canonicalCategory: "mirror", label: "Mirror", behaviour: "simple" },
+  ],
 };
+
+/**
+ * Room types the customer may choose, in menu order.
+ *
+ * `living room` is the only one with full catalogue coverage today. The rest
+ * are offered because the architecture is ready for them, and each one's menu
+ * is filtered down to what Koala can actually supply — see
+ * `getSupportedCategoryMenu`. Offering a category with an empty shelf behind it
+ * is worse than not offering it.
+ */
+export const SELECTABLE_ROOM_TYPES: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "living room", label: "Living room" },
+  { value: "dining room", label: "Dining room" },
+  { value: "bedroom", label: "Bedroom" },
+  { value: "home office", label: "Home office" },
+];
+
+/** The default, and the only room type with complete catalogue coverage. */
+export const FULLY_SUPPORTED_ROOM_TYPE = "living room";
+
+/**
+ * The replace menu, filtered to what the catalogue can fill.
+ *
+ * The living room keeps its full menu deliberately: an unavailable entry there
+ * is already rendered as "coming soon" rather than as a dead shelf, and that
+ * screen is the one every existing test and demo path exercises. The newer room
+ * types have no such coverage, so for them an unsupported entry is simply
+ * hidden — a short honest menu beats a long menu that mostly cannot be used.
+ */
+export function getSupportedCategoryMenu(
+  roomType: string,
+  catalogue: { category: string }[]
+): MenuCategory[] {
+  const menu = getCategoryMenu(roomType);
+  if ((roomType || "").toLowerCase().trim() === FULLY_SUPPORTED_ROOM_TYPE) {
+    return menu;
+  }
+  return menu.filter((entry) => isCategorySupported(entry.canonicalCategory, catalogue));
+}
 
 /** The replace menu for a room type. Falls back to the living-room menu. */
 export function getCategoryMenu(roomType: string): MenuCategory[] {
