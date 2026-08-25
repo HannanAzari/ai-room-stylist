@@ -38,7 +38,8 @@
     "test:timer": "tsx src/scripts/test-studio-timer.ts",
     "test:localized": "tsx src/scripts/test-localized-edit.ts",
     "test:selection-flow": "tsx src/scripts/test-selection-flow.ts",
-    "test:add-or-replace": "tsx src/scripts/test-add-or-replace.ts"
+    "test:add-or-replace": "tsx src/scripts/test-add-or-replace.ts",
+    "test:result-actions": "tsx src/scripts/test-result-actions.ts"
   },
   "dependencies": {
     "next": "16.2.6",

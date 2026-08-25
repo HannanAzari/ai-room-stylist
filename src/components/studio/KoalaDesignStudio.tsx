@@ -116,6 +116,12 @@ import {
 import { RoomObjectSelector } from "./RoomObjectSelector";
 import { MAX_CUSTOMER_NOTE_LENGTH } from "@/lib/intelligence/customer-note";
 import {
+  addToCart,
+  alternativesFor,
+  isInCart,
+  removeFromCart,
+} from "@/features/room-stylist/services/cart";
+import {
   assertStudioGeminiProvider,
   fetchStudioGemini,
   STUDIO_GEMINI_ROUTE,
@@ -832,6 +838,134 @@ function ShoppingSummaryCard({
   );
 }
 
+/**
+ * The two actions a result card offers, in one place.
+ *
+ * Extracted so the buttons cannot drift apart between the "products used" grid
+ * and anywhere else a result product is shown, and so the cart wiring has a
+ * single call site to change when a real endpoint exists.
+ */
+function ProductActions({
+  product,
+  inCart,
+  onAddToCart,
+  onSwap,
+  swapping,
+  swapDisabled,
+}: {
+  product: Product;
+  inCart: boolean;
+  onAddToCart: (product: Product) => void;
+  onSwap: (product: Product) => void;
+  swapping: boolean;
+  swapDisabled: boolean;
+}) {
+  return (
+    // Not 50/50: "Add to cart" is the longer label and the primary action, so
+    // it takes the flexible column and Swap takes only the width it needs.
+    <div className="grid grid-cols-[1fr_auto] gap-2">
+      <button
+        type="button"
+        onClick={() => onAddToCart(product)}
+        aria-pressed={inCart}
+        // whitespace-nowrap: at two cards per row on a 375px phone "Add to
+        // cart" wraps onto two lines and the pair stops looking deliberate.
+        className={`whitespace-nowrap rounded-xl px-2 py-2 text-center text-[11px] font-semibold transition active:scale-[0.98] ${
+          inCart
+            ? "border border-[#C9A57A]/50 bg-[#C9A57A]/12 text-[#C9A57A]"
+            : "bg-[#F5F3EE] text-[#0b0b0d]"
+        }`}
+      >
+        {inCart ? "In cart" : "Add to cart"}
+      </button>
+      <button
+        type="button"
+        onClick={() => onSwap(product)}
+        disabled={swapDisabled}
+        className="whitespace-nowrap rounded-xl border border-[rgba(255,255,255,0.16)] px-2.5 py-2 text-center text-[11px] font-semibold text-[#F5F3EE] transition active:scale-[0.98] disabled:opacity-40"
+      >
+        {swapping ? "Swapping..." : "Swap"}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Choose a different product of the same kind.
+ *
+ * Picking one does NOT change the picture by itself — the room has to be
+ * re-rendered for that, which costs time and money. The sheet says so before
+ * the customer commits rather than swapping the card and quietly leaving the
+ * image showing the old piece.
+ */
+function SwapProductSheet({
+  product,
+  alternatives,
+  onChoose,
+  onClose,
+}: {
+  product: Product;
+  alternatives: Product[];
+  onChoose: (replacement: Product) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Swap ${getShortProductName(product)}`}
+      className="fixed inset-0 z-50 flex items-end bg-black/70 px-6 pb-[calc(env(safe-area-inset-bottom)_+_24px)]"
+    >
+      <button type="button" onClick={onClose} aria-label="Close swap" className="absolute inset-0" />
+      <section className="relative z-10 max-h-[82vh] w-full overflow-y-auto overflow-x-hidden rounded-3xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-5 shadow-2xl">
+        <div className="mb-1 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">Swap</p>
+            <h2 className="mt-1 text-lg font-semibold">{getShortProductName(product)}</h2>
+          </div>
+          <StudioButton variant="ghost" onClick={onClose}>
+            Close
+          </StudioButton>
+        </div>
+        <p className="mb-4 text-xs leading-5 text-[#9C9C94]">
+          Choosing a replacement re-renders your room, which takes a moment.
+        </p>
+
+        {alternatives.length === 0 ? (
+          <p className="rounded-2xl border border-[rgba(255,255,255,0.12)] p-4 text-sm text-[#9a978f]">
+            No other {product.category.replace(/-/g, " ")} in the range yet.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {alternatives.map((alternative) => (
+              <button
+                key={alternative.id}
+                type="button"
+                onClick={() => onChoose(alternative)}
+                className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#111111] p-2.5 text-left transition active:scale-[0.99]"
+              >
+                <ProductImage
+                  product={alternative}
+                  className="h-28 w-full rounded-xl object-cover"
+                  placeholderClassName="h-28 w-full rounded-xl"
+                />
+                <p className="mt-2 line-clamp-2 text-xs font-semibold leading-snug">
+                  {getShortProductName(alternative)}
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#C9A57A]">
+                  {typeof alternative.price === "number"
+                    ? formatMoney(alternative.price)
+                    : "On product page"}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function ShopProductCard({
   product,
   action,
@@ -860,22 +994,20 @@ function ShopProductCard({
             : "On product page"}
         </p>
         <div className="mt-2.5">
+          {/* Cards that pass no action are informational (recommendations pass
+              their own). The product page stays reachable as a quiet link
+              rather than competing with the real CTA. */}
           {action ??
             (productUrl ? (
               <a
                 href={productUrl}
                 target="_blank"
                 rel="noreferrer"
-                onClick={() => trackAddToCartClicked(product)}
-                className="block rounded-xl bg-[#F5F3EE] px-3 py-1.5 text-center text-xs font-semibold text-[#0b0b0d]"
+                className="block px-1 py-1 text-center text-[11px] text-[#9a978f] underline underline-offset-4"
               >
-                View on Koala
+                View product details
               </a>
-            ) : (
-              <span className="block rounded-xl border border-white/10 px-3 py-1.5 text-center text-xs text-[#9a978f]">
-                Available in store
-              </span>
-            ))}
+            ) : null)}
         </div>
       </div>
     </article>
@@ -1615,6 +1747,12 @@ export function KoalaDesignStudio() {
    * render did, not a dead end, and it must not wear the red error styling.
    */
   const [notice, setNotice] = useState("");
+  /** Cart intents, ids only. See services/cart.ts for the API seam. */
+  const [cartProductIds, setCartProductIds] = useState<string[]>([]);
+  /** The result product whose swap picker is open, if any. */
+  const [swapTarget, setSwapTarget] = useState<Product | null>(null);
+  /** The product currently being swapped, so its card can show progress. */
+  const [swappingProductId, setSwappingProductId] = useState<string | null>(null);
   const [selectedRefinementProductIds, setSelectedRefinementProductIds] =
     useState<string[]>([]);
   const [openRefinementCategoryId, setOpenRefinementCategoryId] = useState<
@@ -3013,9 +3151,74 @@ export function KoalaDesignStudio() {
     }
   }
 
-  async function handleRefine() {
+  /** Cart intent. All of it goes through services/cart.ts — see the note there. */
+  function handleAddToCart(product: Product) {
+    triggerHaptic();
+    const inCart = isInCart(product, cartProductIds);
+    const { ids } = inCart
+      ? removeFromCart(product, cartProductIds)
+      : addToCart(product, cartProductIds);
+    setCartProductIds(ids);
+    if (!inCart) trackAddToCartClicked(product);
+  }
+
+  /**
+   * Swap one product in the finished room for another of the same kind.
+   *
+   * ---------------------------------------------------------------------------
+   * WHY THIS RE-RENDERS RATHER THAN SWAPPING THE CARD
+   * ---------------------------------------------------------------------------
+   * The picture is the product here. Changing the card while the image still
+   * shows the old sofa would be a lie the customer can see, so the swap runs a
+   * real generation and the card shows progress until it lands.
+   *
+   * It uses the existing refine path — the safest scoped route that exists
+   * today: it edits the CURRENT image with a targeted instruction rather than
+   * regenerating the whole room from the original photo. The localized
+   * per-item architecture would be a better fit and is deliberately not wired
+   * in yet: it works from the ORIGINAL photograph and the geometry detected in
+   * it, which no longer describes the generated image being looked at.
+   * Replacing the body of this one function is all that would change.
+   *
+   * (Phrasing note: this file is scanned by test-category-flow for jargon that
+   * must never reach customer copy, and it cannot tell a comment from a label.)
+   */
+  async function handleSwapChoice(replacement: Product) {
+    const original = swapTarget;
+    if (!original || refining) return;
+
+    setSwapTarget(null);
+    setSwappingProductId(original.id);
+    try {
+      await handleRefine({
+        changeRequest: `Replace the ${getShortProductName(original)} in this room with the ${getShortProductName(replacement)}. Keep its position, scale and the rest of the room exactly as they are.`,
+        refinementProductIds: [replacement.id],
+        replacedProductId: original.id,
+      });
+      // The old piece is no longer in the room, so it should not sit in the cart.
+      setCartProductIds((current) => current.filter((id) => id !== original.id));
+    } finally {
+      setSwappingProductId(null);
+    }
+  }
+
+  /**
+   * Refine the current image.
+   *
+   * `overrides` exists for Swap: it must send its instruction in the SAME tick
+   * it is triggered, and reading `changeRequest` from state there would send
+   * whatever the refine box happened to contain instead.
+   */
+  async function handleRefine(overrides?: {
+    changeRequest?: string;
+    refinementProductIds?: string[];
+    /** Dropped from the shop list on success — see the merge below. */
+    replacedProductId?: string;
+  }) {
     if (!activeImage) return;
-    if (!changeRequest.trim() && selectedRefinementProductIds.length === 0) {
+    const request = overrides?.changeRequest ?? changeRequest;
+    const refinementIds = overrides?.refinementProductIds ?? selectedRefinementProductIds;
+    if (!request.trim() && refinementIds.length === 0) {
       return;
     }
 
@@ -3025,8 +3228,8 @@ export function KoalaDesignStudio() {
     resetLoadingIndex();
     trackRefineStarted({
       conceptIndex: selectedConceptIndex,
-      changeRequest,
-      refinementProductIds: selectedRefinementProductIds,
+      changeRequest: request,
+      refinementProductIds: refinementIds,
     });
 
     try {
@@ -3038,8 +3241,8 @@ export function KoalaDesignStudio() {
         body: JSON.stringify({
           imageBase64: activeImage,
           imageMimeType: activeConcept?.mimeType || "image/png",
-          changeRequest,
-          refinementProductIds: selectedRefinementProductIds,
+          changeRequest: request,
+          refinementProductIds: refinementIds,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -3062,10 +3265,15 @@ export function KoalaDesignStudio() {
 
       const updatedConcepts = [...generatedConcepts, refinedConcept];
       const refinedIndex = updatedConcepts.length - 1;
-      const refinementProducts = selectedIdsToProducts(
-        selectedRefinementProductIds
-      );
-      const updatedProducts = mergeUniqueProducts(products, refinementProducts);
+      const refinementProducts = selectedIdsToProducts(refinementIds);
+      /**
+       * A swap REPLACES: without dropping the old product the shop list would
+       * grow a piece that is no longer in the picture.
+       */
+      const basis = overrides?.replacedProductId
+        ? products.filter((entry) => entry.id !== overrides.replacedProductId)
+        : products;
+      const updatedProducts = mergeUniqueProducts(basis, refinementProducts);
 
       setGeneratedConcepts(updatedConcepts);
       setProducts(updatedProducts);
@@ -3079,8 +3287,8 @@ export function KoalaDesignStudio() {
       trackRefineCompleted({
         conceptIndex: selectedConceptIndex,
         refinedConceptIndex: refinedIndex,
-        changeRequest,
-        refinementProductIds: selectedRefinementProductIds,
+        changeRequest: request,
+        refinementProductIds: refinementIds,
         mergedProductCount: updatedProducts.length,
       });
       trackResultProviderViewed({
@@ -3199,6 +3407,9 @@ export function KoalaDesignStudio() {
     setRefining(false);
     setSelectedSheetOpen(false);
     setNotice("");
+    setCartProductIds([]);
+    setSwapTarget(null);
+    setSwappingProductId(null);
     setSelectedSheetMode("review");
     setRoomTypeConfirmed(false);
     setRefineSheetOpen(false);
@@ -3839,7 +4050,20 @@ export function KoalaDesignStudio() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               {packageAll.map((product) => (
-                <ShopProductCard key={product.id} product={product} />
+                <ShopProductCard
+                  key={product.id}
+                  product={product}
+                  action={
+                    <ProductActions
+                      product={product}
+                      inCart={isInCart(product, cartProductIds)}
+                      onAddToCart={handleAddToCart}
+                      onSwap={setSwapTarget}
+                      swapping={swappingProductId === product.id}
+                      swapDisabled={refining || loading}
+                    />
+                  }
+                />
               ))}
             </div>
           </section>
@@ -3978,6 +4202,15 @@ export function KoalaDesignStudio() {
             void handleGenerate();
           }}
           confirmDisabled={loading || refining}
+        />
+      )}
+
+      {swapTarget && (
+        <SwapProductSheet
+          product={swapTarget}
+          alternatives={alternativesFor(swapTarget, allCatalogueProducts)}
+          onChoose={(replacement) => void handleSwapChoice(replacement)}
+          onClose={() => setSwapTarget(null)}
         />
       )}
 
