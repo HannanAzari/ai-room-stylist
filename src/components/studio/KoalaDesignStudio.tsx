@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/features/room-stylist/components/ProductImage";
 import { useProgressIndex } from "@/features/room-stylist/hooks/useProgressIndex";
 import { useSingleFlight } from "@/features/room-stylist/hooks/useSingleFlight";
+import { getLifestyleImageUrls } from "@/lib/intelligence/product-intelligence";
 import {
   generationProgress,
   GENERATION_STAGES,
@@ -144,6 +145,14 @@ import {
 const CACHE_KEY = "ai-room-stylist:studio:last-result";
 const SHARE_MESSAGE =
   "I created a luxury room concept with Koala Design Studio.";
+/**
+ * How long the bar takes to run up to 100% once the image is actually ready.
+ *
+ * Short and deliberate. The bar is honest while waiting — it never pretends to
+ * know the finish — so it is usually mid-way when the render lands, and cutting
+ * straight to the result reads as a glitch. This is the completion, not padding.
+ */
+const PROGRESS_COMPLETE_MS = 380;
 /** How long to wait before the single automatic retry of a busy provider. */
 const TRANSIENT_RETRY_DELAY_MS = 2500;
 const refineChips = [
@@ -558,17 +567,19 @@ function RoomTypeSelector({
 }
 
 /**
- * The selected-products sheet, in two modes.
+ * The confirmation sheet: the one review step before a paid generation.
  *
- * `review` is the summary the customer opens themselves from the Selected (n)
- * button. `confirm` is the same list shown as the last thing before a paid
- * generation, with the room type stated and an explicit Confirm — Generate used
- * to fire straight from a tap, which is an easy thing to do by accident and an
- * expensive one.
+ * It restates the room and every chosen product, allows removing any of them,
+ * and requires an explicit Confirm — Generate used to fire straight from a tap,
+ * which is an easy thing to do by accident and an expensive one.
+ *
+ * It had a second "review" mode, opened from a standalone Selected (n) button
+ * in the footer. That button was removed for crowding the footer on a 375px
+ * screen, which left the mode unreachable, so it is gone rather than left
+ * behind as a prop nothing sets.
  */
 function SelectedProductsSheet({
   products,
-  mode,
   roomTypeLabel,
   onClose,
   onRemove,
@@ -576,19 +587,17 @@ function SelectedProductsSheet({
   confirmDisabled,
 }: {
   products: Product[];
-  mode: "review" | "confirm";
   roomTypeLabel: string;
   onClose: () => void;
   onRemove: (productId: string) => void;
-  onConfirm?: () => void;
+  onConfirm: () => void;
   confirmDisabled?: boolean;
 }) {
-  const confirming = mode === "confirm";
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={confirming ? "Confirm your room" : "Selected Koala products"}
+      aria-label="Confirm your room"
       className="fixed inset-0 z-50 flex items-end bg-black/70 px-6 pb-[calc(env(safe-area-inset-bottom)_+_24px)]"
     >
       <button
@@ -601,21 +610,15 @@ function SelectedProductsSheet({
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-[#9C9C94]">
-              {confirming ? "Ready to generate" : "Selected products"}
+              Ready to generate
             </p>
             <h2 className="mt-1 text-lg font-semibold">
               {products.length} {products.length === 1 ? "product" : "products"}
             </h2>
             <p className="mt-1 text-xs capitalize text-[#9C9C94]">{roomTypeLabel}</p>
           </div>
-          {/* Confirm mode already has Cancel beside the primary action, so a
-              second one in the header would just be noise. The backdrop still
-              dismisses either way. */}
-          {!confirming && (
-            <StudioButton variant="ghost" onClick={onClose}>
-              Done
-            </StudioButton>
-          )}
+          {/* Cancel sits beside the primary action below, so a second one in
+              the header would just be noise. The backdrop dismisses too. */}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -652,8 +655,7 @@ function SelectedProductsSheet({
           ))}
         </div>
 
-        {confirming && (
-          <div className="mt-5 grid gap-3">
+        <div className="mt-5 grid gap-3">
             <StudioButton
               onClick={onConfirm}
               disabled={confirmDisabled || products.length === 0}
@@ -661,11 +663,10 @@ function SelectedProductsSheet({
             >
               Confirm and generate
             </StudioButton>
-            <StudioButton variant="ghost" onClick={onClose} className="rounded-2xl">
-              Cancel
-            </StudioButton>
-          </div>
-        )}
+          <StudioButton variant="ghost" onClick={onClose} className="rounded-2xl">
+            Cancel
+          </StudioButton>
+        </div>
       </section>
     </div>
   );
@@ -839,76 +840,106 @@ function ShoppingSummaryCard({
 }
 
 /**
- * Something to look at while the room renders.
+ * Koala inspiration while the room renders.
  *
- * A two-to-three minute wait with nothing on screen but a progress bar invites
- * the customer to leave. This rotates through what they actually chose, what
- * happens next, and a styling note — useful rather than decorative, and it
- * doubles as reassurance that the right pieces were understood.
+ * Generic waiting tips read as filler on a premium brand. This shows the
+ * catalogue's own styled room photography instead, interleaved with the
+ * customer's actual selections, so the wait looks like Koala rather than like a
+ * spinner — and quietly confirms the right pieces were understood.
+ *
+ * Every image already ships in `public/products`; nothing new is authored or
+ * fetched. Slides are decorative, so their images are `aria-hidden` and the
+ * caption carries the meaning.
  */
 function WaitingCarousel({
   products,
   roomType,
+  inspiration,
   index,
 }: {
   products: Product[];
   roomType: string;
+  inspiration: string[];
   index: number;
 }) {
-  const cards: Array<{ eyebrow: string; title: string; body: string }> = [
-    ...(products.length > 0
-      ? [
-          {
-            eyebrow: "Your pieces",
-            title: products.map((product) => getShortProductName(product)).join(" · "),
-            body: `Being placed into your ${roomType.toLowerCase()} now.`,
-          },
-        ]
-      : []),
-    {
-      eyebrow: "What happens next",
-      title: "Your room, then your list",
-      body: "You'll see the finished room first, then every Koala piece in it with pricing.",
-    },
-    {
-      eyebrow: "Styling tip",
-      title: "Leave the walkways",
-      body: "A clear path through a room makes large pieces feel generous rather than crowded.",
-    },
-    {
-      eyebrow: "What happens next",
-      title: "Swap anything you like",
-      body: "Not sure about a piece? Swap it for another from the same range and we'll re-render the room.",
-    },
-    {
-      eyebrow: "Styling tip",
-      title: "One material, three times",
-      body: "Repeating a timber or a metal across three pieces is what makes a room read as designed.",
-    },
-  ];
+  /**
+   * `key` is carried explicitly: the four captions cycle across every
+   * inspiration image, so two slides routinely share a title and keying on it
+   * produced duplicate-key warnings and unstable dots.
+   */
+  type Slide = { key: string; eyebrow: string; title: string; image: string | null; product?: Product };
 
-  const card = cards[index % cards.length];
+  const slides: Slide[] = [];
+
+  // The customer's own pieces first — the most reassuring thing to show.
+  for (const product of products.slice(0, 3)) {
+    slides.push({
+      key: `product-${product.id}`,
+      eyebrow: "Your selection",
+      title: getShortProductName(product),
+      image: null,
+      product,
+    });
+  }
+
+  const captions = [
+    { eyebrow: "Koala inspiration", title: `Matching your ${roomType.toLowerCase()} with Koala pieces` },
+    { eyebrow: "Koala inspiration", title: "Curating your look" },
+    { eyebrow: "Koala inspiration", title: "Building your room package" },
+    { eyebrow: "Koala inspiration", title: "Styled by Koala" },
+  ];
+  inspiration.forEach((image, position) => {
+    slides.push({ key: image, ...captions[position % captions.length], image });
+  });
+
+  if (slides.length === 0) {
+    slides.push({ key: "fallback", eyebrow: "Koala", title: "Curating your look", image: null });
+  }
+
+  const slide = slides[index % slides.length];
 
   return (
-    <div className="mt-8 w-full">
+    <div className="mt-7 w-full">
       <div
-        key={`${card.eyebrow}-${card.title}`}
-        className="animate-[stepIn_500ms_ease-out] rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] p-4 text-left"
+        key={slide.key}
+        className="animate-[stepIn_600ms_ease-out] overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)]"
       >
-        <p className="text-[10px] uppercase tracking-[0.28em] text-[#C9A57A]">
-          {card.eyebrow}
-        </p>
-        <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-[#F5F3EE]">
-          {card.title}
-        </p>
-        <p className="mt-1 text-xs leading-5 text-[#9C9C94]">{card.body}</p>
+        <div className="relative aspect-[4/3] w-full bg-[#0B0B0B]">
+          {slide.product ? (
+            <ProductImage
+              product={slide.product}
+              className="h-full w-full object-cover"
+              placeholderClassName="h-full w-full"
+            />
+          ) : slide.image ? (
+            <img
+              src={slide.image}
+              alt=""
+              aria-hidden
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+          {/* Keeps the caption legible over any photograph. */}
+          {/* Tall enough that the eyebrow is never stranded on a bright part
+              of the photograph — measured against the lightest slide. */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent pb-4 pl-4 pr-4 pt-12 text-left">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[#C9A57A]">
+              {slide.eyebrow}
+            </p>
+            <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-[#F5F3EE]">
+              {slide.title}
+            </p>
+          </div>
+        </div>
       </div>
       <div className="mt-3 flex items-center justify-center gap-1.5">
-        {cards.map((entry, dot) => (
+        {slides.map((entry, dot) => (
           <span
-            key={entry.title}
+            key={entry.key}
             className={`h-1 w-1 rounded-full transition-colors ${
-              dot === index % cards.length ? "bg-[#C9A57A]" : "bg-white/15"
+              dot === index % slides.length ? "bg-[#C9A57A]" : "bg-white/15"
             }`}
           />
         ))}
@@ -1803,12 +1834,6 @@ export function KoalaDesignStudio() {
   const [loading, setLoading] = useState(false);
   const [refining, setRefining] = useState(false);
   const [selectedSheetOpen, setSelectedSheetOpen] = useState(false);
-  /**
-   * `confirm` turns the same sheet into the last gate before a paid render.
-   * One piece of state rather than two sheets, so the list the customer
-   * reviews and the list they confirm cannot drift apart.
-   */
-  const [selectedSheetMode, setSelectedSheetMode] = useState<"review" | "confirm">("review");
   /** Step 2 asks the room type first, then what to do with it. */
   const [roomTypeConfirmed, setRoomTypeConfirmed] = useState(false);
   const [refineSheetOpen, setRefineSheetOpen] = useState(false);
@@ -1832,6 +1857,8 @@ export function KoalaDesignStudio() {
    * for a genuinely bad photo would just waste the customer's time.
    */
   const [retryableError, setRetryableError] = useState(false);
+  /** True for the brief run-up to 100% after a successful render. */
+  const [progressComplete, setProgressComplete] = useState(false);
   /**
    * Guards every path that spends money — generation, refinement and swap.
    * See useSingleFlight for why this cannot be state or a disabled prop.
@@ -1927,6 +1954,11 @@ export function KoalaDesignStudio() {
   );
   const waitStages = refining ? REFINEMENT_STAGES : GENERATION_STAGES;
   const waitProgress = generationProgress(generationElapsedMs, waitStages);
+  /**
+   * What the bar actually shows. Honest elapsed-time progress while waiting,
+   * then a run to 100% once the image is in hand — see completeProgress.
+   */
+  const displayedProgress = progressComplete ? 1 : waitProgress.fraction;
   const selectedProducts = selectedIdsToProducts(selectedProductIds);
   /**
    * What the customer has chosen on the replace-items shelves.
@@ -1956,6 +1988,8 @@ export function KoalaDesignStudio() {
    */
   const selectedProductsForWait =
     products.length > 0 ? products : shelfChosenProducts;
+  /** Catalogue room photography for the waiting screen. Static, so memoised. */
+  const inspirationImages = useMemo(() => getLifestyleImageUrls(8), []);
 
   /** Clear every shelf holding this product, so the summary can undo a pick. */
   function removeShelfProduct(productId: string) {
@@ -2452,12 +2486,24 @@ export function KoalaDesignStudio() {
   function beginTimedRequest(startedAt = nowMs()) {
     setGenerationStartedAt(startedAt);
     setGenerationElapsedMs(0);
+    setProgressComplete(false);
+  }
+
+  /**
+   * Run the bar to 100%, hold for a beat, then let the caller finish.
+   *
+   * Only on success: a failure should not be dressed up as a completed render.
+   */
+  async function completeProgress() {
+    setProgressComplete(true);
+    await new Promise((resolve) => setTimeout(resolve, PROGRESS_COMPLETE_MS));
   }
 
   /** Stop the clock, whether the request succeeded or failed. */
   function endTimedRequest() {
     setGenerationStartedAt(null);
     setGenerationElapsedMs(0);
+    setProgressComplete(false);
   }
 
   useEffect(() => {
@@ -3282,6 +3328,8 @@ export function KoalaDesignStudio() {
         source: "generated",
       });
       saveResultCache(nextConcepts, nextProducts);
+      // The image is in hand: finish the bar before the overlay clears.
+      await completeProgress();
     } catch (generationError) {
       const reason =
         generationError instanceof Error
@@ -3444,6 +3492,7 @@ export function KoalaDesignStudio() {
         source: "refined",
       });
       saveResultCache(updatedConcepts, updatedProducts);
+      await completeProgress();
     } catch (refinementError) {
       setError(
         refinementError instanceof Error
@@ -3558,7 +3607,6 @@ export function KoalaDesignStudio() {
     setCartProductIds([]);
     setSwapTarget(null);
     setSwappingProductId(null);
-    setSelectedSheetMode("review");
     setRoomTypeConfirmed(false);
     setRefineSheetOpen(false);
     setImageViewerOpen(false);
@@ -4294,9 +4342,11 @@ export function KoalaDesignStudio() {
               key={waitProgress.label}
               className="mx-auto mt-5 min-h-[4.5rem] max-w-[300px] animate-[stepIn_500ms_ease-out] font-serif text-3xl font-medium leading-tight text-[#F7F7F2]"
             >
-              {resumedGeneration && waitProgress.stageIndex === 0
-                ? "Picking your room back up"
-                : waitProgress.label}
+              {progressComplete
+                ? "Your room is ready"
+                : resumedGeneration && waitProgress.stageIndex === 0
+                  ? "Picking your room back up"
+                  : waitProgress.label}
             </h2>
 
             {/*
@@ -4308,7 +4358,7 @@ export function KoalaDesignStudio() {
             <div className="mt-6 h-1 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.12)]">
               <div
                 className="h-full rounded-full bg-[#C9A57A] transition-[width] duration-700 ease-out"
-                style={{ width: `${Math.round(waitProgress.fraction * 100)}%` }}
+                style={{ width: `${Math.round(displayedProgress * 100)}%` }}
               />
             </div>
 
@@ -4327,6 +4377,7 @@ export function KoalaDesignStudio() {
             <WaitingCarousel
               products={selectedProductsForWait}
               roomType={roomType}
+              inspiration={inspirationImages}
               index={loadingIndex}
             />
 
@@ -4342,7 +4393,6 @@ export function KoalaDesignStudio() {
       {selectedSheetOpen && (
         <SelectedProductsSheet
           products={shelfChosenProducts}
-          mode={selectedSheetMode}
           roomTypeLabel={roomType}
           onClose={() => setSelectedSheetOpen(false)}
           onRemove={removeShelfProduct}
@@ -4695,39 +4745,26 @@ export function KoalaDesignStudio() {
             {step === 3 &&
               designMode === "replace-items" &&
               replacePhase === "products" && (
-                <div className="flex items-center gap-3">
-                  {/* A way to see and undo what has been chosen, right beside
-                      the button that spends money on it. */}
-                  <StudioButton
-                    variant="ghost"
-                    onClick={() => {
-                      setSelectedSheetMode("review");
-                      setSelectedSheetOpen(true);
-                    }}
-                    disabled={shelfChosenProductIds.length === 0}
-                    className="min-h-14 shrink-0 rounded-2xl px-4 text-sm"
-                  >
-                    Selected ({shelfChosenProductIds.length})
-                  </StudioButton>
-                  <StudioButton
-                    onClick={() => {
-                      // Generation is confirmed, never fired straight from a
-                      // tap: the sheet restates the room and the products.
-                      setSelectedSheetMode("confirm");
-                      setSelectedSheetOpen(true);
-                    }}
-                    disabled={!canGenerateConcept() || loading}
-                    className="min-h-14 flex-1 rounded-2xl text-base"
-                  >
-                    {loading
-                      ? "Generating..."
-                      : // Naming what is missing, rather than a dead button the
-                        // customer has to work out for themselves.
-                        unfilledShelfCount > 0
-                        ? `Choose ${unfilledShelfCount} more ${unfilledShelfCount > 1 ? "pieces" : "piece"}`
-                        : "Generate my room"}
-                  </StudioButton>
-                </div>
+                <StudioButton
+                  onClick={() => {
+                    // Generation is confirmed, never fired straight from a
+                    // tap: the sheet restates the room and the products, and
+                    // is the only review step before spending.
+                    setSelectedSheetOpen(true);
+                  }}
+                  disabled={!canGenerateConcept() || loading}
+                  className="min-h-14 rounded-2xl text-base"
+                >
+                  {loading
+                    ? "Generating..."
+                    : // Naming what is missing, rather than a dead button the
+                      // customer has to work out for themselves. The CTA stays
+                      // disabled here, so an incomplete set cannot reach the
+                      // confirmation sheet.
+                      unfilledShelfCount > 0
+                      ? `Choose ${unfilledShelfCount} more ${unfilledShelfCount > 1 ? "pieces" : "piece"}`
+                      : "Generate my room"}
+                </StudioButton>
               )}
           </footer>
         )}

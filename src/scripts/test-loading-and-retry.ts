@@ -113,7 +113,7 @@ console.log("\nWaiting screen");
   check("the heading is no longer repeated below the bar",
     !/\{refining\s*\n?\s*\? "Updating your room"/.test(UI));
   check("one continuous bar replaces the per-stage segments",
-    /style=\{\{ width: `\$\{Math\.round\(waitProgress\.fraction \* 100\)\}%` \}\}/.test(UI));
+    /style=\{\{ width: `\$\{Math\.round\(displayedProgress \* 100\)\}%` \}\}/.test(UI));
   check("the step counter is honest about how many stages there are",
     /Step \{waitProgress\.stageIndex \+ 1\} of \{waitStages\.length\}/.test(UI));
   check("elapsed time is still shown", /formatElapsed\(generationElapsedMs\)/.test(UI));
@@ -123,21 +123,55 @@ console.log("\nWaiting screen");
     /refining \? REFINEMENT_STAGES : GENERATION_STAGES/.test(UI));
 }
 
-console.log("\nWaiting carousel");
+console.log("\nWaiting carousel — Koala inspiration, not generic tips");
 {
   check("a carousel component exists", /function WaitingCarousel\(/.test(UI));
   check("it is shown while waiting", /<WaitingCarousel/.test(UI));
   check("it shows the customer's own chosen pieces",
     /products=\{selectedProductsForWait\}/.test(UI) &&
-      /const selectedProductsForWait =/.test(UI));
-  check("it includes what-happens-next cards", /What happens next/.test(UI));
-  check("it includes styling tips", /Styling tip/.test(UI));
+      /eyebrow: "Your selection"/.test(UI));
+
+  /**
+   * The tips were replaced: generic waiting advice reads as filler on a
+   * premium brand. Real catalogue room photography is used instead.
+   */
+  check("generic customer tips are gone", !/Styling tip/.test(UI));
+  check("it shows Koala room photography", /eyebrow: "Koala inspiration"/.test(UI));
+  check("the imagery comes from the catalogue, not new assets",
+    /inspiration=\{inspirationImages\}/.test(UI) &&
+      /getLifestyleImageUrls\(/.test(UI));
+  check("the captions match the brief",
+    /Matching your \$\{roomType\.toLowerCase\(\)\} with Koala pieces/.test(UI) &&
+      /Curating your look/.test(UI) &&
+      /Building your room package/.test(UI));
+  check("images are decorative, so the caption carries the meaning",
+    /alt=""/.test(UI) && /aria-hidden/.test(UI));
+  check("images load lazily, keeping the screen light",
+    /loading="lazy"/.test(UI));
   check("it rotates rather than sitting still",
-    /index=\{loadingIndex\}/.test(UI) && /cards\[index % cards\.length\]/.test(UI));
+    /index=\{loadingIndex\}/.test(UI) && /slides\[index % slides\.length\]/.test(UI));
   check("it shows dots so the rotation reads as deliberate",
-    /dot === index % cards\.length/.test(UI));
-  check("it degrades when no products are known yet",
-    /\.\.\.\(products\.length > 0/.test(UI));
+    /dot === index % slides\.length/.test(UI));
+  check("it never renders an empty carousel",
+    /if \(slides\.length === 0\)/.test(UI));
+}
+
+console.log("\nProgress handoff — the bar finishes before the result appears");
+{
+  check("a completion step exists", /async function completeProgress\(\)/.test(UI));
+  check("the bar is driven to 100% on completion",
+    /const displayedProgress = progressComplete \? 1 : waitProgress\.fraction;/.test(UI));
+  check("the completion is short and intentional, not an extra wait",
+    /const PROGRESS_COMPLETE_MS = (2\d\d|3\d\d|4\d\d|500);/.test(UI));
+  check("it runs only after the result is actually in hand",
+    /saveResultCache\(nextConcepts, nextProducts\);[\s\S]{0,120}await completeProgress\(\);/.test(UI));
+  check("a refine and swap complete the same way",
+    /saveResultCache\(updatedConcepts, updatedProducts\);\s*\n\s*await completeProgress\(\);/.test(UI));
+  check("the heading acknowledges completion", /Your room is ready/.test(UI));
+  check("a FAILURE is never dressed up as a completed render",
+    !/catch[\s\S]{0,300}completeProgress\(\)/.test(UI));
+  check("the flag resets when a run starts and when it ends",
+    /setGenerationElapsedMs\(0\);\s*\n\s*setProgressComplete\(false\);/.test(UI));
 }
 
 console.log("\nTransient failures — one retry, never a loop");

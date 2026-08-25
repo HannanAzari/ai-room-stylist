@@ -66,6 +66,27 @@ export function hasEnrichedProduct(productId: string): boolean {
   return Boolean(dataset.products[productId]);
 }
 
+/**
+ * Styled room photography from the catalogue, for the waiting screen.
+ *
+ * These are real Koala lifestyle shots that already ship in `public/products`,
+ * classified by the enrichment pass rather than picked by hand — so the list
+ * grows on its own as the feed does, and nothing new has to be authored or
+ * hosted to make the wait feel like Koala rather than like a spinner.
+ *
+ * Deterministically ordered so two customers waiting on the same room see the
+ * same sequence, which makes the screen reproducible when something looks wrong.
+ */
+export function getLifestyleImageUrls(limit = 12): string[] {
+  const urls: string[] = [];
+  for (const product of Object.values(dataset.products ?? {})) {
+    for (const view of product.views ?? []) {
+      if (view.view === "lifestyle" && view.url) urls.push(view.url);
+    }
+  }
+  return [...new Set(urls)].sort().slice(0, limit);
+}
+
 export function enrichmentDatasetInfo() {
   return {
     datasetVersion: dataset.datasetVersion,

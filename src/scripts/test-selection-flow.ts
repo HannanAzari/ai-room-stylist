@@ -108,33 +108,33 @@ console.log("\nRoom-type step");
     /setRoomTypeConfirmed\(false\);/.test(UI));
 }
 
-console.log("\nSelected-products summary");
+console.log("\nSelected-products review");
 {
-  check("a Selected (n) button sits beside Generate",
-    /Selected \(\{shelfChosenProductIds\.length\}\)/.test(UI));
   /**
-   * The count must come from the SHELVES, not `selectedProductIds` — that list
-   * belongs to Surprise Me and the refine sheet, and reads 0 throughout the
-   * replace-items flow. Getting this wrong showed "Selected (0)" beside a
-   * fully-chosen sofa.
+   * The standalone "Selected (n)" footer button was removed: two CTAs plus Back
+   * crowded a 375px footer. The confirmation sheet is now the ONE review step,
+   * so everything it used to offer must still be there.
    */
-  check("the count reflects the shelves the customer actually filled",
-    /Object\.values\(chosenSeatingProducts\)/.test(UI) &&
-      /Object\.values\(chosenProductByCategory\)/.test(UI));
-  check("the sheet lists those same shelf choices",
+  check("no standalone Selected button remains in the footer",
+    !/Selected \(\{shelfChosenProductIds\.length\}\)/.test(UI));
+  check("the footer is a clean two-button layout",
+    /grid-cols-\[auto_1fr\]/.test(UI));
+  check("the sheet still lists the chosen products",
     /products=\{shelfChosenProducts\}/.test(UI));
-  check("removing from the sheet clears the shelf, not a parallel list",
-    /function removeShelfProduct\(productId: string\)/.test(UI) &&
-      /onRemove=\{removeShelfProduct\}/.test(UI));
-  check("it opens the sheet in review mode",
-    /setSelectedSheetMode\("review"\);\s*\n\s*setSelectedSheetOpen\(true\);/.test(UI));
-  check("it is disabled with nothing selected",
-    /disabled=\{shelfChosenProductIds\.length === 0\}/.test(UI));
   check("the sheet shows each product's category",
     /product\.category\.replace\(\/-\/g, " "\)/.test(UI));
-  check("the sheet can remove a product", /onRemove\(product\.id\)/.test(UI));
-  check("the sheet can be closed", /aria-label="Close selected products"/.test(UI));
-  check("the sheet states the room type", /roomTypeLabel=\{roomType\}/.test(UI));
+  check("products can still be removed from the sheet",
+    /onRemove=\{removeShelfProduct\}/.test(UI) &&
+      /function removeShelfProduct\(productId: string\)/.test(UI));
+  check("the sheet still states the room type", /roomTypeLabel=\{roomType\}/.test(UI));
+  check("the sheet can still be dismissed", /aria-label="Close selected products"/.test(UI));
+
+  /**
+   * With the review mode gone, the sheet has exactly one purpose. Leaving a
+   * `mode` prop nothing sets would be dead code.
+   */
+  check("the unreachable review mode was removed, not left behind",
+    !/selectedSheetMode/.test(UI) && !/"review" \| "confirm"/.test(UI));
 }
 
 console.log("\nConfirmation before generate");
@@ -151,14 +151,25 @@ console.log("\nConfirmation before generate");
   check("the Generate button no longer starts generation directly",
     !/onClick=\{\(\) => void handleGenerate\(\)\}/.test(generateButton), "still calls handleGenerate on tap");
   check("the Generate button opens the confirmation sheet",
-    /setSelectedSheetMode\("confirm"\);/.test(generateButton));
+    /setSelectedSheetOpen\(true\);/.test(generateButton));
   check("generation happens from the sheet's Confirm",
     /onConfirm=\{\(\) => \{[\s\S]{0,160}void handleGenerate\(\);/.test(UI));
   check("the sheet offers an explicit Confirm action", /Confirm and generate/.test(UI));
   check("the sheet offers a Cancel that just closes it",
     /<StudioButton variant="ghost" onClick=\{onClose\} className="rounded-2xl">\s*\n\s*Cancel/.test(UI));
-  check("confirm mode does not show two competing Cancels",
-    /\{!confirming && \(/.test(UI));
+  check("there is exactly one Cancel, not two competing ones",
+    (UI.match(/>\s*\n?\s*Cancel\s*\n?\s*<\/StudioButton>/g) ?? []).length === 1);
+
+  /**
+   * An incomplete selection must not reach the confirmation sheet at all — the
+   * CTA stays disabled and keeps naming what is missing.
+   */
+  check("an incomplete selection cannot open the confirmation",
+    /disabled=\{!canGenerateConcept\(\) \|\| loading\}/.test(generateButton));
+  check("the CTA still names how many pieces are missing",
+    /Choose \$\{unfilledShelfCount\} more/.test(generateButton));
+  check("unfilled shelves genuinely block generation",
+    /if \(unfilledShelfCount > 0\) return false;/.test(UI));
   check("confirming is blocked while a render is already running",
     /confirmDisabled=\{loading \|\| refining\}/.test(UI));
   check("confirming is blocked with an empty selection",
